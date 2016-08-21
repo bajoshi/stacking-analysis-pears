@@ -1,0 +1,269 @@
+em_lines = ['h_pears_n_id90194.fits', 'h_pears_s_id17321.fits', 'h_pears_s_id106641.fits', 'h_pears_s_id106993.fits', 'h_pears_s_id110400.fits', 'h_pears_s_id21196.fits', 'h_pears_s_id94632.fits', 'h_pears_n_id42058.fits', 'h_pears_n_id105902.fits', 'h_pears_n_id118534.fits', 'h_pears_s_id26909.fits', 'h_pears_n_id113595.fits', 'h_pears_s_id16788.fits', 'h_pears_s_id64769.fits', 'h_pears_s_id121506.fits', 'h_pears_s_id122913.fits', 'h_pears_n_id44207.fits', 'h_pears_n_id50210.fits', 'h_pears_n_id63410.fits', 'h_pears_n_id72081.fits', 'h_pears_n_id84467.fits', 'h_pears_n_id85556.fits', 'h_pears_n_id108010.fits', 'h_pears_n_id107999.fits', 'h_pears_n_id108239.fits', 'h_pears_s_id17587.fits', 'h_pears_s_id22486.fits', 'h_pears_s_id40117.fits', 'h_pears_s_id59595.fits', 'h_pears_s_id63612.fits', 'h_pears_s_id64393.fits', 'h_pears_s_id65179.fits', 'h_pears_s_id68852.fits', 'h_pears_s_id94873.fits', 'h_pears_s_id98046.fits', 'h_pears_s_id98242.fits', 'h_pears_s_id107055.fits', 'h_pears_s_id109596.fits', 'h_pears_s_id121911.fits', 'h_pears_s_id109435.fits', 'h_pears_s_id119341.fits', 'h_pears_s_id122735.fits', 'h_pears_s_id129968.fits', 'h_pears_s_id17587.fits', 'h_pears_s_id22486.fits', 'h_pears_s_id68852.fits', 'h_pears_s_id82307.fits', 'h_pears_n_id82356.fits', 'h_pears_s_id90246.fits', 'h_pears_s_id94873.fits', 'h_pears_n_id35090.fits', 'h_pears_n_id42526.fits', 'h_pears_n_id66045.fits', 'h_pears_n_id82693.fits', 'h_pears_n_id93025.fits', 'h_pears_s_id18882.fits', 'h_pears_s_id21363.fits', 'h_pears_s_id25474.fits', 'h_pears_s_id27652.fits', 'h_pears_s_id40163.fits', 'h_pears_s_id41078.fits', 'h_pears_s_id43170.fits', 'h_pears_s_id46284.fits', 'h_pears_s_id50298.fits', 'h_pears_s_id51976.fits', 'h_pears_s_id65708.fits', 'h_pears_s_id69168.fits', 'h_pears_s_id69234.fits', 'h_pears_s_id104478.fits', 'h_pears_s_id104514.fits', 'h_pears_s_id105015.fits', 'h_pears_s_id107052.fits', 'h_pears_s_id113279.fits', 'h_pears_s_id117686.fits', 'h_pears_s_id121974.fits', 'h_pears_s_id21614.fits', 'h_pears_s_id79520.fits', 'h_pears_s_id81609.fits', 'h_pears_s_id83804.fits', 'h_pears_s_id90198.fits', 'h_pears_s_id91382.fits', 'h_pears_n_id39842.fits', 'h_pears_n_id47252.fits', 'h_pears_n_id61065.fits', 'h_pears_n_id90145.fits', 'h_pears_n_id84077.fits', 'h_pears_n_id112486.fits', 'h_pears_n_id110727.fits', 'h_pears_n_id121428.fits', 'h_pears_s_id31086.fits', 'h_pears_s_id32905.fits', 'h_pears_s_id118526.fits', 'h_pears_n_id75917.fits', 'h_pears_n_id54384.fits', 'h_pears_n_id109561.fits', 'h_pears_n_id124893.fits', 'h_pears_s_id51293.fits', 'h_pears_s_id98951.fits', 'h_pears_s_id100652.fits', 'h_pears_s_id124410.fits', 'h_pears_s_id125699.fits', 'h_pears_s_id133306.fits', 'h_pears_s_id78045.fits', 'h_pears_s_id87735.fits', 'h_pears_n_id33944.fits', 'h_pears_n_id41064.fits', 'h_pears_n_id77596.fits', 'h_pears_n_id81988.fits', 'h_pears_n_id81946.fits', 'h_pears_n_id84715.fits', 'h_pears_s_id52445.fits', 'h_pears_s_id104446.fits', 'h_pears_s_id107036.fits', 'h_pears_s_id118673.fits', 'h_pears_s_id71864.fits', 'h_pears_s_id73385.fits', 'h_pears_s_id76154.fits', 'h_pears_s_id92860.fits', 'h_pears_n_id91947.fits', 'h_pears_n_id101185.fits', 'h_pears_n_id119723.fits', 'h_pears_n_id125948.fits', 'h_pears_s_id35878.fits', 'h_pears_s_id38417.fits', 'h_pears_s_id103422.fits', 'h_pears_s_id115331.fits', 'h_pears_s_id120803.fits', 'h_pears_s_id121733.fits', 'h_pears_s_id126769.fits', 'h_pears_s_id21647.fits', 'h_pears_s_id80500.fits', 'h_pears_s_id83686.fits', 'h_pears_n_id42014.fits', 'h_pears_s_id109992.fits', 'h_pears_s_id124964.fits', 'h_pears_s_id78077.fits', 'h_pears_s_id69713.fits', 'h_pears_s_id87679.fits', 'h_pears_n_id38344.fits', 'h_pears_s_id71524.fits', 'h_pears_n_id123476.fits', 'h_pears_s_id119489.fits', 'h_pears_s_id109167.fits', 'h_pears_s_id110397.fits', 'h_pears_s_id14215.fits', 'h_pears_s_id117429.fits', 'h_pears_n_id53563.fits', 'h_pears_s_id62528.fits', 'h_pears_n_id114628.fits', 'h_pears_s_id114108.fits', 'h_pears_s_id124313.fits', 'h_pears_s_id119193.fits']
+
+ONGRID 0.3 8.0
+'h_pears_n_id90194.fits' # clear h_beta + oiii
+'h_pears_s_id17321.fits' # clear oii and oiii and also an absorption feature at ~4200. not sure of the abs. line??
+'h_pears_s_id106641.fits' # clear h_beta
+'h_pears_s_id106993.fits' # clear h_beta
+'h_pears_s_id110400.fits' # clear h_beta + oiii
+'h_pears_s_id21196.fits' # clear oiii. Maybe h_beta
+'h_pears_s_id94632.fits' # see list on possibly misidentified spec
+ONGRID 0.3 8.5
+'h_pears_n_id42058.fits' # probably oii
+'h_pears_n_id105902.fits' # clear h_beta + oiii
+'h_pears_n_id118534.fits' # see list on possibly misidentified spec
+'h_pears_s_id26909.fits' # see list on possibly misidentified spec
+ONGRID 0.6 7.5
+'h_pears_n_id113595.fits' # clear h_beta + oiii. Maybe also oii that got cut off
+'h_pears_s_id16788.fits' # clear h_beta + oiii
+'h_pears_s_id64769.fits' # see list on possibly misidentified spec
+'h_pears_s_id121506.fits' # see list on possibly misidentified spec
+'h_pears_s_id122913.fits' # probably oiii
+ONGRID 0.6 8.0
+'h_pears_n_id44207.fits' # clear h_beta + oiii
+'h_pears_n_id50210.fits' # clear h_beta + oiii
+'h_pears_n_id63410.fits' # maybe h_beta
+'h_pears_n_id72081.fits' # maybe h_beta
+'h_pears_n_id84467.fits' # clear h_beta + oiii
+'h_pears_n_id85556.fits' # maybe h_beta
+'h_pears_n_id108010.fits' # see list on possibly misidentified spec
+'h_pears_n_id107999.fits' # maybe h_beta that got cut off
+'h_pears_n_id108239.fits' # see list on possibly misidentified spec
+'h_pears_s_id17587.fits' # see list on possibly misidentified spec
+'h_pears_s_id22486.fits' # maybe h_beta that got cut off
+'h_pears_s_id40117.fits' # clear h_beta
+'h_pears_s_id59595.fits' # see list on possibly misidentified spec
+'h_pears_s_id63612.fits' # clear h_beta
+'h_pears_s_id64393.fits' # clear h_beta and possibly also oiii
+'h_pears_s_id65179.fits' # see list on possibly misidentified spec
+'h_pears_s_id68852.fits' # clear h_beta and possibly also oiii
+'h_pears_s_id94873.fits' # see list on possibly misidentified spec
+'h_pears_s_id98046.fits' # see list on possibly misidentified spec
+'h_pears_s_id98242.fits' # clear h_beta + oiii
+'h_pears_s_id107055.fits' # maybe h_beta that got cut off
+'h_pears_s_id109596.fits' # clear h_beta + oiii
+'h_pears_s_id121911.fits' # clear h_beta
+'h_pears_s_id109435.fits' # clear h_beta and possibly also oiii
+'h_pears_s_id119341.fits' # clear h_beta
+'h_pears_s_id122735.fits' # see list on possibly misidentified spec
+'h_pears_s_id129968.fits' # clear h_beta + oiii
+'h_pears_s_id17587.fits' # see list on possibly misidentified spec
+'h_pears_s_id22486.fits' # maybe blended h_beta + oiii that got cut off
+'h_pears_s_id68852.fits' # clear h_beta
+'h_pears_s_id82307.fits' # see list on possibly misidentified spec
+'h_pears_n_id82356.fits' # see list on possibly misidentified spec
+'h_pears_s_id90246.fits' # clear h_beta + oiii
+'h_pears_s_id94873.fits' # see list on possibly misidentified spec
+ONGRID 0.6 8.5
+'h_pears_n_id35090.fits' # clear h_beta
+'h_pears_n_id42526.fits' # clear h_beta + oiii
+'h_pears_n_id66045.fits' # see list on possibly misidentified spec
+'h_pears_n_id82693.fits' # clear oii + oiii
+'h_pears_n_id93025.fits' # see list on possibly misidentified spec
+'h_pears_s_id18882.fits' # clear h_beta
+'h_pears_s_id21363.fits' # clear h_beta
+'h_pears_s_id25474.fits' # clear h_beta
+'h_pears_s_id27652.fits' # clear h_beta + oiii
+'h_pears_s_id40163.fits' # maybe h_beta that got cut off
+'h_pears_s_id41078.fits' # clear oiii
+'h_pears_s_id43170.fits' # clear h_beta
+'h_pears_s_id46284.fits' # clear h_beta + oiii and maybe also oii
+'h_pears_s_id50298.fits' # clear oii (maybe slightly redshifted possibly due to redshift errors)
+'h_pears_s_id51976.fits' # see list on possibly misidentified spec
+'h_pears_s_id65708.fits' # clear h_beta (perhaps slightly blueshifted possibly due to redshift errors)
+'h_pears_s_id69168.fits' # clear h_beta + oiii
+'h_pears_s_id69234.fits' # probably oii
+'h_pears_s_id104478.fits' # probably oii
+'h_pears_s_id104514.fits' # maybe h_beta that got cut off
+'h_pears_s_id105015.fits' # clear h_beta + oiii
+'h_pears_s_id107052.fits' # see list on possibly misidentified spec
+'h_pears_s_id113279.fits' # clear oiii
+'h_pears_s_id117686.fits' # clear h_beta
+'h_pears_s_id121974.fits' # see list on possibly misidentified spec
+'h_pears_s_id21614.fits' # clear h_beta + oiii and maybe also oii
+'h_pears_s_id79520.fits' # clear h_beta
+'h_pears_s_id81609.fits' # see list on possibly misidentified spec
+'h_pears_s_id83804.fits' # see list on possibly misidentified spec
+'h_pears_s_id90198.fits' # probably oiii
+'h_pears_s_id91382.fits' # see list on possibly misidentified spec
+ONGRID 0.6 9.0
+'h_pears_n_id39842.fits' # clear h_beta
+'h_pears_n_id47252.fits' # clear oii
+'h_pears_n_id61065.fits' # see list on possibly misidentified spec
+'h_pears_n_id90145.fits' # see list on possibly misidentified spec
+'h_pears_n_id84077.fits' # see list on possibly misidentified spec
+'h_pears_n_id112486.fits' # probably h_beta + oiii and also oii
+'h_pears_n_id110727.fits' # see list on possibly misidentified spec
+'h_pears_n_id121428.fits' # see list on possibly misidentified spec
+'h_pears_s_id31086.fits' # clear h_beta + oiii
+'h_pears_s_id32905.fits' # clear oii
+'h_pears_s_id118526.fits' # probably h_beta + oiii
+ONGRID 0.9 7.5
+'h_pears_n_id75917.fits' # clear oii + probably h_gamma as well
+ONGRID 0.9 8.0
+'h_pears_n_id54384.fits' # possibly oiii
+'h_pears_n_id109561.fits' # probably h_delta
+'h_pears_n_id124893.fits' # see list on possibly misidentified spec
+'h_pears_s_id51293.fits' # see list on possibly misidentified spec
+'h_pears_s_id98951.fits' # see list on possibly misidentified spec
+'h_pears_s_id100652.fits' # probably h_beta
+'h_pears_s_id124410.fits' # see list on possibly misidentified spec
+'h_pears_s_id125699.fits' # see list on possibly misidentified spec
+'h_pears_s_id133306.fits' # see list on possibly misidentified spec
+'h_pears_s_id78045.fits' # probably h_beta
+'h_pears_s_id87735.fits' # see list on possibly misidentified spec
+ONGRID 0.9 8.5
+'h_pears_n_id33944.fits' # clear h_beta + oiii
+'h_pears_n_id41064.fits' # probably h_beta
+'h_pears_n_id77596.fits' # see list on possibly misidentified spec
+'h_pears_n_id81988.fits' # probably h_beta
+'h_pears_n_id81946.fits' # probably oiii that got cut off
+'h_pears_n_id84715.fits' # see list on possibly misidentified spec
+'h_pears_s_id52445.fits' # clear h_beta + oiii
+'h_pears_s_id104446.fits' # see list on possibly misidentified spec
+'h_pears_s_id107036.fits' # clear oiii
+'h_pears_s_id118673.fits' # clear oiii
+'h_pears_s_id71864.fits' # probably h_beta and clear oiii
+'h_pears_s_id73385.fits' # see list on possibly misidentified spec
+'h_pears_s_id76154.fits' # see list on possibly misidentified spec
+'h_pears_s_id92860.fits' # clear h_beta
+ONGRID 0.9 9.0
+'h_pears_n_id91947.fits' # see list on possibly misidentified spec
+'h_pears_n_id101185.fits' # clear h_beta + oiii and also oii
+'h_pears_n_id119723.fits' # clear h_beta + oiii and also oii
+'h_pears_n_id125948.fits' # see list on possibly misidentified spec
+'h_pears_s_id35878.fits' # clear h_beta + oiii
+'h_pears_s_id38417.fits'  # see list on possibly misidentified spec
+'h_pears_s_id103422.fits' # see list on possibly misidentified spec
+'h_pears_s_id115331.fits' # clear h_beta + oiii
+'h_pears_s_id120803.fits' # see list on possibly misidentified spec
+'h_pears_s_id121733.fits' # see list on possibly misidentified spec
+'h_pears_s_id126769.fits' # see list on possibly misidentified spec
+'h_pears_s_id21647.fits' # clear h_beta and maybe also oiii
+'h_pears_s_id80500.fits' # clear oii and oiii + h_beta
+'h_pears_s_id83686.fits' # clear oii and oiii
+ONGRID 0.9 9.5
+'h_pears_n_id42014.fits' # clear h_beta
+'h_pears_s_id109992.fits' # see list on possibly misidentified spec
+'h_pears_s_id124964.fits' # see list on possibly misidentified spec
+'h_pears_s_id78077.fits' # clear h_beta + oiii
+ONGRID 1.2 8.5
+'h_pears_s_id69713.fits' # see list on possibly misidentified spec
+'h_pears_s_id87679.fits' # see list on possibly misidentified spec
+ONGRID 1.2 9.0
+'h_pears_n_id38344.fits' # see list on possibly misidentified spec
+ONGRID 1.2 10.0
+'h_pears_s_id71524.fits' # see list on possibly misidentified spec
+'h_pears_n_id123476.fits' # clear h_beta and oiii
+ONGRID 1.2 10.5
+'h_pears_s_id119489.fits' # clear h_beta and maybe also oiii
+ONGRID 1.5 9.5
+'h_pears_s_id109167.fits' # see list on possibly misidentified spec
+'h_pears_s_id110397.fits' # probably h_beta
+ONGRID 1.5 10.0
+'h_pears_s_id14215.fits' # see list on possibly misidentified spec
+'h_pears_s_id117429.fits' # see list on possibly misidentified spec
+ONGRID 1.8 10.0
+'h_pears_n_id53563.fits' # see list on possibly misidentified spec
+'h_pears_s_id62528.fits' # see list on possibly misidentified spec
+ONGRID 1.8 10.5
+'h_pears_n_id114628.fits' # see list on possibly misidentified spec
+ONGRID 2.1 10.0
+'h_pears_s_id114108.fits' # see list on possibly misidentified spec
+'h_pears_s_id124313.fits' # see list on possibly misidentified spec
+ONGRID 2.1 10.5
+'h_pears_s_id119193.fits' # clear h_beta # wow...I would've thought it was too red for emission lines
+
+
+
+
+
+
+possibly_misidentified_spec = ['h_pears_n_id94458.fits', 'h_pears_n_id123008.fits', 'h_pears_s_id94632.fits', 'h_pears_n_id118534.fits', 'h_pears_s_id26909.fits', 'h_pears_s_id64769.fits', 'h_pears_s_id121506.fits', 'h_pears_n_id108010.fits', 'h_pears_n_id108239.fits', 'h_pears_s_id17587.fits', 'h_pears_s_id59595.fits', 'h_pears_s_id65179.fits', 'h_pears_s_id94873.fits', 'h_pears_s_id98046.fits', 'h_pears_s_id114115.fits', 'h_pears_s_id122735.fits', 'h_pears_s_id17587.fits', 'h_pears_s_id78527.fits', 'h_pears_s_id82307.fits', 'h_pears_n_id82356.fits', 'h_pears_s_id94873.fits', 'h_pears_n_id66045.fits', 'h_pears_n_id93025.fits', 'h_pears_s_id51976.fits', 'h_pears_s_id107052.fits', 'h_pears_s_id121974.fits', 'h_pears_n_id74900.fits', 'h_pears_s_id81609.fits', 'h_pears_s_id83804.fits', 'h_pears_s_id91382.fits', 'h_pears_n_id61065.fits', 'h_pears_n_id90145.fits', 'h_pears_n_id84077.fits', 'h_pears_n_id110727.fits', 'h_pears_n_id121428.fits', 'h_pears_n_id124893.fits', 'h_pears_s_id51293.fits', 'h_pears_s_id98951.fits', 'h_pears_s_id124410.fits', 'h_pears_s_id125699.fits', 'h_pears_s_id133306.fits', 'h_pears_s_id87735.fits', 'h_pears_n_id77596.fits', 'h_pears_n_id84715.fits', 'h_pears_s_id104446.fits', 'h_pears_s_id73385.fits', 'h_pears_s_id76154.fits', 'h_pears_n_id91947.fits', 'h_pears_n_id125948.fits', 'h_pears_s_id38417.fits', 'h_pears_s_id103422.fits', 'h_pears_s_id120803.fits', 'h_pears_s_id121733.fits', 'h_pears_s_id126769.fits', 'h_pears_s_id109992.fits', 'h_pears_s_id124964.fits', 'h_pears_s_id69713.fits', 'h_pears_s_id87679.fits', 'h_pears_n_id38344.fits', 'h_pears_s_id71524.fits', 'h_pears_s_id109167.fits', 'h_pears_s_id14215.fits', 'h_pears_s_id117429.fits', 'h_pears_n_id53563.fits', 'h_pears_s_id62528.fits', 'h_pears_n_id114628.fits', 'h_pears_s_id114108.fits', 'h_pears_s_id124313.fits']
+
+ONGRID 0.3 8.0
+'h_pears_n_id94458.fits' # seems too red by eye to be given a (U-R) of ~0.3. Seems to have a large break... perhaps a wrong redshift.
+'h_pears_n_id123008.fits' # seems too red by eye to be given a (U-R) of ~0.3.
+'h_pears_s_id94632.fits' # seems to have a strong line at 4585 but I don't know what line it is
+ONGRID 0.3 8.5
+'h_pears_n_id118534.fits' # seems to have a strong line at 4640 but I don't know what line it is 
+'h_pears_s_id26909.fits' # seems to have a strong line at 4060 and maybe at 3020 but I don't know what line it is. Probably misidentified oii and oiii lines.
+ONGRID 0.6 7.5
+'h_pears_s_id64769.fits' # seems to have strong lines at 4750 and at 3540 but I don't know what lines they are. Probably misidentified oii and oiii lines.
+'h_pears_s_id121506.fits' # seems to have a strong line at 4235 (possibly double peaked) but I don't know what line it is
+ONGRID 0.6 8.0
+'h_pears_n_id108010.fits' # seems to have a strong line at 4470 but I don't know what line it is 
+'h_pears_n_id108239.fits' # seems to have strong lines at 5160 and at 5320 but I don't know what lines they are.
+'h_pears_s_id17587.fits' # has a strong line at 4730 but I don't know for sure what line it is. Line shape makes me think it could be blended h_beta + oiii
+'h_pears_s_id59595.fits' # has a strong line at 4600 but I don't know for sure what line it is. Line shape makes me think it could be blended h_beta + oiii
+'h_pears_s_id65179.fits' # seems to have a strong line at 5345 but I don't know what line it is
+'h_pears_s_id94873.fits' # seems to have a strong line at 4175 but I don't know what line it is
+'h_pears_s_id98046.fits' # seems to have a strong line at 5486 (and maybe also at 4800) but I don't know what line it is
+'h_pears_s_id114115.fits' # seems too red by eye to be given a (U-R) of ~0.6.
+'h_pears_s_id122735.fits' # seems to have a strong line at 5850 that gets cut off. Could be h_beta + oiii ... maybe wrong redshift
+'h_pears_s_id17587.fits' # has a strong line at 4730 but I don't know for sure what line it is. Line shape makes me think it could be blended h_beta + oiii
+'h_pears_s_id78527.fits' # looks like it has a break at 4800.... perhaps wrong redshift
+'h_pears_s_id82307.fits' # seems to have a strong line at 4580 but I don't know what line it is
+'h_pears_n_id82356.fits' # seems to have a strong line at 4280 (and maybe also at 2930) but I don't know what line it is
+'h_pears_s_id94873.fits' # seems to have a strong line at 4175 but I don't know what line it is
+ONGRID 0.6 8.5
+'h_pears_n_id66045.fits' # seems to have a strong line at 4440 but I don't know what line it is
+'h_pears_n_id93025.fits' # seems to have a strong line at 3620 but I don't know what line it is
+'h_pears_s_id51976.fits' # seems to have a slightly wrong redshift. I think there is a Balmer break and possibly a h_beta + oiii line that got cut off
+'h_pears_s_id107052.fits' # seems to be oiii and oii with grossly overestimated redshift 
+'h_pears_s_id121974.fits' # seems to be oiii but with a slightly wrong redshift
+'h_pears_n_id74900.fits' # seems too red by eye to be given a (U-R) of ~0.6.
+'h_pears_s_id81609.fits' # seems to have a strong line at 3840 but I don't know what line it is (maybe misplaced oii)
+'h_pears_s_id83804.fits' # seems to have a strong line at 3860 but I don't know what line it is (maybe misplaced oii)
+'h_pears_s_id91382.fits' # seems to have a strong line at 3630 but I don't know what line it is (maybe misplaced oii)
+ONGRID 0.6 9.0
+'h_pears_n_id61065.fits' # seems to have a somewhat significant line at 3940 but I don't know what line it is
+'h_pears_n_id90145.fits' # seems to have a somewhat significant line at 3820 but I don't know what line it is (maybe misplaced oii)
+'h_pears_n_id84077.fits' # seems to have h_beta + oiii and also oii but the redshift is probably overestimated
+'h_pears_n_id110727.fits' # seems to have oii but there is an even brighter line redwards of it that i can't identify (could be contamination)
+'h_pears_n_id121428.fits' # seems to have a broad peak centered on ~4700. could be misplaced h_beta + oiii
+ONGRID 0.9 8.0
+'h_pears_n_id124893.fits' # seems to have a somewhat significant line at 3590 but I don't know what line it is (maybe misplaced oii)
+'h_pears_s_id51293.fits' # seems to have a strong line at 4250 but I don't know what line it is
+'h_pears_s_id98951.fits' # seems to have a somewhat significant line at 3650 but I don't know what line it is (maybe misplaced oii)
+'h_pears_s_id124410.fits' # seems to be oiii but with a slightly wrong redshift
+'h_pears_s_id125699.fits' # seems to have a strong line at 4750 but I don't know what line it is
+'h_pears_s_id133306.fits' # seems to have a strong line at 4565 but I don't know what line it is
+'h_pears_s_id87735.fits' # seems to be h_beta but with a slightly wrong redshift 
+ONGRID 0.9 8.5
+'h_pears_n_id77596.fits' # seems to be h_beta + oiii and oii but with a wrong redshift
+'h_pears_n_id84715.fits' # seems to be oiii with a slightly wrong redshift
+'h_pears_s_id104446.fits' # seems to have a strong line at 4770 but I don't know what line it is
+'h_pears_s_id73385.fits' # seems to have a somewhat significant line at 4920 (maybe h_beta at slightly wrong redshift) 
+'h_pears_s_id76154.fits' # seems to have strong lines at 4815 and at 5150 but I don't know what lines they are (one of those could be h_beta or oiii....still the redshift seems wrong)
+ONGRID 0.9 9.0
+'h_pears_n_id91947.fits' # seems to have a somewhat significant line at 5050 (h_beta ...probably at the wrong redshift) 
+'h_pears_n_id125948.fits' # seems to have a somewhat significant line at 4200 (I think there is a Balmer break. its probably a wrong redshift.)
+'h_pears_s_id38417.fits' # seems to have a somewhat significant line at 4925 but I don't know what line it is (h_beta ...probably at the wrong redshift)
+'h_pears_s_id103422.fits' # seems to be oiii and oii with a slightly wrong redshift
+'h_pears_s_id120803.fits' # seems to have a somewhat significant line at 4825 but I don't know what line it is (h_beta ...probably at the wrong redshift)
+'h_pears_s_id121733.fits' # seems to be oiii and maybe also oii ....probably at the wrong redshift
+'h_pears_s_id126769.fits' # seems to have lines at 5065 and perhaps also at 3765 but I don't know what lines they are (probably oiii and oii....still the redshift seems wrong)
+ONGRID 0.9 9.5
+'h_pears_s_id109992.fits' # seems to have a strong line at 4440 but I don't know what line it is
+'h_pears_s_id124964.fits' # seems to have a strong line at 4500 but I don't know what line it is
+ONGRID 1.2 8.5
+'h_pears_s_id69713.fits' # seems to have a strong line at 3630 but I don't know what line it is
+'h_pears_s_id87679.fits' # seems to have a somewhat significant line at 4900 but I don't know what line it is (h_beta ...probably at the wrong redshift)
+ONGRID 1.2 9.0
+'h_pears_n_id38344.fits' # seems to have a strong line at 4710 but I don't know what line it is
+ONGRID 1.2 10.0
+'h_pears_s_id71524.fits' # seems to have a strong line at 3580 but I don't know what line it is
+ONGRID 1.5 9.5
+'h_pears_s_id109167.fits' # seems to have a somewhat significant line at 4915 but I don't know what line it is (h_beta ...probably at the wrong redshift)
+ONGRID 1.5 10.0
+'h_pears_s_id14215.fits' # seems to have a somewhat significant line at 4990 but I don't know what line it is (could be h_beta or oiii....still the redshift seems wrong)
+'h_pears_s_id117429.fits' # seems to have a somewhat significant line at 4780 (h_beta ...probably at the wrong redshift) 
+ONGRID 1.8 10.0
+'h_pears_n_id53563.fits' # seems to have a strong line at 4725 but I don't know what line it is (i think the spectrum is too red to have an emission line...so it could be contamination)
+'h_pears_s_id62528.fits' # seems to have a somewhat significant line at 4965 but I don't know what line it is (could be h_beta or oiii....still the redshift seems wrong)
+ONGRID 1.8 10.5
+'h_pears_n_id114628.fits' # seems to have a strong line at 5040 (oiii ...probably at the wrong redshift) 
+ONGRID 2.1 10.0
+'h_pears_s_id114108.fits' # seems to have a strong line at 5310 but I don't know what line it is 
+'h_pears_s_id124313.fits' # seems too blue by eye to be given a (U-R) of ~2.1. Also seems to have a strong line at 3900.
