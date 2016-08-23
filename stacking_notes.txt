@@ -1,0 +1,11 @@
+### ALSO CHECK NOTES IN THE RESEARCH BOOK ###
+
+# skip over the best chosen net sig PA for spectra in specskip.txt (simply because they don't look right to the eye but the code failed to reject them)
+# but check if averaging over all PAs gives a better result
+# there are still some nan's in the fluxes
+# some spectra are being plotted twice. this probably affects the median too.
+# the median points are being plotted at the start of the delta_lambda interval. They should be in the middle.
+# why do Ferreras etal 2009 (who selected early type galaxies visually) get more red sequence galaxies than blue cloud galaxies and I get the exact opposite thing?? WTF?
+---They selected galaxies that looked like early types (i.e. spheroidals). So it makes sense that they would have more red galaxies than blue.
+# the error bars are still wrong
+# I see a label repeated twice. This shouldn't happen unless it is somehow selecting more than one PA.

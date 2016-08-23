@@ -1,0 +1,19 @@
+specskip = ['h_pears_n_id78220.fits',\
+'h_pears_n_id47644.fits', 'h_pears_s_id74234.fits', 'h_pears_s_id124266.fits',\
+'h_pears_n_id111054.fits',\
+'h_pears_s_id106446.fits',\
+'h_pears_n_id120710.fits',\
+'h_pears_s_id78417.fits',\
+'h_pears_s_id59792.fits','h_pears_s_id93218.fits','h_pears_n_id104213.fits','h_pears_s_id115422.fits','h_pears_s_id72113.fits','h_pears_s_id107858.fits','h_pears_s_id45223.fits','h_pears_s_id23920.fits',\
+'h_pears_s_id64963.fits','h_pears_s_id128268.fits',\
+'h_pears_s_id110795.fits','h_pears_s_id108561.fits','h_pears_n_id123162.fits',\
+'h_pears_s_id79154.fits','h_pears_s_id114978.fits',\
+'h_pears_s_id115024.fits','h_pears_n_id67343.fits',\
+'h_pears_s_id113895.fits',\
+'h_pears_n_id79581.fits',\
+'h_pears_s_id120441.fits','h_pears_n_id77819.fits',\
+'h_pears_s_id48182.fits',\
+'h_pears_n_id103918.fits',\
+'h_pears_s_id70340.fits','h_pears_n_id110223.fits','h_pears_n_id59873.fits',\
+'h_pears_s_id56575.fits']
+

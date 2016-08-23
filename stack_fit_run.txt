@@ -1,0 +1,306 @@
+Starting at --  2016-05-31 00:15:14.712116
+At  0.0,7.0  with  0  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.0,7.5  with  4  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.0,8.0  with  8  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.3,7.0  with  0  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.3,7.5  with  16  spectra in stack.
+0.3,7.5
+Minimum Chi square --  63.419869064
+Minimum Chi square within fitting range --  55.4697192668
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.0114815
+Best fit tau (in exp SFH) --  0.0199
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  1.32319437878e-15
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau199_salp.fits
+At  0.3,8.0  with  31  spectra in stack.
+0.3,8.0
+Minimum Chi square --  667.241235217
+Minimum Chi square within fitting range --  89.7103725935
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.00660692
+Best fit tau (in exp SFH) --  0.01
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  2.16836243976e-15
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau100_salp.fits
+At  0.3,8.5  with  27  spectra in stack.
+0.3,8.5
+Minimum Chi square --  49.9808768667
+Minimum Chi square within fitting range --  22.3301283214
+Best Metallicity --  m62
+Best fit age [Gyr] --  0.0114815
+Best fit tau (in exp SFH) --  0.01
+Best fit tau_V (opt. depth to dust extn) --  2.5
+Value for vertical scaling constant that minimizes chi square --  9.73122701742e-16
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m62/bc2003_hr_m62_tauV25_csp_tau100_salp.fits
+At  0.3,9.0  with  4  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.3,9.5  with  2  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.6,7.0  with  0  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.6,7.5  with  32  spectra in stack.
+0.6,7.5
+Minimum Chi square --  475.653340992
+Minimum Chi square within fitting range --  120.562993785
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.0104713
+Best fit tau (in exp SFH) --  79.432
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  6.2038466382e-12
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau794320_salp.fits
+At  0.6,8.0  with  147  spectra in stack.
+0.6,8.0
+Minimum Chi square --  62.4625959844
+Minimum Chi square within fitting range --  46.5629751716
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.0109648
+Best fit tau (in exp SFH) --  0.0316
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  3.18779871737e-15
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau316_salp.fits
+At  0.6,8.5  with  216  spectra in stack.
+0.6,8.5
+Minimum Chi square --  47.0591463045
+Minimum Chi square within fitting range --  38.1167523652
+Best Metallicity --  m42
+Best fit age [Gyr] --  0.00416869
+Best fit tau (in exp SFH) --  0.0125
+Best fit tau_V (opt. depth to dust extn) --  2.6
+Value for vertical scaling constant that minimizes chi square --  2.91110710506e-15
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m42/bc2003_hr_m42_tauV26_csp_tau125_salp.fits
+At  0.6,9.0  with  84  spectra in stack.
+0.6,9.0
+Minimum Chi square --  119.306384701
+Minimum Chi square within fitting range --  83.1633091798
+Best Metallicity --  m42
+Best fit age [Gyr] --  0.00416869
+Best fit tau (in exp SFH) --  0.0794
+Best fit tau_V (opt. depth to dust extn) --  2.8
+Value for vertical scaling constant that minimizes chi square --  5.55322160117e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m42/bc2003_hr_m42_tauV28_csp_tau794_salp.fits
+At  0.6,9.5  with  5  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.6,10.0  with  1  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.9,7.0  with  0  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.9,7.5  with  5  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  0.9,8.0  with  95  spectra in stack.
+0.9,8.0
+Minimum Chi square --  142.846840355
+Minimum Chi square within fitting range --  80.4402486903
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.0109648
+Best fit tau (in exp SFH) --  0.0398
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  2.97888313509e-15
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau398_salp.fits
+At  0.9,8.5  with  192  spectra in stack.
+0.9,8.5
+Minimum Chi square --  57.9555222416
+Minimum Chi square within fitting range --  28.4955285532
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.00346736
+Best fit tau (in exp SFH) --  0.0398
+Best fit tau_V (opt. depth to dust extn) --  2.8
+Value for vertical scaling constant that minimizes chi square --  2.00200908371e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV28_csp_tau398_salp.fits
+At  0.9,9.0  with  206  spectra in stack.
+0.9,9.0
+Minimum Chi square --  156.277012297
+Minimum Chi square within fitting range --  85.9667750534
+Best Metallicity --  m42
+Best fit age [Gyr] --  0.00724435
+Best fit tau (in exp SFH) --  0.1258
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  5.04520103017e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m42/bc2003_hr_m42_tauV29_csp_tau1258_salp.fits
+At  0.9,9.5  with  57  spectra in stack.
+0.9,9.5
+Minimum Chi square --  83.3910658402
+Minimum Chi square within fitting range --  72.6165907978
+Best Metallicity --  m42
+Best fit age [Gyr] --  0.00999998
+Best fit tau (in exp SFH) --  79.432
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  5.09071001604e-11
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m42/bc2003_hr_m42_tauV29_csp_tau794320_salp.fits
+At  0.9,10.0  with  4  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.2,7.5  with  0  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.2,8.0  with  10  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.2,8.5  with  57  spectra in stack.
+1.2,8.5
+Minimum Chi square --  26.1545718131
+Minimum Chi square within fitting range --  13.9359371509
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.0054954
+Best fit tau (in exp SFH) --  0.01
+Best fit tau_V (opt. depth to dust extn) --  1.5
+Value for vertical scaling constant that minimizes chi square --  4.44212186011e-16
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV15_csp_tau100_salp.fits
+At  1.2,9.0  with  74  spectra in stack.
+1.2,9.0
+Minimum Chi square --  185.092940042
+Minimum Chi square within fitting range --  141.529004687
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.00380189
+Best fit tau (in exp SFH) --  0.0125
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  1.0539905626e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau125_salp.fits
+At  1.2,9.5  with  58  spectra in stack.
+1.2,9.5
+Minimum Chi square --  107.839745319
+Minimum Chi square within fitting range --  66.6862001616
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.00380189
+Best fit tau (in exp SFH) --  0.01
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  1.79195216426e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau100_salp.fits
+At  1.2,10.0  with  17  spectra in stack.
+1.2,10.0
+Minimum Chi square --  384.401794729
+Minimum Chi square within fitting range --  303.962559939
+Best Metallicity --  m22
+Best fit age [Gyr] --  0.00660692
+Best fit tau (in exp SFH) --  0.0199
+Best fit tau_V (opt. depth to dust extn) --  2.9
+Value for vertical scaling constant that minimizes chi square --  3.5366487868e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV29_csp_tau199_salp.fits
+At  1.2,10.5  with  2  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.5,8.0  with  0  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.5,8.5  with  7  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.5,9.0  with  18  spectra in stack.
+1.5,9.0
+Minimum Chi square --  59.0614381059
+Minimum Chi square within fitting range --  57.1672022905
+Best Metallicity --  m72
+Best fit age [Gyr] --  12.499999744
+Best fit tau (in exp SFH) --  6.3095
+Best fit tau_V (opt. depth to dust extn) --  0.0
+Value for vertical scaling constant that minimizes chi square --  3.75392690944e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m72/bc2003_hr_m72_tauV0_csp_tau63095_salp.fits
+At  1.5,9.5  with  40  spectra in stack.
+1.5,9.5
+Minimum Chi square --  89.5458547806
+Minimum Chi square within fitting range --  67.1813592814
+Best Metallicity --  m32
+Best fit age [Gyr] --  11.500000256
+Best fit tau (in exp SFH) --  3.1622
+Best fit tau_V (opt. depth to dust extn) --  0.0
+Value for vertical scaling constant that minimizes chi square --  2.68848962707e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m32/bc2003_hr_m32_tauV0_csp_tau31622_salp.fits
+At  1.5,10.0  with  23  spectra in stack.
+1.5,10.0
+Minimum Chi square --  287.130672005
+Minimum Chi square within fitting range --  169.574204526
+Best Metallicity --  m32
+Best fit age [Gyr] --  10.250000384
+Best fit tau (in exp SFH) --  1.9952
+Best fit tau_V (opt. depth to dust extn) --  0.0
+Value for vertical scaling constant that minimizes chi square --  8.02604142568e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m32/bc2003_hr_m32_tauV0_csp_tau19952_salp.fits
+At  1.5,10.5  with  11  spectra in stack.
+1.5,10.5
+Minimum Chi square --  871.892624751
+Minimum Chi square within fitting range --  366.903795029
+Best Metallicity --  m32
+Best fit age [Gyr] --  7.0
+Best fit tau (in exp SFH) --  0.063
+Best fit tau_V (opt. depth to dust extn) --  0.0
+Value for vertical scaling constant that minimizes chi square --  2.21048518131e-13
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m32/bc2003_hr_m32_tauV0_csp_tau630_salp.fits
+At  1.8,8.0  with  0  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.8,8.5  with  10  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.8,9.0  with  10  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  1.8,9.5  with  26  spectra in stack.
+1.8,9.5
+Minimum Chi square --  94.6347059972
+Minimum Chi square within fitting range --  43.5005358819
+Best Metallicity --  m32
+Best fit age [Gyr] --  9.249999872
+Best fit tau (in exp SFH) --  0.01
+Best fit tau_V (opt. depth to dust extn) --  0.8
+Value for vertical scaling constant that minimizes chi square --  5.02207477792e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m32/bc2003_hr_m32_tauV8_csp_tau100_salp.fits
+At  1.8,10.0  with  32  spectra in stack.
+1.8,10.0
+Minimum Chi square --  122.364794936
+Minimum Chi square within fitting range --  77.143203622
+Best Metallicity --  m22
+Best fit age [Gyr] --  20.0
+Best fit tau (in exp SFH) --  0.01
+Best fit tau_V (opt. depth to dust extn) --  1.7
+Value for vertical scaling constant that minimizes chi square --  1.90010852272e-13
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m22/bc2003_hr_m22_tauV17_csp_tau100_salp.fits
+At  1.8,10.5  with  18  spectra in stack.
+1.8,10.5
+Minimum Chi square --  313.686202538
+Minimum Chi square within fitting range --  219.629865702
+Best Metallicity --  m72
+Best fit age [Gyr] --  4.0
+Best fit tau (in exp SFH) --  1.2588
+Best fit tau_V (opt. depth to dust extn) --  0.3
+Value for vertical scaling constant that minimizes chi square --  1.31877520667e-13
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m72/bc2003_hr_m72_tauV3_csp_tau12588_salp.fits
+At  1.8,11.0  with  3  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  2.1,8.5  with  2  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  2.1,9.0  with  1  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  2.1,9.5  with  18  spectra in stack.
+2.1,9.5
+Minimum Chi square --  88.5527834732
+Minimum Chi square within fitting range --  67.2618950321
+Best Metallicity --  m72
+Best fit age [Gyr] --  12.999999488
+Best fit tau (in exp SFH) --  5.0118
+Best fit tau_V (opt. depth to dust extn) --  0.0
+Value for vertical scaling constant that minimizes chi square --  4.30105678491e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m72/bc2003_hr_m72_tauV0_csp_tau50118_salp.fits
+At  2.1,10.0  with  29  spectra in stack.
+2.1,10.0
+Minimum Chi square --  161.234361069
+Minimum Chi square within fitting range --  127.958822632
+Best Metallicity --  m62
+Best fit age [Gyr] --  10.0
+Best fit tau (in exp SFH) --  3.981
+Best fit tau_V (opt. depth to dust extn) --  2.3
+Value for vertical scaling constant that minimizes chi square --  1.70119548583e-13
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m62/bc2003_hr_m62_tauV23_csp_tau39810_salp.fits
+At  2.1,10.5  with  52  spectra in stack.
+2.1,10.5
+Minimum Chi square --  1502.94953206
+Minimum Chi square within fitting range --  1091.68887206
+Best Metallicity --  m62
+Best fit age [Gyr] --  1.8
+Best fit tau (in exp SFH) --  0.1584
+Best fit tau_V (opt. depth to dust extn) --  0.4
+Value for vertical scaling constant that minimizes chi square --  8.52200460963e-14
+Filename with best fit model --  /Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m62/bc2003_hr_m62_tauV4_csp_tau1584_salp.fits
+At  2.1,11.0  with  9  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  2.4,9.5  with  3  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  2.4,10.0  with  5  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+At  2.4,10.5  with  10  spectra in stack.
+Too few spectra in stack. Continuing to the next grid cell...
+Total time taken --  16.3726099703 hours.

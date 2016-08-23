@@ -1,0 +1,35 @@
+In [72]: len(np.where((t[1].data['z_peak_phot'] >= 0.6) & (t[1].data['z_peak_phot'] < 0.8) & (t[1].data['field'] == 'goodsn'))[0])
+Out[72]: 3265
+
+In [73]: len(np.where((t[1].data['z_peak_phot'] >= 0.6) & (t[1].data['z_peak_phot'] < 0.8) & (t[1].data['field'] == 'goodss'))[0])
+Out[73]: 3997
+
+In [74]: len(np.where((t[1].data['z_spec'] >= 0.6) & (t[1].data['z_spec'] < 0.8) & (t[1].data['field'] == 'goodsn'))[0])
+Out[74]: 252
+
+In [75]: len(np.where((t[1].data['z_spec'] >= 0.6) & (t[1].data['z_spec'] < 0.8) & (t[1].data['field'] == 'goodss'))[0])
+Out[75]: 346
+
+In [77]: len(np.where((t[1].data['z_spec'] >= 0.8) & (t[1].data['z_spec'] < 1.0) & (t[1].data['field'] == 'goodss'))[0])
+Out[77]: 149
+
+In [78]: len(np.where((t[1].data['z_spec'] >= 0.8) & (t[1].data['z_spec'] < 1.0) & (t[1].data['field'] == 'goodsn'))[0])
+Out[78]: 388
+
+In [79]: len(np.where((t[1].data['z_peak_phot'] >= 0.8) & (t[1].data['z_peak_phot'] < 1.0) & (t[1].data['field'] == 'goodsn'))[0])
+Out[79]: 4686
+
+In [80]: len(np.where((t[1].data['z_peak_phot'] >= 0.8) & (t[1].data['z_peak_phot'] < 1.0) & (t[1].data['field'] == 'goodss'))[0])
+Out[80]: 4357
+
+In [81]: len(np.where((t[1].data['z_peak_phot'] >= 1.0) & (t[1].data['z_peak_phot'] < 1.2) & (t[1].data['field'] == 'goodsn'))[0])
+Out[81]: 3144
+
+In [82]: len(np.where((t[1].data['z_peak_phot'] >= 1.0) & (t[1].data['z_peak_phot'] < 1.2) & (t[1].data['field'] == 'goodss'))[0])
+Out[82]: 5537
+
+In [83]: len(np.where((t[1].data['z_spec'] >= 1.0) & (t[1].data['z_spec'] < 1.2) & (t[1].data['field'] == 'goodsn'))[0])
+Out[83]: 200
+
+In [84]: len(np.where((t[1].data['z_spec'] >= 1.0) & (t[1].data['z_spec'] < 1.2) & (t[1].data['field'] == 'goodss'))[0])
+Out[84]: 183
