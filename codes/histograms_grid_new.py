@@ -177,12 +177,12 @@ if __name__ == '__main__':
         if (row == 1) and (column == 4):
             ax_gs_ages.get_xaxis().set_ticklabels(['8', '8.5', '9.0', '9.5', '10'], fontsize=10, rotation=45)
 
-        fig_ages.savefig(figdir + 'agedist_jackknife_hist_grid_new' + '_run2.png', dpi=300)
+        fig_ages.savefig(figdir + 'agedist_jackknife_hist_grid_new' + '_run2.eps', dpi=300)
         """
 
         #### Mass weighted age grid plots ####
         ax_gs_mass_wht_ages = fig_mass_wht_ages.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
-        N, bins, patches = ax_gs_mass_wht_ages.hist(mass_wht_ages[count], 10, histtype='bar', align='mid', alpha=0.5, linewidth=0.3)
+        N, bins, patches = ax_gs_mass_wht_ages.hist(mass_wht_ages[count], 10, histtype='bar', align='mid', alpha=0.5, linewidth=0)
 
         # this part of the code i.e. to color the histogram based on the x value came from a stackoverflow answer.
         # I modified it for my code.
@@ -190,7 +190,7 @@ if __name__ == '__main__':
         bin_centers = 0.5 * (bins[:-1] + bins[1:])
         
         # scale values to interval [0,1]
-        low_lim = 8.4
+        low_lim = 8.7
         up_lim = 9.9
         col = (bin_centers - low_lim)/(up_lim - low_lim)
 
@@ -199,6 +199,7 @@ if __name__ == '__main__':
 
         ax_gs_mass_wht_ages.set_yscale('log')
         ax_gs_mass_wht_ages.set_xlim(7.5, 10)
+        ax_gs_mass_wht_ages.set_ylim(1, 1e4)
         ax_gs_mass_wht_ages.get_xaxis().set_ticklabels([])
         ax_gs_mass_wht_ages.get_yaxis().set_ticklabels([])
         if (row == 3) and (column == 0):
@@ -210,7 +211,7 @@ if __name__ == '__main__':
         if (row == 2) and (column == 1):
             ax_gs_mass_wht_ages.get_yaxis().set_ticklabels(['', '$10^0$', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
         if (row == 0) and (column == 3):
-            ax_gs_mass_wht_ages.get_yaxis().set_ticklabels(['$10^0$', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
+            ax_gs_mass_wht_ages.get_yaxis().set_ticklabels(['', '$10^0$', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
 
         if (row == 4) and (column == 2):
             ax_gs_mass_wht_ages.set_xlabel(r'$\mathrm{log(Mass-weighted\ Age\ [yr])}$', fontsize=13)
@@ -232,15 +233,28 @@ if __name__ == '__main__':
         if (row == 1) and (column == 4):
             ax_gs_mass_wht_ages.get_xaxis().set_ticklabels(['7.5', '8', '8.5', '9.0', '9.5', '10'], fontsize=8, rotation=45)
 
-        fig_mass_wht_ages.savefig(figdir + 'mass_wht_agedist_jackknife_hist_grid_new' + '_run2_8p4.png', dpi=300)
+        fig_mass_wht_ages.savefig(figdir + 'mass_wht_agedist_jackknife_hist_grid.eps', dpi=300)
 
         #### Quenching timescale grid plots ####
         ax_quench = fig_quench.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
-        ax_quench.hist(quenching_times[count], 15, histtype='bar', align='mid', alpha=0.5, linewidth=0.3)
+        N, bins, patches = ax_quench.hist(quenching_times[count], 15, histtype='bar', align='mid', alpha=0.5, linewidth=0)
+
+        # this part of the code i.e. to color the histogram based on the x value came from a stackoverflow answer.
+        # I modified it for my code.
+        cm = plt.cm.get_cmap('bwr_r')
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        
+        # scale values to interval [0,1]
+        low_lim = 7.0
+        up_lim = 9.9
+        col = (bin_centers - low_lim)/(up_lim - low_lim)
+
+        for c, p in zip(col, patches):
+            plt.setp(p, 'facecolor', cm(c))
 
         ax_quench.set_yscale('log')
         ax_quench.set_xlim(7, 10)
-
+        ax_quench.set_ylim(1, 1e4)
         ax_quench.get_xaxis().set_ticklabels([])
         ax_quench.get_yaxis().set_ticklabels([])
         if (row == 3) and (column == 0):
@@ -248,11 +262,11 @@ if __name__ == '__main__':
         if (row == 4) and (column == 0):
             ax_quench.get_yaxis().set_ticklabels(['', '$10^0$', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
         if (row == 1) and (column == 1):
-            ax_quench.get_yaxis().set_ticklabels(['', '', '', '$10^4$'], fontsize=10)
+            ax_quench.get_yaxis().set_ticklabels(['', '', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
         if (row == 2) and (column == 1):
             ax_quench.get_yaxis().set_ticklabels(['', '$10^0$', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
         if (row == 0) and (column == 3):
-            ax_quench.get_yaxis().set_ticklabels(['', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
+            ax_quench.get_yaxis().set_ticklabels(['', '$10^0$', '$10^1$', '$10^2$', '$10^3$', '$10^4$'], fontsize=10)
 
         if (row == 4) and (column == 2):
             ax_quench.set_xlabel(r'$\mathrm{log(Quenching\ Time\ [yr])}$', fontsize=13)
@@ -274,7 +288,7 @@ if __name__ == '__main__':
         if (row == 1) and (column == 4):
             ax_quench.get_xaxis().set_ticklabels(['7.0', '7.5', '8', '8.5', '9.0', '9.5', '10'], fontsize=8, rotation=45)
 
-        fig_quench.savefig(figdir + 'quenchdist_jackknife_hist_grid_new' + '_run2.png', dpi=300)
+        fig_quench.savefig(figdir + 'quenchdist_jackknife_hist_grid_colormap_reverse.eps', dpi=300)
 
         """
         #### Metallicity grid plots ####
@@ -330,7 +344,7 @@ if __name__ == '__main__':
         if (row == 1) and (column == 4):
             ax_gs_metals.get_xaxis().set_ticklabels(['0', '0.01', '0.02', '0.03', '0.04', '0.05'], fontsize=10, rotation=45)
 
-        fig_metals.savefig(figdir + 'metalsdist_jackknife_hist_grid_new' + '_run2.png', dpi=300)
+        fig_metals.savefig(figdir + 'metalsdist_jackknife_hist_grid_new' + '_run2.eps', dpi=300)
 
         #### Tau grid plots ####
         ax_gs_tau = fig_tau.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
@@ -384,7 +398,7 @@ if __name__ == '__main__':
         if (row == 1) and (column == 4):
             ax_gs_tau.get_xaxis().set_ticklabels(['-2', '-1.5', '-1.0', '-0.5', '0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
 
-        fig_tau.savefig(figdir + 'logtaudist_jackknife_hist_grid_new' + '_run2.png', dpi=300)
+        fig_tau.savefig(figdir + 'logtaudist_jackknife_hist_grid_new' + '_run2.eps', dpi=300)
 
         #### AV grid plots ####
         ax_gs_av = fig_av.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
@@ -439,7 +453,7 @@ if __name__ == '__main__':
         if (row == 1) and (column == 4):
             ax_gs_av.get_xaxis().set_ticklabels(['0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
 
-        fig_av.savefig(figdir + 'avdist_jackknife_hist_grid_new' + '_run2.png', dpi=300)
+        fig_av.savefig(figdir + 'avdist_jackknife_hist_grid_new' + '_run2.eps', dpi=300)
         """
 
         count += 1
