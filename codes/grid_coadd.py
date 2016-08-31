@@ -185,10 +185,12 @@ def fileprep(pears_index, redshift):
 if __name__ == '__main__':    
     # Start time
     start = time.time()
+
+    home = os.getenv('HOME')
     
-    data_path = "/Users/baj/Documents/PEARS/data_spectra_only/"
-    threedphot = "/Users/baj/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
-    threed = fits.open('/Users/baj/Documents/3D-HST/3dhst.v4.1.5.master.fits')
+    data_path = home + "/Documents/PEARS/data_spectra_only/"
+    threedphot = home + "/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
+    threed = fits.open(home + '/Documents/3D-HST/3dhst.v4.1.5.master.fits')
 
     """
     # This block sets up the division by the sensitivity curve
@@ -211,7 +213,7 @@ if __name__ == '__main__':
     logging.info("Coaddition started at --")
     logging.info(dt.now())
     
-    cat = np.genfromtxt('/Users/baj/Desktop/FIGS/new_codes/color_stellarmass.txt',
+    cat = np.genfromtxt(home + 'Desktop/FIGS/new_codes/color_stellarmass.txt',
                        dtype=None, names=True, skip_header=2)
     
     pears_id = cat['pearsid']
@@ -243,57 +245,13 @@ if __name__ == '__main__':
     hdulist = fits.HDUList(hdu)
     hdulist.append(fits.ImageHDU(lam_grid, header=hdr))
     
-    skipspec = ['h_pears_n_id78220.fits',\
-                'h_pears_n_id47644.fits', 'h_pears_s_id74234.fits', 'h_pears_s_id124266.fits',\
-                'h_pears_n_id111054.fits',\
-                'h_pears_s_id106446.fits',\
-                'h_pears_n_id120710.fits',\
-                'h_pears_s_id78417.fits',\
-                'h_pears_s_id59792.fits','h_pears_s_id93218.fits','h_pears_n_id104213.fits','h_pears_s_id115422.fits','h_pears_s_id72113.fits','h_pears_s_id107858.fits','h_pears_s_id45223.fits','h_pears_s_id23920.fits',\
-                'h_pears_s_id64963.fits','h_pears_s_id128268.fits',\
-                'h_pears_s_id110795.fits','h_pears_s_id108561.fits','h_pears_n_id123162.fits',\
-                'h_pears_s_id79154.fits','h_pears_s_id114978.fits',\
-                'h_pears_s_id115024.fits','h_pears_n_id67343.fits',\
-                'h_pears_s_id113895.fits',\
-                'h_pears_n_id79581.fits',\
-                'h_pears_s_id120441.fits','h_pears_n_id77819.fits',\
-                'h_pears_s_id48182.fits',\
-                'h_pears_n_id103918.fits',\
-                'h_pears_s_id70340.fits','h_pears_n_id110223.fits','h_pears_n_id59873.fits',\
-                'h_pears_s_id56575.fits']
+    skipspec = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/specskip.txt', dtype=np.str, delimiter=',')
+    em_lines = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/em_lines_readin.txt', dtype=np.str, delimiter=',')
+    # This little for loop is to fix formatting issues with the skipspec and em_lines arrays that are read in with loadtxt.
+    for i in range(len(skipspec)):
+        skipspec[i] = skipspec[i].replace('\'', '')
+        em_lines[i] = em_lines[i].replace('\'', '')
 
-    em_lines = ['h_pears_n_id90194.fits', 'h_pears_s_id17321.fits', 'h_pears_s_id106641.fits', 'h_pears_s_id106993.fits',\
-    'h_pears_s_id110400.fits', 'h_pears_s_id21196.fits', 'h_pears_s_id94632.fits', 'h_pears_n_id42058.fits', 'h_pears_n_id105902.fits',\
-    'h_pears_n_id118534.fits', 'h_pears_s_id26909.fits', 'h_pears_n_id113595.fits', 'h_pears_s_id16788.fits', 'h_pears_s_id64769.fits',\
-    'h_pears_s_id121506.fits', 'h_pears_s_id122913.fits', 'h_pears_n_id44207.fits', 'h_pears_n_id50210.fits', 'h_pears_n_id63410.fits',\
-    'h_pears_n_id72081.fits', 'h_pears_n_id84467.fits', 'h_pears_n_id85556.fits', 'h_pears_n_id108010.fits', 'h_pears_n_id107999.fits',\
-    'h_pears_n_id108239.fits', 'h_pears_s_id17587.fits', 'h_pears_s_id22486.fits', 'h_pears_s_id40117.fits', 'h_pears_s_id59595.fits',\
-    'h_pears_s_id63612.fits', 'h_pears_s_id64393.fits', 'h_pears_s_id65179.fits', 'h_pears_s_id68852.fits', 'h_pears_s_id94873.fits',\
-    'h_pears_s_id98046.fits', 'h_pears_s_id98242.fits', 'h_pears_s_id107055.fits', 'h_pears_s_id109596.fits', 'h_pears_s_id121911.fits',\
-    'h_pears_s_id109435.fits', 'h_pears_s_id119341.fits', 'h_pears_s_id122735.fits', 'h_pears_s_id129968.fits', 'h_pears_s_id17587.fits',\
-    'h_pears_s_id22486.fits', 'h_pears_s_id68852.fits', 'h_pears_s_id82307.fits', 'h_pears_n_id82356.fits', 'h_pears_s_id90246.fits',\
-    'h_pears_s_id94873.fits', 'h_pears_n_id35090.fits', 'h_pears_n_id42526.fits', 'h_pears_n_id66045.fits', 'h_pears_n_id82693.fits',\
-    'h_pears_n_id93025.fits', 'h_pears_s_id18882.fits', 'h_pears_s_id21363.fits', 'h_pears_s_id25474.fits', 'h_pears_s_id27652.fits',\
-    'h_pears_s_id40163.fits', 'h_pears_s_id41078.fits', 'h_pears_s_id43170.fits', 'h_pears_s_id46284.fits', 'h_pears_s_id50298.fits',\
-    'h_pears_s_id51976.fits', 'h_pears_s_id65708.fits', 'h_pears_s_id69168.fits', 'h_pears_s_id69234.fits', 'h_pears_s_id104478.fits',\
-    'h_pears_s_id104514.fits', 'h_pears_s_id105015.fits', 'h_pears_s_id107052.fits', 'h_pears_s_id113279.fits', 'h_pears_s_id117686.fits',\
-    'h_pears_s_id121974.fits', 'h_pears_s_id21614.fits', 'h_pears_s_id79520.fits', 'h_pears_s_id81609.fits', 'h_pears_s_id83804.fits',\
-    'h_pears_s_id90198.fits', 'h_pears_s_id91382.fits', 'h_pears_n_id39842.fits', 'h_pears_n_id47252.fits', 'h_pears_n_id61065.fits',\
-    'h_pears_n_id90145.fits', 'h_pears_n_id84077.fits', 'h_pears_n_id112486.fits', 'h_pears_n_id110727.fits', 'h_pears_n_id121428.fits',\
-    'h_pears_s_id31086.fits', 'h_pears_s_id32905.fits', 'h_pears_s_id118526.fits', 'h_pears_n_id75917.fits', 'h_pears_n_id54384.fits',\
-    'h_pears_n_id109561.fits', 'h_pears_n_id124893.fits', 'h_pears_s_id51293.fits', 'h_pears_s_id98951.fits', 'h_pears_s_id100652.fits',\
-    'h_pears_s_id124410.fits', 'h_pears_s_id125699.fits', 'h_pears_s_id133306.fits', 'h_pears_s_id78045.fits', 'h_pears_s_id87735.fits',\
-    'h_pears_n_id33944.fits', 'h_pears_n_id41064.fits', 'h_pears_n_id77596.fits', 'h_pears_n_id81988.fits', 'h_pears_n_id81946.fits',\
-    'h_pears_n_id84715.fits', 'h_pears_s_id52445.fits', 'h_pears_s_id104446.fits', 'h_pears_s_id107036.fits', 'h_pears_s_id118673.fits',\
-    'h_pears_s_id71864.fits', 'h_pears_s_id73385.fits', 'h_pears_s_id76154.fits', 'h_pears_s_id92860.fits', 'h_pears_n_id91947.fits',\
-    'h_pears_n_id101185.fits', 'h_pears_n_id119723.fits', 'h_pears_n_id125948.fits', 'h_pears_s_id35878.fits', 'h_pears_s_id38417.fits',\
-    'h_pears_s_id103422.fits', 'h_pears_s_id115331.fits', 'h_pears_s_id120803.fits', 'h_pears_s_id121733.fits', 'h_pears_s_id126769.fits',\
-    'h_pears_s_id21647.fits', 'h_pears_s_id80500.fits', 'h_pears_s_id83686.fits', 'h_pears_n_id42014.fits', 'h_pears_s_id109992.fits',\
-    'h_pears_s_id124964.fits', 'h_pears_s_id78077.fits', 'h_pears_s_id69713.fits', 'h_pears_s_id87679.fits', 'h_pears_n_id38344.fits',\
-    'h_pears_s_id71524.fits', 'h_pears_n_id123476.fits', 'h_pears_s_id119489.fits', 'h_pears_s_id109167.fits', 'h_pears_s_id110397.fits',\
-    'h_pears_s_id14215.fits', 'h_pears_s_id117429.fits', 'h_pears_n_id53563.fits', 'h_pears_s_id62528.fits', 'h_pears_n_id114628.fits',\
-    'h_pears_s_id114108.fits', 'h_pears_s_id124313.fits', 'h_pears_s_id119193.fits']
-                
     added_gal = 0
     skipped_gal = 0
     gal_per_bin = np.zeros((len(np.arange(col_low, col_high, col_step)), len(np.arange(mstar_low, mstar_high, mstar_step))))
@@ -393,7 +351,8 @@ if __name__ == '__main__':
                     # add the spectrum
                     added_gal += 1
                     gal_current_bin += 1
-                    old_flam, old_flamerr, num_points, num_galaxies = add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points, num_galaxies, lam_grid, lam_step)
+                    old_flam, old_flamerr, num_points, num_galaxies = \
+                    add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points, num_galaxies, lam_grid, lam_step)
             
                 # Now intepolate the spectrum on to the lambda grid
                 #interp_spec, interp_spec_err = get_interp_spec(lam_em, flam_em, ferr)
