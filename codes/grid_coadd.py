@@ -1,15 +1,15 @@
 from __future__ import division
-import os, sys, time, datetime
+import os
+import sys
+import time
+import datetime
 import logging
 
 import numpy as np
 from astropy.io import fits
 from scipy.stats import gaussian_kde
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-pgf_preamble = {"pgf.texsystem": "pdflatex"}
-mpl.rcParams.update(pgf_preamble)
 
 home = os.getenv('HOME')
 
