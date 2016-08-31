@@ -1,121 +1,21 @@
 from __future__ import division
 import numpy as np
-import pyfits as pf
+from astropy.io import fits
 
-import datetime, sys, os
+import datetime
+import sys
+import os
 import logging
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.offsetbox import AnchoredOffsetbox, TextArea
-
 import matplotlib.gridspec as gridspec
 
-#from grid_coadd import fileprep, rescale, get_net_sig
+import grid_coadd as gd
 
-def get_net_sig(fitsdata, filename):
-
-    try:
-        signal_sum = 0
-        noise_sum = 0
-        totalsum = 0
-        cumsum = []
- 
-        if np.count_nonzero(fitsdata['ERROR']) != len(fitsdata['ERROR']):
-	        raise ZeroDivisionError
-
-        sn = fitsdata['COUNT']/fitsdata['ERROR']
-        sn_sorted = np.sort(sn)
-        sn_sorted_reversed = sn_sorted[::-1]
-
-        for _count_ in range(len(fitsdata)):
-            idx = np.where(sn==sn_sorted_reversed[_count_])
-            signal_sum += fitsdata['COUNT'][idx]
-            noise_sum += fitsdata['ERROR'][idx]**2
-            totalsum = signal_sum/np.sqrt(noise_sum)
-            cumsum.append(totalsum)
-
-	    netsig = np.amax(cumsum)
-
-        return netsig
-
-    except ValueError as detail:
-        logging.warning(filename)
-        #logging.warning(detail.value)
-        logging.warning("The above spectrum will be given net sig of -99. Not sure of this error yet.")
-    except ZeroDivisionError:
-        logging.warning(filename)
-        logging.warning("Division by zero! The net sig here cannot be trusted. Setting Net Sig to -99.")
-        return -99.0
-
-def fileprep(pears_index, redshift):
-    
-    # Get the correct filename and the number of extensions
-    filename = data_path + 'h_pears_n_id' + str(pears_index) + '.fits'
-    if not os.path.isfile(filename):
-        filename = data_path + 'h_pears_s_id' + str(pears_index) + '.fits'
-
-    fitsfile = pf.open(filename)
-    n_ext = fitsfile[0].header['NEXTEND']
-
-    specname = os.path.basename(filename)
-    #specname = specname.split('.')[0].split('_')[2:]
-
-    # Get highest netsig to find the spectrum to be added
-    if n_ext > 1:
-        netsiglist = []
-        for count in range(n_ext):
-	    fitsdata = fitsfile[count+1].data
-            netsig = get_net_sig(fitsdata, filename)
-	    netsiglist.append(netsig)
-	netsiglist = np.array(netsiglist)
-	maxnetsigarg = np.argmax(netsiglist)
-	spec_toadd = fitsfile[maxnetsigarg+1].data
-    elif n_ext == 1:
-        spec_toadd = fitsfile[1].data
-
-    # Now get the spectrum to be added
-    lam_obs = spec_toadd['LAMBDA']
-    flam_obs = spec_toadd['FLUX']
-    ferr = spec_toadd['FERROR']
-    contam = spec_toadd['CONTAM']
-
-    flam_obs = flam_obs - contam
-            
-    # First chop off the ends and only look at the observed spectrum from 6000A to 9500A
-    arg6000 = np.argmin(abs(lam_obs - 6000))
-    arg9500 = np.argmin(abs(lam_obs - 9500))
-			        
-    lam_obs = lam_obs[arg6000:arg9500]
-    flam_obs = flam_obs[arg6000:arg9500]
-    ferr = ferr[arg6000:arg9500]
-					            
-    flam_obs[flam_obs < 0] = 0
-							        
-    # Now unredshift the spectrum
-    lam_em = lam_obs / (1 + redshift)
-    flam_em = flam_obs * (1 + redshift)
-    # check the relations for unredshifting
-
-    return lam_em, flam_em, ferr, specname
-
-def rescale(indices):
-    medarr = np.zeros(len(pears_id[indices]))
-        
-    for k in range(len(pears_id[indices])):
-	            
-        redshift = photz[indices][k]
-        lam_em, flam_em, ferr, specname = fileprep(pears_id[indices][k], redshift)
-        
-        # Store median of values from 4400A-4600A for each spectrum
-        arg4400 = np.argmin(abs(lam_em - 4400))
-        arg4600 = np.argmin(abs(lam_em - 4600))
-        medarr[k] = np.median(flam_em[arg4400:arg4600+1])
-    
-    medval = np.median(medarr)
-		
-    # Return the maximum in array of median values
-    return medarr, medval, np.std(medarr)
+home = os.getenv('HOME')
+stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 
 def plot_spectrum_indiv(flam_em, ferr, lam_em, specname):
 
@@ -165,19 +65,18 @@ if __name__ == '__main__':
     logging.info(dt.now())
     
     # Prep for normalizing and plotting
-    coadd_dir = '/Users/baj/Desktop/FIGS/new_codes/'
-    h = pf.open('/Users/baj/Desktop/FIGS/new_codes/coadded_PEARSgrismspectra_coarsegrid.fits')
+    h = fits.open(stacking_analysis_dir + 'coadded_PEARSgrismspectra_coarsegrid.fits')
     
     lam = h[1].data
     #n_ext = h[0].header['NUMEXT'] # you will have to edit the header and put this keyword in by hand
     #num_spectra = n_ext - 2
     
-    savename = 'coadded_spectra_coarsegrid.png'
+    savename = 'coadded_spectra_coarsegrid.eps'
 
-    data_path = "/Users/baj/Documents/PEARS/data_spectra_only/"
-    threedphot = "/Users/baj/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
-    threed = pf.open('/Users/baj/Documents/3D-HST/3dhst.v4.1.5.master.fits')
-    cat = np.genfromtxt('/Users/baj/Desktop/FIGS/new_codes/color_stellarmass.txt',\
+    data_path = home + "/Documents/PEARS/data_spectra_only/"
+    threedphot = home + "/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
+    threed = fits.open(home + '/Documents/3D-HST/3dhst.v4.1.5.master.fits')
+    cat = np.genfromtxt(home + '/Desktop/FIGS/new_codes/color_stellarmass.txt',\
                         dtype=None, names=True, skip_header=2)
     
     pears_id = cat['pearsid']
@@ -188,28 +87,15 @@ if __name__ == '__main__':
     color_step = 0.6
     mstar_step = 1.0
     
-    skipspec = ['h_pears_n_id78220.fits',\
-                'h_pears_n_id47644.fits', 'h_pears_s_id74234.fits', 'h_pears_s_id124266.fits',\
-                'h_pears_n_id111054.fits',\
-                'h_pears_s_id106446.fits',\
-                'h_pears_n_id120710.fits',\
-                'h_pears_s_id78417.fits',\
-                'h_pears_s_id59792.fits','h_pears_s_id93218.fits','h_pears_n_id104213.fits','h_pears_s_id115422.fits','h_pears_s_id72113.fits','h_pears_s_id107858.fits','h_pears_s_id45223.fits','h_pears_s_id23920.fits',\
-                'h_pears_s_id64963.fits','h_pears_s_id128268.fits',\
-                'h_pears_s_id110795.fits','h_pears_s_id108561.fits','h_pears_n_id123162.fits',\
-                'h_pears_s_id79154.fits','h_pears_s_id114978.fits',\
-                'h_pears_s_id115024.fits','h_pears_n_id67343.fits',\
-                'h_pears_s_id113895.fits',\
-                'h_pears_n_id79581.fits',\
-                'h_pears_s_id120441.fits','h_pears_n_id77819.fits',\
-                'h_pears_s_id48182.fits',\
-                'h_pears_n_id103918.fits',\
-                'h_pears_s_id70340.fits','h_pears_n_id110223.fits','h_pears_n_id59873.fits',\
-                'h_pears_s_id56575.fits']
+    skipspec = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/specskip.txt', dtype=np.str, delimiter=',')
+    em_lines = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/em_lines_readin.txt', dtype=np.str, delimiter=',')
+    # This little for loop is to fix formatting issues with the skipspec and em_lines arrays that are read in with loadtxt.
+    for i in range(len(skipspec)):
+        skipspec[i] = skipspec[i].replace('\'', '')
+        em_lines[i] = em_lines[i].replace('\'', '')
                 
     gs = gridspec.GridSpec(15,15)
     gs.update(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.00, hspace=0.00)
-    
     
     # Find the averages of all grid cells in a particular row/column
     # While these are useful numbers to have, they are currently only used in the plotting routine.
@@ -224,7 +110,7 @@ if __name__ == '__main__':
 
     for i in np.arange(0.0, 3.0, color_step):
         colcount = 0
-        for j in np.arange(7.0, 11.5, mstar_step):
+        for j in np.arange(7.0, 12.0, mstar_step):
             
             indices = np.where((ur_color >= i) & (ur_color < i + color_step) &\
 	                   (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
@@ -251,15 +137,18 @@ if __name__ == '__main__':
     # Begin looping through cells to plot
     cellcount = 0
     for i in np.arange(0.0, 3.0, color_step):
-        for j in np.arange(7.0, 11.5, mstar_step):
+        for j in np.arange(7.0, 12.0, mstar_step):
             
             indices = np.where((ur_color >= i) & (ur_color < i + color_step) &\
                             (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
                             
             print "ONGRID", i, j
             
+            curr_pearsids = pears_id[indices]
+            curr_zs = photz[indices]
+
             if indices.size:
-                medarr, medval, stdval = rescale(indices)
+                medarr, medval, stdval = gd.rescale(curr_pearsids, curr_zs)
             else:
                 continue
             
@@ -270,7 +159,7 @@ if __name__ == '__main__':
                 redshift = photz[indices][x]
                 
                 # Get rest frame values for all quantities
-                lam_em, flam_em, ferr, specname = fileprep(pears_id[indices][x], redshift)
+                lam_em, flam_em, ferr, specname = gd.fileprep(pears_id[indices][x], redshift)
                
                 # Divide by max value to rescale
                 flam_em /= maxval
@@ -332,7 +221,7 @@ if __name__ == '__main__':
                 redshift = photz[indices][u]
                 
                 # Get rest frame values for all quantities
-                lam_em, flam_em, ferr, specname = fileprep(pears_id[indices][u], redshift)
+                lam_em, flam_em, ferr, specname = gd.fileprep(pears_id[indices][u], redshift)
                     
                 # Divide by max value to rescale
                 flam_em = (flam_em / medarr[u])
@@ -372,7 +261,12 @@ if __name__ == '__main__':
                 ax.add_artist(anchored_fluxbox)
                 
                 # Box in fig for rescaling flux value
-                numbox = TextArea("{:d}".format(int(numspec)), textprops=dict(color='darkgreen'))
+                numbox = TextArea("{:d}".format(int(float(numspec))), textprops=dict(color='darkgreen'))
+                # The reason for using int(float(num)) is that you cannot use int directly on an 
+                # float stored as a string.
+                # Obviously in the above line num is a float stored as a string.
+                # Doing int(num) will throw a ValueError. For example, if num = '20.0'
+                # ValueError: invalid literal for int() with base 10: '20.0' 
                 
                 anchored_numbox = AnchoredOffsetbox(loc=4, child=numbox, pad=0.0, frameon=False,\
                                                     bbox_to_anchor=(0.9, 0.07),\
@@ -464,7 +358,7 @@ if __name__ == '__main__':
                 cellcount += 1
                 continue
 
-    plt.savefig(savename, dpi=300)
+    plt.savefig(stacking_analysis_dir + savename, dpi=300)
     print "Reached end of file. Exiting."
     
     """
