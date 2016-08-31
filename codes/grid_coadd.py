@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 pgf_preamble = {"pgf.texsystem": "pdflatex"}
 mpl.rcParams.update(pgf_preamble)
 
+home = os.getenv('HOME')
+
 def get_net_sig(fitsdata, filename):
 
     try:
@@ -134,7 +136,7 @@ def rescale(ids, zs):
 
 def fileprep(pears_index, redshift):
 
-    data_path = "/Users/baj/Documents/PEARS/data_spectra_only/"
+    data_path = home + "/Documents/PEARS/data_spectra_only/"
     # Get the correct filename and the number of extensions
     filename = data_path + 'h_pears_n_id' + str(pears_index) + '.fits'
     if not os.path.isfile(filename):
@@ -185,8 +187,6 @@ def fileprep(pears_index, redshift):
 if __name__ == '__main__':    
     # Start time
     start = time.time()
-
-    home = os.getenv('HOME')
     
     data_path = home + "/Documents/PEARS/data_spectra_only/"
     threedphot = home + "/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
@@ -213,7 +213,7 @@ if __name__ == '__main__':
     logging.info("Coaddition started at --")
     logging.info(dt.now())
     
-    cat = np.genfromtxt(home + 'Desktop/FIGS/new_codes/color_stellarmass.txt',
+    cat = np.genfromtxt(home + '/Desktop/FIGS/new_codes/color_stellarmass.txt',
                        dtype=None, names=True, skip_header=2)
     
     pears_id = cat['pearsid']
