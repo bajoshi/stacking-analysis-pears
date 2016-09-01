@@ -1,0 +1,18 @@
+#### Issues ####
+1. convolution with galaxy profile?
+2. inclusion of dust in models?
+
+#### Comments/Solutions ####
+1. you might only need to convolve with the galaxy profile only for the largest i.e. most massive galaxies. For a first step just try to include the redshift errors and only then include the PEARS LSFs (ask Sangeeta for the PEARS LSFs). 
+
+Actually try looking at the sizes of galaxies that are not massive and see how much smaller they are than say red sequence galaxies.
+Ex: Say a red-sequence galaxy has a size of 10 pixels. The PEARS data which is from the ACS grism has a dispersion of 40A/pix that means that a feature like the 4000A break can be shifted by 40A/pix x 10pix = 400A which is significant.
+Also realize that a redshift error of 5% can cause a shift of 0.05 x 4000A = 200A for the 4000A break. So in this case both the effects are significant.
+
+So, look at the sizes (get a mean/median) and see if the effect of morphological broadening is significant compared to the effect of redshift uncertainties.
+
+The reason why the 3D-HST grism stacking papers needed to convolve the models with the galaxy profile is -- they divide by the continuum i.e. they were just trying to fit the minute absorption features like Ca and Mg absorption. Because these features are spread over a narrow wavelength they are affected significantly by the galaxy morphology along the dispersion direction.
+
+2. you probably do need to include dust because you are taking the continuum and its slope into account.
+
+The reason why the 3D-HST grism stacking papers did not include dust in their models is -- they divide by the continuum i.e. they were just trying to fit the minute absorption features like Ca and Mg absorption. Because these features are spread over a narrow wavelength they will not be affected very much by dust.
