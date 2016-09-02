@@ -223,15 +223,14 @@ if __name__ == '__main__':
 
     #print len(pears_id) # 2032
     #print len(np.unique(pears_id)) # 1783
-    
+
+    # Change only the parameters here to change how the code runs
+    # Ideally you shouldn't have to change anything else.
     lam_step = 100
     lam_grid = np.arange(2700, 6000, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range
-    
-    # Change only the parameters here to change how the code runs
-    # Ideally you shouldn't have to change anything else.
     col_step = 0.3
     mstar_step = 0.5
     final_fits_filename = 'coadded_PEARSgrismspectra.fits'
@@ -250,6 +249,7 @@ if __name__ == '__main__':
     # This little for loop is to fix formatting issues with the skipspec and em_lines arrays that are read in with loadtxt.
     for i in range(len(skipspec)):
         skipspec[i] = skipspec[i].replace('\'', '')
+    for i in range(len(em_lines)):
         em_lines[i] = em_lines[i].replace('\'', '')
 
     added_gal = 0
@@ -383,8 +383,8 @@ if __name__ == '__main__':
             hdr["NUMSPEC"] = str(int(gal_current_bin))
             hdr["NORMVAL"] = str(medval)
                    
-            dat = np.array((old_flam, old_flamerr)).reshape(2,len(lam_grid))
-            hdulist.append(fits.ImageHDU(data = dat, header=hdr))
+            dat = np.array((old_flam, old_flamerr)).reshape(2, len(lam_grid))
+            hdulist.append(fits.ImageHDU(data = dat, header = hdr))
 
             row = int(i/col_step)
             column = int((j - mstar_low)/mstar_step)

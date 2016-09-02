@@ -37,25 +37,25 @@ if __name__ == '__main__':
     stellarmass = cat['mstar']
     photz = cat['threedzphot']
     
-    lam_step = 50
+    lam_step = 100
     lam_grid = np.arange(2700, 6000, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range
-    
-    color_step = 0.6
+
+    # Change only the parameters here to change how the code runs
+    # Ideally you shouldn't have to change anything else.
+    col_step = 0.6
     mstar_step = 1.0
-    
+    final_fits_filename = 'coadded_PEARSgrismspectra_coarsegrid.fits'
+    col_low = 0.0
+    col_high = 3.0
+    mstar_low = 7.0
+    mstar_high = 12.0
+
     hdu = fits.PrimaryHDU()
-    
     hdr = fits.Header()
-    nextend = len(np.arange(0.0,3.0, color_step)) * len(np.arange(7.0, 11.5, mstar_step))
-    hdr["NEXTEND"] = str(nextend)
-    # This isn't correct. This will give the number of grid cells but
-    # not all grid cells will have results that go into the fits file.
-    
     hdulist = fits.HDUList(hdu)
-    
     hdulist.append(fits.ImageHDU(lam_grid, header=hdr))
     
     skipspec = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/specskip.txt', dtype=np.str, delimiter=',')
@@ -63,22 +63,22 @@ if __name__ == '__main__':
     # This little for loop is to fix formatting issues with the skipspec and em_lines arrays that are read in with loadtxt.
     for i in range(len(skipspec)):
         skipspec[i] = skipspec[i].replace('\'', '')
+    for i in range(len(em_lines)):
         em_lines[i] = em_lines[i].replace('\'', '')
         
     added_gal = 0
     skipped_gal = 0
-    gal_per_bin = np.zeros((len(np.arange(0.0,3.0, color_step)), len(np.arange(7.0, 11.5, mstar_step))))
+    gal_per_bin = np.zeros((len(np.arange(col_low, col_high, col_step)), len(np.arange(mstar_low, mstar_high, mstar_step))))
 
-    for i in np.arange(0.0, 3.0, color_step):
-        for j in np.arange(7.0, 11.5, mstar_step):
+    for i in np.arange(col_low, col_high, col_step):
+        for j in np.arange(mstar_low, mstar_high, mstar_step):
             
             gal_current_bin = 0
             print "ONGRID", i, j
             logging.info("\n ONGRID %.1f %.1f", i, j)
             
-            indices = np.where((ur_color >= i) & (ur_color < i + color_step) &\
+            indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
                                (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
-                
 
             old_flam = np.zeros(len(lam_grid))
             old_flamerr = np.zeros(len(lam_grid))
@@ -98,9 +98,9 @@ if __name__ == '__main__':
             # All spectra to be coadded in a given grid cell need to be divided by this value
             if indices.size:
                 medarr, medval, stdval = gd.rescale(curr_pearsids, curr_zs)
-                #print "ONGRID", i, j, "with", maxval, "as the normalization value and", len(pears_id[indices]), "spectra."
+                print "ONGRID", i, j, "with", medval, "as the normalization value and a maximum possible spectra of", len(pears_id[indices]), "spectra."
             else:
-                #print "ONGRID", i, j, "has no spectra to coadd. Moving to next grid cell."
+                print "ONGRID", i, j, "has no spectra to coadd. Moving to next grid cell."
                 continue
             
             # Loop over all spectra in a grid cell and coadd them
@@ -124,10 +124,11 @@ if __name__ == '__main__':
                 flam_em = (flam_em / medarr[u])
                 ferr = (ferr / medarr[u])
         
-                if specname in skipspec:
+                if (specname in skipspec) or (specname in em_lines):
                     print "Skipped", specname
                     skipped_gal += 1
                     continue
+
                 # Reject spectrum if overall contamination too high
                 if np.sum(abs(ferr)) > 0.3 * np.sum(abs(flam_em)):
                     print "Skipped", specname
@@ -140,9 +141,15 @@ if __name__ == '__main__':
                     old_flam, old_flamerr, num_points, num_galaxies =\
                         gd.add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points, num_galaxies, lam_grid, lam_step)
 
+            # taking median
+            # maybe I should also try doing a mean after 3sigma clipping and compare
             for y in range(len(lam_grid)):
-                old_flam[y] = np.median(old_flam[y])
-                old_flamerr[y] = np.median(old_flamerr[y])
+                if old_flam[y]:
+                    old_flamerr[y] = 1.253 * np.std(old_flam[y]) / np.sqrt(len(old_flam[y]))
+                    old_flam[y] = np.median(old_flam[y])
+                else:
+                    old_flam[y] = 0.0
+                    old_flamerr[y] = 0.0
 
             avgcol = np.mean(ur_color[indices])
             avgmass = np.mean(stellarmass[indices])
@@ -157,21 +164,22 @@ if __name__ == '__main__':
             #hdr["PCOUNT"]  = "                   0 / number of parameters"
             #hdr["GCOUNT "] = "                   1 / number of groups"
             hdr["ONGRID"]  = str(i) + "," + str(j)
-            hdr["NUMSPEC"] = str(np.max(num_galaxies))
+            hdr["NUMSPEC"] = str(int(gal_current_bin))
             hdr["NORMVAL"] = str(medval)
             hdr["AVGCOL"] = str(avgcol)
             hdr["AVGMASS"] = str(avgmass)
             
-            dat = np.array((old_flam, old_flamerr)).reshape(2,len(lam_grid))
-            hdulist.append(fits.ImageHDU(data = dat, header=hdr))
+            dat = np.array((old_flam, old_flamerr)).reshape(2, len(lam_grid))
+            hdulist.append(fits.ImageHDU(data = dat, header = hdr))
             
-            row = int(i/color_step)
-            column = int((j - 7.0)/mstar_step)
+            row = int(i/col_step)
+            column = int((j - mstar_low)/mstar_step)
             gal_per_bin[row,column] = gal_current_bin
     
     print added_gal, skipped_gal
     print gal_per_bin
-    hdulist.writeto(stacking_analysis_dir + 'coadded_PEARSgrismspectra_coarsegrid.fits', clobber=True)
+    print np.sum(gal_per_bin, axis=None)
+    hdulist.writeto(stacking_analysis_dir + final_fits_filename, clobber=True)
     
     # Total time taken
     logging.info("Time taken for coaddition -- %.2f seconds", time.time() - start)
