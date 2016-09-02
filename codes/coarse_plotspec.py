@@ -16,26 +16,17 @@ import grid_coadd as gd
 
 home = os.getenv('HOME')
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+figures_dir = stacking_analysis_dir + "figures/"
 
-def plot_spectrum_indiv(flam_em, ferr, lam_em, specname):
+def plot_spectrum_indiv(flam_em_indiv, ferr_indiv, lam_em, specname):
+
+    # matplotlib will not plot nan values so I'm setting 0's to nan's here.
+    # This is only to make the plot look better.
+    flam_em_indiv[flam_em_indiv == 0.0] = np.nan
+    ferr_indiv[ferr == 0.0] = np.nan
 
     # without label
-    ax.plot(lam_em, flam_em, ls='-', color='gray')
-    
-    """
-    # with label
-    ax.plot(lam_em, flam_em, ls='-')
-    max_flam_arg = np.argmax(flam_em)
-    max_flam = flam_em[max_flam_arg]
-    max_flam_lam = lam_em[max_flam_arg]
-    
-    print max_flam, max_flam_lam
-    
-    ax.annotate(specname, xy=(max_flam_lam,max_flam), xytext=(max_flam_lam,max_flam),\
-                arrowprops=dict(arrowstyle="->"))
-    
-    #ax.legend(loc=0, prop={'size':2}, ncol=3)
-    """
+    ax.plot(lam_em, flam_em_indiv, ls='-', color='gray')
     
     ax.minorticks_on()
     ax.tick_params('both', width=1, length=3, which='minor')
@@ -92,6 +83,7 @@ if __name__ == '__main__':
     # This little for loop is to fix formatting issues with the skipspec and em_lines arrays that are read in with loadtxt.
     for i in range(len(skipspec)):
         skipspec[i] = skipspec[i].replace('\'', '')
+    for i in range(len(em_lines)):
         em_lines[i] = em_lines[i].replace('\'', '')
                 
     gs = gridspec.GridSpec(15,15)
@@ -144,6 +136,14 @@ if __name__ == '__main__':
                             
             print "ONGRID", i, j
             
+            if (len(indices) < 5) and (len(indices) > 1):
+                print "Too few spectra in stack. Continuing to the next grid cell..."
+                cellcount += 1
+                print "Skipping ONGRID", i, j
+                continue
+            elif len(indices) == 0:
+                continue
+
             curr_pearsids = pears_id[indices]
             curr_zs = photz[indices]
 
@@ -178,8 +178,8 @@ if __name__ == '__main__':
             
             if (row == 4) and (column == 2):
                 ax.set_xlabel('$\lambda\ [\mu m]$', fontsize=13)
-            if (row == 2) and (column == 0):
-                ax.set_ylabel('$F_{\lambda}\ [\mathrm{arbitrary\ units}]$', fontsize=13)
+            if (row == 2) and (column == 1):
+                ax.set_ylabel('$F_{\lambda}\ [\mathrm{arbitrary\ units}]$', fontsize=13, labelpad=100)
             
             # If you want the twin axis labels above and to the right
             # then run the following block
@@ -198,7 +198,7 @@ if __name__ == '__main__':
             
             # This block is also to get the twin axis labels
             # They will be placed below and to the left of the numbers now
-            if (row == 2) and (column == 0):
+            if (row == 2) and (column == 1):
                 masslabelbox = TextArea("{:s}".format(r'$\left<\mathrm{log}\left(\frac{M_*}{M_\odot}\right)\right>$'),\
                                         textprops=dict(color='k', size=13))
                 anchored_masslabelbox = AnchoredOffsetbox(loc=3, child=masslabelbox, pad=0.0, frameon=False,\
@@ -230,10 +230,10 @@ if __name__ == '__main__':
                 # Plotting
                 # Reject spectrum if overall contamination too high
                 if np.sum(abs(ferr)) > 0.3 * np.sum(abs(flam_em)):
-                    print "Skipped", specname
+                    #print "Skipped", specname
                     continue
-                if specname in skipspec:
-                    print "Skipped", specname
+                if (specname in skipspec) or (specname in em_lines):
+                    #print "Skipped", specname
                     continue
                 else:
                     ax.plot(lam_em, flam_em, ls='-', color='lightgray')
@@ -317,10 +317,17 @@ if __name__ == '__main__':
                                               bbox_transform=ax.transAxes, borderpad=0.0)
                     ax.add_artist(anchored_massbox)
 
-                if (row == 2) and (column == 0):
+                if (row == 1) and (column == 2):
                     massbox = TextArea("{:.2f}".format(float(avgmassarr[column])), textprops=dict(color='k', size=12))
                     anchored_massbox = AnchoredOffsetbox(loc=3, child=massbox, pad=0.0, frameon=False,\
-                                                    bbox_to_anchor=(0.3, 3.03),\
+                                              bbox_to_anchor=(0.3, 2.03),\
+                                              bbox_transform=ax.transAxes, borderpad=0.0)
+                    ax.add_artist(anchored_massbox)
+
+                if (row == 3) and (column == 0):
+                    massbox = TextArea("{:.2f}".format(float(avgmassarr[column])), textprops=dict(color='k', size=12))
+                    anchored_massbox = AnchoredOffsetbox(loc=3, child=massbox, pad=0.0, frameon=False,\
+                                                    bbox_to_anchor=(0.3, 4.03),\
                                                     bbox_transform=ax.transAxes, borderpad=0.0)
                     ax.add_artist(anchored_massbox)
 
@@ -358,7 +365,8 @@ if __name__ == '__main__':
                 cellcount += 1
                 continue
 
-    plt.savefig(stacking_analysis_dir + savename, dpi=300)
+    plt.savefig(figures_dir + savename, dpi=300)
+    plt.savefig(figures_dir + savename.replace('.eps', '.png'), dpi=300)  # also saving a png because eps files take too long to load when I just need a quick look
     print "Reached end of file. Exiting."
     
     """
