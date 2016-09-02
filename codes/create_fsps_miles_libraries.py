@@ -1,10 +1,15 @@
 from astropy.io import fits
 
+import numpy as np
 import fsps
 
 import sys
 import glob
 import os
+
+home = os.getenv('HOME')
+stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+figures_dir = stacking_analysis_dir + "figures/"
 
 def resample(lam, spec, lam_grid_tofit, lam_step, total_ages):
     
@@ -58,11 +63,11 @@ def create_miles_lib_main():
         hdr['alp2Fe'] = h[0].header['COMMENT'][42].split(':')[-1].split('\'')[0].lstrip(' ')
         hdr['Isochron'] = h[0].header['COMMENT'][43].split(':')[-1].split('\'')[0].lstrip(' ')
 
-        hdulist.append(fits.ImageHDU(data = h[0].data, header = hdr))
+        hdulist.append(fits.ImageHDU(data=h[0].data, header=hdr))
 
-    hdulist.writeto(stacking_maindir + 'all_comp_spectra_miles.fits', clobber = True)
+    hdulist.writeto(stacking_analysis_dir + 'all_comp_spectra_miles.fits', clobber=True)
 
-    return
+    return None
 
 def create_fsps_lib_main():
     """
@@ -91,23 +96,33 @@ def create_fsps_lib_main():
     # tburst -- the age of the universe when SF starts; default 11 Gyr
     # I think the fifth parameter is that the SF will produce a total of 1 solar mass over the total SFH.
 
+    # Create fits file for saving all consolidated spectra
+    hdu = fits.PrimaryHDU()
+    hdulist = fits.HDUList(hdu)    
+
     # Loop over parameter space and generate model spectra 
     count = 0
     for metals in metallicities:
         for logtau in logtauarr:
             tau = 10**(logtau)
-            sps.params['tau'] = tau
-            sps.params['logzsol'] = metals
+            sps.params['tau'] = tau  # it wants this in Gyr
+            sps.params['logzsol'] = np.log10(metals / 0.02)  # it wants this in log(Z/Z_sol)
             lam, spec = sps.get_spectrum(peraa=True)
-            print lam, spec
-            count += 1
-            if count == 4: break
+            log_ages = sps.log_age
+            
+            for j in range(len(spec)):
+                hdr = fits.Header()
+                hdr['LOG_AGE'] = str(log_ages[j])
+                hdr['METAL'] = str(metals)
+                hdr['TAU_GYR'] = str(tau)
 
-    return
+                hdulist.append(fits.ImageHDU(data=spec[j], header=hdr))
+
+    hdulist.writeto(stacking_analysis_dir + 'all_comp_spectra_fsps.fits', clobber=True)
+
+    return None
 
 if __name__ == "__main__":
-
-    stacking_maindir = '/Users/baj/Desktop/FIGS/stacking-analysis-pears/'
 
     #create_miles_lib_main()
     create_fsps_lib_main()
