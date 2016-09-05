@@ -10,6 +10,7 @@ import os
 home = os.getenv('HOME')
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 figures_dir = stacking_analysis_dir + "figures/"
+savefits_dir = home + "/Desktop/FIGS/new_codes/"
 
 def resample(lam, spec, lam_grid_tofit, lam_step, total_ages):
     
@@ -65,7 +66,7 @@ def create_miles_lib_main():
 
         hdulist.append(fits.ImageHDU(data=h[0].data, header=hdr))
 
-    hdulist.writeto(stacking_analysis_dir + 'all_comp_spectra_miles.fits', clobber=True)
+    hdulist.writeto(savefits_dir + 'all_comp_spectra_miles.fits', clobber=True)
 
     return None
 
@@ -118,21 +119,15 @@ def create_fsps_lib_main():
 
                 hdulist.append(fits.ImageHDU(data=spec[j], header=hdr))
 
-    hdulist.writeto(stacking_analysis_dir + 'all_comp_spectra_fsps.fits', clobber=True)
+    hdulist.writeto(savefits_dir + 'all_comp_spectra_fsps.fits', clobber=True)
 
     return None
 
 if __name__ == "__main__":
 
-    #create_miles_lib_main()
+    create_miles_lib_main()
     create_fsps_lib_main()
+
     sys.exit(0)
-
-
-
-
-
-
-
 
 
