@@ -1,10 +1,18 @@
 from __future__ import division
+
 import numpy as np
 from astropy.io import fits
 
 import matplotlib.pyplot as plt
 
-import sys, glob, os
+import sys
+import glob
+import os
+
+home = os.getenv('HOME')  # Does not have a trailing slash at the end
+stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+figures_dir = stacking_analysis_dir + "figures/"
+savefits_dir = home + "/Desktop/FIGS/new_codes/"
 
 def resample(lam, spec, lam_grid_tofit, lam_step, total_ages):
     
@@ -80,7 +88,7 @@ if __name__ == '__main__':
     #metals = ['m72']
 
     lam_step = 100
-    lam_lowfit = 2500
+    lam_lowfit = 3600
     lam_highfit = 6500
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
 
@@ -115,18 +123,18 @@ if __name__ == '__main__':
                 for i in range(total_ages):
                     currentspec[i] = h[age_ind[i]+3].data
 
-                # Only consider the part of BC03 spectrum between 2500 to 6500
-                arg2500 = np.argmin(abs(currentlam - 2500))
-                arg6500 = np.argmin(abs(currentlam - 6500))
-    
-                currentlam = currentlam[arg2500:arg6500+1] # chopping off unrequired lambda
-                currentspec = currentspec[:,arg2500:arg6500+1] # chopping off unrequired spectrum
+                # Only consider the part of the model spectrum between low and high lambda limits defined above
+                #arg_lowfit = np.argmin(abs(currentlam - lam_lowfit))
+                #arg_highfit = np.argmin(abs(currentlam - lam_highfit))
+                #currentlam = currentlam[arg_lowfit:arg_highfit+1]  # chopping off unrequired lambda
+                #currentspec = currentspec[:,arg_lowfit:arg_highfit+1]  # chopping off unrequired spectrum
+
                 currentspec = resample(currentlam, currentspec, lam_grid_tofit, lam_step, total_ages)
                 currentlam = lam_grid_tofit
 
-                meanvals = normalize(currentspec)
-                meanvals = meanvals.reshape(total_ages,1)
-                currentspec = np.divide(currentspec, meanvals)
+                #meanvals = normalize(currentspec)
+                #meanvals = meanvals.reshape(total_ages,1)
+                #currentspec = np.divide(currentspec, meanvals)
 
                 """
                 fig, ax = makefig()
@@ -171,25 +179,5 @@ if __name__ == '__main__':
                     hdr['TAUV'] = str(float(tauVarrval)/10)
                     hdulist.append(fits.ImageHDU(data = currentspec[i], header=hdr))
 
-    hdulist.writeto('all_comp_spectra.fits', clobber=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    hdulist.writeto(savefits_dir + 'all_comp_spectra_bc03.fits', clobber=True)
 

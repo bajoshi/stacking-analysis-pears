@@ -12,8 +12,10 @@ import matplotlib.pyplot as plt
 
 import grid_coadd as gd
 
-home = os.getenv('HOME')
+home = os.getenv('HOME')  # Does not have a trailing slash at the end
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+figures_dir = stacking_analysis_dir + "figures/"
+savefits_dir = home + "/Desktop/FIGS/new_codes/"
 
 if __name__ == '__main__':
     # Start time
@@ -179,7 +181,7 @@ if __name__ == '__main__':
     print added_gal, skipped_gal
     print gal_per_bin
     print np.sum(gal_per_bin, axis=None)
-    hdulist.writeto(stacking_analysis_dir + final_fits_filename, clobber=True)
+    hdulist.writeto(savefits_dir + final_fits_filename, clobber=True)
     
     # Total time taken
     logging.info("Time taken for coaddition -- %.2f seconds", time.time() - start)

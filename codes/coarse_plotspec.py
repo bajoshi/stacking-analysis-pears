@@ -33,6 +33,8 @@ def plot_spectrum_indiv(flam_em_indiv, ferr_indiv, lam_em, specname):
     ax.tick_params('both', width=1, length=4.7, which='major')
     ax.set_xlim(3000, 5500)
 
+    return None
+
 def plot_spectrum_median(flux, flux_err, lam, ongrid, numspec):
     
     ax.errorbar(lam, flux, yerr=flux_err, fmt='o-', color='k', linewidth=2, label=ongrid+','+numspec,\
@@ -46,6 +48,8 @@ def plot_spectrum_median(flux, flux_err, lam, ongrid, numspec):
     ax.axvline(x=5200, color='maroon')
     #ax.set_yscale('log')
     ax.legend(loc=0)
+
+    return None
 
 if __name__ == '__main__':
     

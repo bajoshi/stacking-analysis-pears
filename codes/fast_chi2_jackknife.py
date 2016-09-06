@@ -1,9 +1,14 @@
 from __future__ import division
+
 import numpy as np
 import numpy.ma as ma
 from astropy.io import fits
 
-import sys, os, time, glob, datetime
+import sys
+import os
+import time
+import glob
+import datetime
 import logging
 import collections
 
@@ -11,7 +16,13 @@ import matplotlib.pyplot as plt
 from matplotlib import cm 
 import matplotlib.gridspec as gridspec
 
+home = os.getenv('HOME')  # Does not have a trailing slash at the end
+stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+figures_dir = stacking_analysis_dir + "figures/"
+savefits_dir = home + "/Desktop/FIGS/new_codes/"
+
 def makefig_hist(qty):
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.set_xlabel(qty)
@@ -20,6 +31,7 @@ def makefig_hist(qty):
     return fig, ax
 
 def makefig(xlab, ylab):
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.set_xlabel(xlab)
@@ -35,9 +47,10 @@ def plot_spectrum_data(lam, flux, flux_err):
     ax.tick_params('both', width=1, length=3, which='minor')
     ax.tick_params('both', width=1, length=4.7, which='major')
     ax.set_xlim(2500, 6000)
-    #ax.set_ylim(0,2)
 
-def plot_spectrum_bc03(lam, flux):
+    return None
+
+def plot_spectrum_model(lam, flux):
     
     ax.plot(lam, flux, 'o-', color='r', linewidth=3)
     
@@ -46,6 +59,140 @@ def plot_spectrum_bc03(lam, flux):
     ax.tick_params('both', width=1, length=4.7, which='major')
     ax.set_xlim(2500, 6000)
 
+    return None
+
+def get_total_extensions(fitsfile):
+    """
+    This function will return the number of extensions in a fits file.
+    It does not count the 0th extension.
+
+    It takes the opened fits header data unit as its only argument.
+    """
+
+    nexten = 0 # this is the total number of extensions
+    while 1:
+        try:
+            if fitsfile[nexten+1]:
+                nexten += 1
+        except IndexError:
+            break
+
+    return nexten
+
+def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, library):
+    """
+    This is the function that does the actual chi2 fitting.
+    """
+
+    # Actual chi2 fitting
+    ages = []
+    tau = []
+    tauv = []
+    metals = []
+    #totalchi2 = []    
+    #estchi2index = []
+    #bestalpha = []
+    for i in range(int(num_samp_to_draw)): # loop over jackknife runs
+        #if i%1000 == 0: print i
+        flam = resampled_spec[i]
+
+        currentspec = comp_spec
+    
+        chi2 = np.zeros(nexten, dtype=np.float64)
+        alpha = np.sum(flam * currentspec / (ferr**2), axis=1) / np.sum(currentspec**2 / ferr**2, axis=1)
+        chi2 = np.sum(((flam - (alpha * currentspec.T).T) / ferr)**2, axis=1)
+    
+        if library == 'bc03':
+            # This is to get only physical ages
+            sortargs = np.argsort(chi2)
+            for k in range(len(chi2)):
+                best_age = float(bc03_spec[sortargs[k] + 1].header['LOG_AGE'])
+                if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
+                    tau.append(bc03_spec[sortargs[k] + 1].header['TAU_GYR'])
+                    tauv.append(bc03_spec[sortargs[k] + 1].header['TAUV'])
+                    ages.append(best_age)
+                    #totalchi2.append(chi2[sortargs[k]])
+                    #bestchi2index.append(sortargs[k])
+                    #bestalpha.append(alpha[sortargs[k]])
+                    metals.append(bc03_spec[sortargs[k] + 1].header['METAL'])
+                    break
+
+        if library == 'miles':
+            # This is to get only physical ages
+            sortargs = np.argsort(chi2)
+            for k in range(len(chi2)):
+                best_age = float(miles_spec[sortargs[k] + 1].header['LOG_AGE'])
+                if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
+                    ages.append(best_age)
+                    metals.append(miles_spec[sortargs[k] + 1].header['METAL'])
+                    break
+
+        if library == 'fsps':
+            # This is to get only physical ages
+            sortargs = np.argsort(chi2)
+            for k in range(len(chi2)):
+                best_age = float(fsps_spec[sortargs[k] + 1].header['LOG_AGE'])
+                if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
+                    tau.append(fsps_spec[sortargs[k] + 1].header['TAU_GYR'])
+                    ages.append(best_age)
+                    metals.append(fsps_spec[sortargs[k] + 1].header['METAL'])
+                    break
+
+    # total computational time
+    print "\n"
+    print "--------- {0} ---------".format(library)
+    print "Total computational time taken to get chi2 values --", time.time() - chi2start, "seconds."
+
+    if library == 'bc03':
+        ages = np.asarray(ages, dtype=np.float64)
+        metals = np.asarray(metals, dtype=np.float64)
+        tau = np.asarray(tau, dtype=np.float64)
+        logtau = np.log10(tau)
+        tauv = np.asarray(tauv, dtype=np.float64)
+        
+        print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
+        print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
+        print "Tau: Median +- std dev = ", np.median(tau), "+-", np.std(tau)
+        print "Tau_v: Median +- std dev = ", np.median(tauv), "+-", np.std(tauv)
+    
+        print "Unique elements in jackknifed runs for BC03 --"
+        print "Ages - ", len(np.unique(ages))
+        print "Metals - ", len(np.unique(metals))
+        print "Tau - ", len(np.unique(tau))
+        print "Tau_v - ", len(np.unique(tauv))
+
+        return ages, metals, tau, tauv
+
+    elif library == 'miles':
+        ages = np.asarray(ages, dtype=np.float64)
+        metals = np.asarray(metals, dtype=np.float64)
+        
+        print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
+        print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
+    
+        print "Unique elements in jackknifed runs for MILES --"
+        print "Ages - ", len(np.unique(ages))
+        print "Metals - ", len(np.unique(metals))
+
+        return ages, metals
+
+    elif library == 'fsps':
+        ages = np.asarray(ages, dtype=np.float64)
+        metals = np.asarray(metals, dtype=np.float64)
+        tau = np.asarray(tau, dtype=np.float64)
+        logtau = np.log10(tau)
+        
+        print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
+        print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
+        print "Tau: Median +- std dev = ", np.median(tau), "+-", np.std(tau)
+    
+        print "Unique elements in jackknifed runs for FSPS --"
+        print "Ages - ", len(np.unique(ages))
+        print "Metals - ", len(np.unique(metals))
+        print "Tau - ", len(np.unique(tau))
+
+        return ages, metals, tau
+
 if __name__ == '__main__':
 
     # start time
@@ -53,43 +200,58 @@ if __name__ == '__main__':
     dt = datetime.datetime
     print "Starting at --", dt.now()
 
-    # File to save distribution of best params in
-    f_ages = open('jackknife_ages.txt', 'wa')
-    f_metals = open('jackknife_metals.txt', 'wa')
-    f_logtau = open('jackknife_logtau.txt', 'wa')
-    f_tauv = open('jackknife_tauv.txt', 'wa')    
+    # Files to save distribution of best params in
+    f_ages_bc03 = open(stacking_analysis_dir + 'jackknife_ages_bc03.txt', 'wa')
+    f_metals_bc03 = open(stacking_analysis_dir + 'jackknife_metals_bc03.txt', 'wa')
+    f_logtau_bc03 = open(stacking_analysis_dir + 'jackknife_logtau_bc03.txt', 'wa')
+    f_tauv_bc03 = open(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', 'wa')      
 
-    # Get comparison spectra
-    #h = fits.open('all_spectra_dist.fits', memmap=False)   
-    #nexten = 0 # this is the total number of distinguishable spectra
-    #while 1:
-    #    try:
-    #        if h[nexten+1]:
-    #            nexten += 1
-    #    except IndexError:
-    #        break
+    f_ages_miles = open(stacking_analysis_dir + 'jackknife_ages_miles.txt', 'wa')
+    f_metals_miles = open(stacking_analysis_dir + 'jackknife_metals_miles.txt', 'wa')
 
-    h = fits.open('/Users/baj/Desktop/FIGS/new_codes/all_comp_spectra.fits', memmap=False)
-    nexten = 136800 # this is the total number of spectra
+    f_ages_fsps = open(stacking_analysis_dir + 'jackknife_ages_fsps.txt', 'wa')
+    f_metals_fsps = open(stacking_analysis_dir + 'jackknife_metals_fsps.txt', 'wa')
+    f_logtau_fsps = open(stacking_analysis_dir + 'jackknife_logtau_fsps.txt', 'wa')
 
+    # Open fits files with comparison spectra
+    bc03_spec = fits.open(home + '/Desktop/FIGS/new_codes/all_comp_spectra_bc03.fits', memmap=False)
+    miles_spec = fits.open(home + '/Desktop/FIGS/new_codes/all_comp_spectra_miles.fits', memmap=False)
+    fsps_spec = fits.open(home + '/Desktop/FIGS/new_codes/all_comp_spectra_fsps.fits', memmap=False)
+
+    # Find number of extensions in each
+    bc03_extens = get_total_extensions(bc03_spec)
+    miles_extens = get_total_extensions(miles_spec)
+    fsps_extens = get_total_extensions(fsps_spec)
+
+    # set up lambda grid
     lam_step = 100
-    lam_lowfit = 2500
+    lam_lowfit = 3600
     lam_highfit = 6500
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
-    arg_lamlow = np.argmin(abs(lam_grid_tofit - 3000))
+    arg_lamlow = np.argmin(abs(lam_grid_tofit - 3600))
     arg_lamhigh = np.argmin(abs(lam_grid_tofit - 6000))
 
-    comp_spec = np.zeros([nexten, len(lam_grid_tofit)], dtype=np.float64)
-    for i in range(nexten):
-        comp_spec[i] = h[i+1].data
+    # set up comparison spectra arrays for faster array computations
+    comp_spec_bc03 = np.zeros([bc03_extens, len(lam_grid_tofit)], dtype=np.float64)
+    for i in range(bc03_extens):
+        comp_spec_bc03[i] = bc03_spec[i+1].data
+    comp_spec_bc03 = comp_spec_bc03[:,arg_lamlow:arg_lamhigh]
 
-    comp_spec = comp_spec[:,arg_lamlow:arg_lamhigh]
+    comp_spec_miles = np.zeros([miles_extens, len(lam_grid_tofit)], dtype=np.float64)
+    for i in range(miles_extens):
+        comp_spec_miles[i] = miles_spec[i+1].data
+    comp_spec_miles = comp_spec_miles[:,arg_lamlow:arg_lamhigh]
+
+    comp_spec_fsps = np.zeros([fsps_extens, len(lam_grid_tofit)], dtype=np.float64)
+    for i in range(fsps_extens):
+        comp_spec_fsps[i] = fsps_spec[i+1].data
+    comp_spec_fsps = comp_spec_fsps[:,arg_lamlow:arg_lamhigh]
 
     # Read stacks
-    stacks = fits.open('/Users/baj/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
-    fig_savedir = '/Users/baj/Desktop/FIGS/new_codes/jackknife_figs/coarse/'
-    #stacks = fits.open('/Users/baj/Desktop/FIGS/new_codes/coadded_PEARSgrismspectra.fits')
-    #fig_savedir = '/Users/baj/Desktop/FIGS/new_codes/jackknife_figs/'
+    stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
+    fig_savedir = home + '/Desktop/FIGS/new_codes/jackknife_figs/coarse/'
+
+    totalstacks = get_total_extensions(stacks)
 
     # Create grid for making grid plots
     gs = gridspec.GridSpec(15,15)
@@ -102,34 +264,28 @@ if __name__ == '__main__':
     color_step = 0.6
     mstar_step = 1.0
 
-    # find number of extensions
-    totalstacks = 0
-    while 1:
-        try:
-            if stacks[totalstacks+2]:
-                totalstacks += 1
-        except IndexError:
-            break
-
     # Loop over all stacks
     num_samp_to_draw = 1e4
     print "Running over", int(num_samp_to_draw), "random jackknifed samples."
-    for stackcount in range(0,totalstacks,1):
+    for stackcount in range(0, totalstacks-1, 1): # it is totalstacks-1 because the first extension is the lambda array
         # start time for each stack
         chi2start = time.time()
         
-        flam = stacks[stackcount+2].data[0]
-        ferr = stacks[stackcount+2].data[1]
+        flam = stacks[stackcount + 2].data[0]
+        ferr = stacks[stackcount + 2].data[1]
         ferr = ferr + 0.05 * flam # putting in a 5% additional error bar
-        ongrid = stacks[stackcount+2].header["ONGRID"]
-        numspec = int(stacks[stackcount+2].header["NUMSPEC"])
+        ongrid = stacks[stackcount + 2].header["ONGRID"]
+        numspec = int(stacks[stackcount + 2].header["NUMSPEC"])
+        print "\n"
+        print "-------------------------------------------------------------------------------------------------------------"
         print "ONGRID", ongrid
 
         if numspec < 5:
             print "Too few spectra in stack. Continuing to the next grid cell..."
             continue
 
-        # All the masks in this block only generate the mask which is applied during the loop that loops over jackknife runs.
+        ### All the masks in this block only generate the mask which is applied during the loop that loops over jackknife runs. ###
+
         # mask the array where the flam value has been set to 0 by the stacking code
         if np.any(flam == 0.0):
             indices_to_be_masked = np.where(flam == 0.0)[0]
@@ -159,8 +315,6 @@ if __name__ == '__main__':
         stmass = float(ongrid.split(',')[1])
         if urcol <= 1.2:
             arg4800 = np.argmin(abs(lam_grid_tofit - 4800))
-            arg4900 = np.argmin(abs(lam_grid_tofit - 4900))
-            arg5000 = np.argmin(abs(lam_grid_tofit - 5000))
             arg5100 = np.argmin(abs(lam_grid_tofit - 5100)) 
             lam_mask = np.zeros(len(flam))
             lam_mask[arg4800:arg5100 + 1] = 1
@@ -170,15 +324,16 @@ if __name__ == '__main__':
             lam_mask = np.zeros(len(flam))
 
         # Chop off the ends of the stacked spectrum
-        orig_lam_grid = np.arange(2700, 6000, lam_step)
+        orig_lam_grid = np.arange(2700, 6000, lam_step)  
+        # this is the lam grid used for the stacks. it has to be defined again because it (and therefore its indices) are different from the lam grid used to resample the models.
         # redefine lam_lowfit and lam_highfit
-        lam_lowfit = 3000
+        lam_lowfit = 3600
         lam_highfit = 6000
         lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
         arg_lamlow = np.argmin(abs(orig_lam_grid - lam_lowfit))
-        arg_lamhigh = np.argmin(abs(orig_lam_grid - lam_highfit+100))
-        flam = flam[arg_lamlow:arg_lamhigh+1]
-        ferr = ferr[arg_lamlow:arg_lamhigh+1]
+        arg_lamhigh = np.argmin(abs(orig_lam_grid - lam_highfit + 100))
+        flam = flam[arg_lamlow:arg_lamhigh + 1]
+        ferr = ferr[arg_lamlow:arg_lamhigh + 1]
 
         # Get random samples by jackknifing
         resampled_spec = ma.empty((len(flam), num_samp_to_draw))
@@ -189,299 +344,64 @@ if __name__ == '__main__':
                 resampled_spec[i] = ma.masked
         resampled_spec = resampled_spec.T
 
-        # Actual chi2 fitting
-        ages = []
-        tau = []
-        tauv = []
-        metals = []
-        totalchi2 = []    
-        bestchi2index = []
-        bestalpha = []
-        for i in range(int(num_samp_to_draw)): # loop over jackknife runs
-            #if i%1000 == 0: print i
-            flam = resampled_spec[i]
-            #ferr = stack_ferr
-    
-            """
-            # Chop off the ends of the stacked spectrum
-            orig_lam_grid = np.arange(2700, 6000, lam_step)
-            # redefine lam_lowfit and lam_highfit
-            lam_lowfit = 3000
-            lam_highfit = 6000
-            lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
-            arg_lamlow = np.argmin(abs(orig_lam_grid - lam_lowfit))
-            arg_lamhigh = np.argmin(abs(orig_lam_grid - lam_highfit+100))
-            flam = flam[arg_lamlow:arg_lamhigh+1]
-            ferr = ferr[arg_lamlow:arg_lamhigh+1]
-            """
+        ages_bc03, metals_bc03, tau_bc03, tauv_bc03 = fit_chi2(flam, ferr, comp_spec_bc03, bc03_extens, resampled_spec, num_samp_to_draw, 'bc03')
+        ages_miles, metals_miles = fit_chi2(flam, ferr, comp_spec_miles, miles_extens, resampled_spec, num_samp_to_draw, 'miles')
+        ages_fsps, metals_fsps, tau_fsps = fit_chi2(flam, ferr, comp_spec_fsps, fsps_extens, resampled_spec, num_samp_to_draw, 'fsps')
 
-            currentspec = comp_spec
-        
-            chi2 = np.zeros(nexten, dtype=np.float64)
-            alpha = np.sum(flam*currentspec/(ferr**2), axis=1)/np.sum(currentspec**2/ferr**2, axis=1)
-            chi2 = np.sum(((flam - (alpha * currentspec.T).T) / ferr)**2, axis=1)
-        
-            # This is to get only physical ages
-            sortargs = np.argsort(chi2)
-            for k in range(len(chi2)):
-                best_age = float(h[sortargs[k]+1].header['LOG_AGE'])
-                if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
-                    tau.append(h[sortargs[k]+1].header['TAU_GYR'])
-                    tauv.append(h[sortargs[k]+1].header['TAUV'])
-                    ages.append(best_age)
-                    totalchi2.append(chi2[sortargs[k]])
-                    bestchi2index.append(sortargs[k])
-                    bestalpha.append(alpha[sortargs[k]])
-                    metals.append(h[sortargs[k]+1].header['METAL'])
-                    #print np.min(chi2), best_metal, best_age, curr_tau, curr_tauv
-                    break
-        
-        # total computational time
-        print "Total computational time taken to get chi2 values --", time.time() - chi2start, "seconds."
-
-        #print np.min(totalchi2)
-        #print bestchi2index[np.argmin(totalchi2)]
-        #print bestalpha[np.argmin(totalchi2)]
-
-        ages = np.asarray(ages, dtype=np.float64)
-        metals = np.asarray(metals, dtype=np.float64)
-        tau = np.asarray(tau, dtype=np.float64)
-        logtau = np.log10(tau)
-        tauv = np.asarray(tauv, dtype=np.float64)
-        
-        print np.mean(ages), np.median(ages), np.std(ages)
-        print np.mean(metals), np.median(metals), np.std(metals)
-        print np.mean(tau), np.median(tau), np.std(tau)
-        print np.mean(tauv), np.median(tauv), np.std(tauv)
-
-        #print len(zip(ages, tau)), len(set(zip(ages, tau)))
-        print len(np.unique(ages)), len(np.unique(metals)), len(np.unique(tau)), len(np.unique(tauv))
+        logtau_bc03 = np.log10(tau_bc03)
+        logtau_fsps = np.log10(tau_fsps)
 
         # Save the data from the runs
-        f_ages.write(ongrid + ' ')
-        for k in range(len(ages)):
-            f_ages.write(str(ages[k]) + ' ')
-        f_ages.write('\n')
+        ### BC03 ### 
+        f_ages_bc03.write(ongrid + ' ')
+        for k in range(len(ages_bc03)):
+            f_ages_bc03.write(str(ages_bc03[k]) + ' ')
+        f_ages_bc03.write('\n')
 
-        f_metals.write(ongrid + ' ')
-        for k in range(len(metals)):
-            f_metals.write(str(metals[k]) + ' ')
-        f_metals.write('\n')
+        f_metals_bc03.write(ongrid + ' ')
+        for k in range(len(metals_bc03)):
+            f_metals_bc03.write(str(metals_bc03[k]) + ' ')
+        f_metals_bc03.write('\n')
 
-        f_logtau.write(ongrid + ' ')
-        for k in range(len(logtau)):
-            f_logtau.write(str(logtau[k]) + ' ')
-        f_logtau.write('\n')
+        f_logtau_bc03.write(ongrid + ' ')
+        for k in range(len(logtau_bc03)):
+            f_logtau_bc03.write(str(logtau_bc03[k]) + ' ')
+        f_logtau_bc03.write('\n')
 
-        f_tauv.write(ongrid + ' ')
-        for k in range(len(tauv)):
-            f_tauv.write(str(tauv[k]) + ' ')
-        f_tauv.write('\n')
+        f_tauv_bc03.write(ongrid + ' ')
+        for k in range(len(tauv_bc03)):
+            f_tauv_bc03.write(str(tauv_bc03[k]) + ' ')
+        f_tauv_bc03.write('\n')
 
-        # for the grid plots
-        row = 4 - int(float(ongrid.split(',')[0])/color_step)
-        column = int((float(ongrid.split(',')[1]) - 7.0)/mstar_step)
+        ### MILES ###
+        f_ages_miles.write(ongrid + ' ')
+        for k in range(len(ages_miles)):
+            f_ages_miles.write(str(ages_miles[k]) + ' ')
+        f_ages_miles.write('\n')
 
-        #### Age grid plots ####
-        ax_gs_ages = fig_ages.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
-        #iqr = 1.349 * np.std(np.unique(ages), dtype=np.float64)
-        #binsize = 2*iqr*np.power(len(np.unique(ages)),-1/3) # Freedman-Diaconis Rule
-        #totalbins = np.floor((max(ages) - min(ages))/binsize)
-        ax_gs_ages.hist(ages, 8, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(ages)/len(ages), facecolor='b')
-        ax_gs_ages.set_xlim(8, 10)
-        ax_gs_ages.set_ylim(0, 1)        
-        ax_gs_ages.get_xaxis().set_ticklabels([])
-        ax_gs_ages.get_yaxis().set_ticklabels([])
+        f_metals_miles.write(ongrid + ' ')
+        for k in range(len(metals_miles)):
+            f_metals_miles.write(str(metals_miles[k]) + ' ')
+        f_metals_miles.write('\n')
 
-        if (row == 3) and (column == 0):
-            ax_gs_ages.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 4) and (column == 0):
-            ax_gs_ages.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 1) and (column == 1):
-            ax_gs_ages.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 2) and (column == 1):
-            ax_gs_ages.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 0) and (column == 3):
-            ax_gs_ages.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
+        ### FSPS ###
+        f_ages_fsps.write(ongrid + ' ')
+        for k in range(len(ages_fsps)):
+            f_ages_fsps.write(str(ages_fsps[k]) + ' ')
+        f_ages_fsps.write('\n')
 
-        if (row == 4) and (column == 2):
-            ax_gs_ages.set_xlabel(r'$\mathrm{log(Age\ [yr])}$', fontsize=13)
-        if (row == 2) and (column == 1):
-            ax_gs_ages.set_ylabel('N', fontsize=13)
+        f_metals_fsps.write(ongrid + ' ')
+        for k in range(len(metals_fsps)):
+            f_metals_fsps.write(str(metals_fsps[k]) + ' ')
+        f_metals_fsps.write('\n')
 
-        if (row == 4) and (column == 0):
-            ax_gs_ages.get_xaxis().set_ticklabels(['8', '8.5', '9.0', '9.5', '10'], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 1):
-            ax_gs_ages.get_xaxis().set_ticklabels(['', '8.5', '9.0', '9.5'], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 2):
-            ax_gs_ages.get_xaxis().set_ticklabels(['8', '8.5', '9.0', '9.5', '10'], fontsize=10, rotation=45)
-        
-        if (row == 3) and (column == 3):
-            ax_gs_ages.get_xaxis().set_ticklabels(['8', '8.5', '9.0', '9.5', '10'], fontsize=10, rotation=45)
-        
-        if (row == 1) and (column == 4):
-            ax_gs_ages.get_xaxis().set_ticklabels(['8', '8.5', '9.0', '9.5', '10'], fontsize=10, rotation=45)
-
-        fig_ages.savefig('/Users/baj/Desktop/FIGS/new_codes/agedist_jackknife_grid' + '_run2.png', dpi=300)
-
-        #### Metallicity grid plots ####
-        ax_gs_metals = fig_metals.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
-        #iqr = 1.349 * np.std(np.unique(metals), dtype=np.float64)
-        #binsize = 2*iqr*np.power(len(np.unique(metals)),-1/3) # Freedman-Diaconis Rule
-        #totalbins = np.floor((max(metals) - min(metals))/binsize)
-        ax_gs_metals.hist(metals, 8, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(metals)/len(metals), facecolor='b')
-        ax_gs_metals.set_xlim(0, 0.05)
-        ax_gs_metals.set_ylim(0, 1)        
-        ax_gs_metals.get_xaxis().set_ticklabels([])
-        ax_gs_metals.get_yaxis().set_ticklabels([])
-
-        if (row == 3) and (column == 0):
-            ax_gs_metals.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 4) and (column == 0):
-            ax_gs_metals.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 1) and (column == 1):
-            ax_gs_metals.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 2) and (column == 1):
-            ax_gs_metals.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 0) and (column == 3):
-            ax_gs_metals.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-
-        if (row == 4) and (column == 2):
-            ax_gs_metals.set_xlabel('Metals [Z]', fontsize=13)
-        if (row == 2) and (column == 1):
-            ax_gs_metals.set_ylabel('N', fontsize=13)
-
-        if (row == 4) and (column == 0):
-            ax_gs_metals.get_xaxis().set_ticklabels(['0', '0.01', '0.02', '0.03', '0.04', '0.05'], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 1):
-            ax_gs_metals.get_xaxis().set_ticklabels(['', '0.01', '0.02', '0.03', '0.04', ''], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 2):
-            ax_gs_metals.get_xaxis().set_ticklabels(['0', '0.01', '0.02', '0.03', '0.04', '0.05'], fontsize=10, rotation=45)
-        
-        if (row == 3) and (column == 3):
-            ax_gs_metals.get_xaxis().set_ticklabels(['0', '0.01', '0.02', '0.03', '0.04', '0.05'], fontsize=10, rotation=45)
-        
-        if (row == 1) and (column == 4):
-            ax_gs_metals.get_xaxis().set_ticklabels(['0', '0.01', '0.02', '0.03', '0.04', '0.05'], fontsize=10, rotation=45)
-
-        fig_metals.savefig('/Users/baj/Desktop/FIGS/new_codes/metalsdist_jackknife_grid' + '_run2.png', dpi=300)
-
-        #### Tau grid plots ####
-        ax_gs_tau = fig_tau.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
-        #iqr = 1.349 * np.std(np.unique(logtau), dtype=np.float64)
-        #binsize = 2*iqr*np.power(len(np.unique(logtau)),-1/3) # Freedman-Diaconis Rule
-        #totalbins = np.floor((max(logtau) - min(logtau))/binsize)
-        ax_gs_tau.hist(logtau, 8, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(logtau)/len(logtau), facecolor='b')
-        ax_gs_tau.set_xlim(-2, 2)
-        ax_gs_tau.set_ylim(0, 1)        
-        ax_gs_tau.get_xaxis().set_ticklabels([])
-        ax_gs_tau.get_yaxis().set_ticklabels([])
-
-        if (row == 3) and (column == 0):
-            ax_gs_tau.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 4) and (column == 0):
-            ax_gs_tau.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 1) and (column == 1):
-            ax_gs_tau.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 2) and (column == 1):
-            ax_gs_tau.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 0) and (column == 3):
-            ax_gs_tau.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-
-        if (row == 4) and (column == 2):
-            ax_gs_tau.set_xlabel(r'$\mathrm{log}(\tau)$', fontsize=13)
-        if (row == 2) and (column == 1):
-            ax_gs_tau.set_ylabel('N', fontsize=13)
-
-        if (row == 4) and (column == 0):
-            ax_gs_tau.get_xaxis().set_ticklabels(['-2', '-1.5', '-1.0', '-0.5', '0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 1):
-            ax_gs_tau.get_xaxis().set_ticklabels(['', '-1.5', '-1.0', '-0.5', '0.0', '0.5', '1.0', '1.5', ''], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 2):
-            ax_gs_tau.get_xaxis().set_ticklabels(['-2', '-1.5', '-1.0', '-0.5', '0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-        
-        if (row == 3) and (column == 3):
-            ax_gs_tau.get_xaxis().set_ticklabels(['-2', '-1.5', '-1.0', '-0.5', '0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-        
-        if (row == 1) and (column == 4):
-            ax_gs_tau.get_xaxis().set_ticklabels(['-2', '-1.5', '-1.0', '-0.5', '0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-
-        fig_tau.savefig('/Users/baj/Desktop/FIGS/new_codes/logtaudist_jackknife_grid' + '_run2.png', dpi=300)
-
-        #### TauV grid plots ####
-        ax_gs_tauv = fig_tauv.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
-        ax_gs_tauv.hist(tauv, 8, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(logtau)/len(logtau), facecolor='b')
-        ax_gs_tauv.set_xlim(0, 2)
-        ax_gs_tauv.set_ylim(0, 1)        
-        ax_gs_tauv.get_xaxis().set_ticklabels([])
-        ax_gs_tauv.get_yaxis().set_ticklabels([])
-
-        if (row == 3) and (column == 0):
-            ax_gs_tauv.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 4) and (column == 0):
-            ax_gs_tauv.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 1) and (column == 1):
-            ax_gs_tauv.get_yaxis().set_ticklabels(['', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 2) and (column == 1):
-            ax_gs_tauv.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-        if (row == 0) and (column == 3):
-            ax_gs_tauv.get_yaxis().set_ticklabels(['0', '0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=10)
-
-        if (row == 4) and (column == 2):
-            ax_gs_tauv.set_xlabel(r'$\tau_V$', fontsize=13)
-        if (row == 2) and (column == 1):
-            ax_gs_tauv.set_ylabel('N', fontsize=13)
-
-        if (row == 4) and (column == 0):
-            ax_gs_tauv.get_xaxis().set_ticklabels(['0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 1):
-            ax_gs_tauv.get_xaxis().set_ticklabels(['', '0.5', '1.0', '1.5', ''], fontsize=10, rotation=45)
-        
-        if (row == 4) and (column == 2):
-            ax_gs_tauv.get_xaxis().set_ticklabels(['0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-        
-        if (row == 3) and (column == 3):
-            ax_gs_tauv.get_xaxis().set_ticklabels(['0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-        
-        if (row == 1) and (column == 4):
-            ax_gs_tauv.get_xaxis().set_ticklabels(['0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
-
-        fig_tauv.savefig('/Users/baj/Desktop/FIGS/new_codes/tauvdist_jackknife_grid' + '_run2.png', dpi=300)
-
-        # for the individual plots
-        # histograms of the best fit params
-        fig, ax = makefig_hist(r'$\mathrm{log(Age\ [yr])}$')
-        ax.hist(ages, 10, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(ages)/len(ages), facecolor='b')
-        ax.set_xlim(8, 10)
-        ax.set_ylim(0, 1)
-        fig.savefig(fig_savedir + 'agedist_jackknife_' + ongrid.replace('.','p').replace(',','_') + '_run2.png', dpi=300)
-   
-        fig, ax = makefig_hist('Metals [Z]')
-        ax.hist(metals, 10, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(metals)/len(metals), facecolor='b')
-        ax.set_xlim(0, 0.05)
-        ax.set_ylim(0, 1)
-        fig.savefig(fig_savedir + 'metaldist_jackknife_' + ongrid.replace('.','p').replace(',','_') + '_run2.png', dpi=300)
-        
-        fig, ax = makefig_hist(r'$\mathrm{log}(\tau)$')
-        ax.hist(logtau, 10, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(logtau)/len(logtau), facecolor='b')
-        ax.set_xlim(-2, 2)
-        ax.set_ylim(0, 1)
-        fig.savefig(fig_savedir + 'taudist_jackknife_' + ongrid.replace('.','p').replace(',','_') + '_run2.png', dpi=300)
-        
-        fig, ax = makefig_hist(r'$\tau_V$')
-        ax.hist(tauv, 10, histtype='bar', align='mid', alpha=0.5, weights=np.ones_like(tauv)/len(tauv), facecolor='b')
-        ax.set_xlim(0, 2)
-        ax.set_ylim(0, 1)
-        fig.savefig(fig_savedir + 'tauvdist_jackknife_' + ongrid.replace('.','p').replace(',','_') + '_run2.png', dpi=300)
+        f_logtau_fsps.write(ongrid + ' ')
+        for k in range(len(logtau_fsps)):
+            f_logtau_fsps.write(str(logtau_fsps[k]) + ' ')
+        f_logtau_fsps.write('\n')
 
         ########### Plots between parameters ##########
+        """
         fig, ax = makefig(r'$\tau_V$', r'$\mathrm{log(Age\ [yr])}$')
         ax.plot(tauv, ages, 'o', color='k', markeredgecolor='k', markersize=2)
         ax.set_xlim(0, 2)
@@ -535,14 +455,21 @@ if __name__ == '__main__':
         ax.tick_params('both', width=1, length=3, which='minor')
         ax.tick_params('both', width=1, length=4.7, which='major')
         fig.savefig(fig_savedir + 'tau_metals_jackknife_' + ongrid.replace('.','p').replace(',','_') + '_run2.png', dpi=300)
-
-    f_ages.close()
-    f_metals.close()
-    f_logtau.close()
-    f_tauv.close()
-
-    #plt.show()
+        """
          
+    # Close all files to write them -- 
+    f_ages_bc03.close()
+    f_metals_bc03.close()
+    f_logtau_bc03.close()
+    f_tauv_bc03.close()
+
+    f_ages_miles.close()
+    f_metals_miles.close()
+
+    f_ages_fsps.close()
+    f_metals_fsps.close()
+    f_logtau_fsps.close()
+
     # total run time
     print "Total time taken --", time.time() - start, "seconds."
 
