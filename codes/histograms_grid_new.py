@@ -1,12 +1,17 @@
 from __future__ import division
+
 import numpy as np
 from astropy.io import fits
-import collections, sys
+
+import collections
+import sys
 #from scipy.integrate import simps
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+
+from fast_chi2_jackknife import get_total_extensions
 
 def makefig_hist(qty):
 
@@ -20,14 +25,7 @@ def makefig_hist(qty):
 if __name__ == '__main__':
 
     stacks = fits.open('/Users/baj/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
-    # find number of extensions
-    totalstacks = 0
-    while 1:
-        try:
-            if stacks[totalstacks+2]:
-                totalstacks += 1
-        except IndexError:
-            break
+    totalstacks = get_total_extensions(stacks)
 
     # Create grid for making grid plots
     figdir = '/Users/baj/Desktop/FIGS/stacking-analysis-pears/figures/'
@@ -97,24 +95,6 @@ if __name__ == '__main__':
         row = 4 - int(float(ongrid.split(',')[0])/color_step)
         column = int((float(ongrid.split(',')[1]) - 7.0)/mstar_step)
 
-        #ctr_ages = collections.Counter()
-        #ctr_metals = collections.Counter()
-        #ctr_logtau = collections.Counter()
-        #ctr_av = collections.Counter()
-        #
-        #for i in ages[count]:
-        #    ctr_ages[i] += 1
-        #
-        #for i in metals[count]:
-        #    ctr_metals[i] += 1        
-        #
-        #for i in logtau[count]:
-        #    ctr_logtau[i] += 1
-        #
-        #for i in av[count]:
-        #    ctr_av[i] += 1
-
-        """
         #### Age grid plots ####
         ax_gs_ages = fig_ages.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
         ax_gs_ages.hist(ages[count], len(np.unique(ages[count])), histtype='bar', align='mid', alpha=0.5, linewidth=0.3)
@@ -178,7 +158,6 @@ if __name__ == '__main__':
             ax_gs_ages.get_xaxis().set_ticklabels(['8', '8.5', '9.0', '9.5', '10'], fontsize=10, rotation=45)
 
         fig_ages.savefig(figdir + 'agedist_jackknife_hist_grid_new' + '_run2.eps', dpi=300)
-        """
 
         #### Mass weighted age grid plots ####
         ax_gs_mass_wht_ages = fig_mass_wht_ages.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
@@ -290,7 +269,6 @@ if __name__ == '__main__':
 
         fig_quench.savefig(figdir + 'quenchdist_jackknife_hist_grid_colormap_reverse.eps', dpi=300)
 
-        """
         #### Metallicity grid plots ####
         ax_gs_metals = fig_metals.add_subplot(gs[row*3:row*3+3, column*3:column*3+3])
         ax_gs_metals.hist(metals[count], len(np.unique(metals[count])), histtype='bar', align='mid', alpha=0.5, linewidth=0.3)
@@ -454,7 +432,6 @@ if __name__ == '__main__':
             ax_gs_av.get_xaxis().set_ticklabels(['0.0', '0.5', '1.0', '1.5', '2.0'], fontsize=10, rotation=45)
 
         fig_av.savefig(figdir + 'avdist_jackknife_hist_grid_new' + '_run2.eps', dpi=300)
-        """
 
         count += 1
 
