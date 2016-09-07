@@ -83,6 +83,9 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
     """
     This is the function that does the actual chi2 fitting.
     """
+    
+    # start time for each stack
+    chi2start = time.time()
 
     # Actual chi2 fitting
     ages = []
@@ -195,7 +198,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
 
 if __name__ == '__main__':
 
-    # start time
+    # Start time
     start = time.time()
     dt = datetime.datetime
     print "Starting at --", dt.now()
@@ -268,8 +271,6 @@ if __name__ == '__main__':
     num_samp_to_draw = 1e4
     print "Running over", int(num_samp_to_draw), "random jackknifed samples."
     for stackcount in range(0, totalstacks-1, 1): # it is totalstacks-1 because the first extension is the lambda array
-        # start time for each stack
-        chi2start = time.time()
         
         flam = stacks[stackcount + 2].data[0]
         ferr = stacks[stackcount + 2].data[1]
