@@ -153,6 +153,7 @@ if __name__ == '__main__':
 
         ongrid = stacks[stackcount+2].header["ONGRID"]
         numspec = int(stacks[stackcount+2].header["NUMSPEC"])
+        print count, ongrid, numspec
 
         if numspec < 5:
             print ongrid, "Too few spectra in stack. Continuing to the next grid cell..."
