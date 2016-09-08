@@ -43,9 +43,9 @@ def plot_spectrum_data(lam, flux, flux_err, ax):
     ax.set_xlim(3000, 6000)
     #ax.set_ylim(0,2)
 
-def plot_spectrum_model(lam, flux, bestparams, ax):
-    
-    ax.plot(lam, flux, 'o-', color='r', linewidth=3, label=bestparams)
+def plot_spectrum_model(lam, flux, col, bestparams, ax):
+
+    ax.plot(lam, flux, 'o-', color=col, linewidth=3, label=bestparams)
     
     ax.minorticks_on()
     ax.tick_params('both', width=1, length=3, which='minor')
@@ -63,6 +63,12 @@ if __name__ == '__main__':
     # Read in stacks
     stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
     totalstacks = get_total_extensions(stacks)
+
+    # Set up lambda grid
+    lam_step = 100
+    lam_lowfit = 3600
+    lam_highfit = 6500
+    lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
 
     # Create pdf file to plot figures in
     pdfname = figures_dir + 'overplot_all_sps.pdf'
@@ -129,8 +135,12 @@ if __name__ == '__main__':
     count = 0
     for stackcount in range(0, totalstacks-1, 1):
 
-        ongrid = stacks[stackcount+2].header["ONGRID"]
-        numspec = int(stacks[stackcount+2].header["NUMSPEC"])
+        flam = stacks[stackcount + 2].data[0]
+        ferr = stacks[stackcount + 2].data[1]
+        ongrid = stacks[stackcount + 2].header["ONGRID"]
+        numspec = int(stacks[stackcount + 2].header["NUMSPEC"])
+
+        fig, ax = makefig()
 
         """
         In the comparisons below, I'm using np.allclose instead of np.setdiff1d because 
@@ -146,9 +156,9 @@ if __name__ == '__main__':
 
         for j in range(bc03_extens):
             if np.allclose(bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)):
-                print j
-                print bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)
-                print bc03_spec[j+1].header
+                currentspec = bc03_spec[j+1].data
+                alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
+                plot_spectrum_model(lam_grid_tofit, alpha*bc03_spec[j+1].data, 'r', ax)
 
         del best_age, best_metal, best_tau, best_tauv
 
@@ -158,9 +168,7 @@ if __name__ == '__main__':
 
         for j in range(miles_extens):
             if np.allclose(miles_params[j], np.array([best_age, best_metal]).reshape(2)):
-                print j
-                print miles_params[j], np.array([best_age, best_metal]).reshape(2)
-                print miles_spec[j+1].header
+                plot_spectrum_model(lam_grid_tofit, miles_spec[j+1].data, 'b', ax)
 
         del best_age, best_metal
 
@@ -171,9 +179,7 @@ if __name__ == '__main__':
 
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
-                print j
-                print fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)
-                print fsps_spec[j+1].header
+                plot_spectrum_model(lam_grid_tofit, fsps_spec[j+1].data, 'g', ax)
 
         del best_age, best_metal, best_tau
 
