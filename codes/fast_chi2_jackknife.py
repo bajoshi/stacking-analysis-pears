@@ -83,7 +83,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
     """
     This is the function that does the actual chi2 fitting.
     """
-    
+
     # start time for each stack
     chi2start = time.time()
 
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     # set up lambda grid
     lam_step = 100
     lam_lowfit = 3600
-    lam_highfit = 6500
+    lam_highfit = 6000
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
     arg_lamlow = np.argmin(abs(lam_grid_tofit - 3600))
     arg_lamhigh = np.argmin(abs(lam_grid_tofit - 6000))
@@ -238,17 +238,17 @@ if __name__ == '__main__':
     comp_spec_bc03 = np.zeros([bc03_extens, len(lam_grid_tofit)], dtype=np.float64)
     for i in range(bc03_extens):
         comp_spec_bc03[i] = bc03_spec[i+1].data
-    comp_spec_bc03 = comp_spec_bc03[:,arg_lamlow:arg_lamhigh]
+    comp_spec_bc03 = comp_spec_bc03[:,arg_lamlow:arg_lamhigh+1]
 
     comp_spec_miles = np.zeros([miles_extens, len(lam_grid_tofit)], dtype=np.float64)
     for i in range(miles_extens):
         comp_spec_miles[i] = miles_spec[i+1].data
-    comp_spec_miles = comp_spec_miles[:,arg_lamlow:arg_lamhigh]
+    comp_spec_miles = comp_spec_miles[:,arg_lamlow:arg_lamhigh+1]
 
     comp_spec_fsps = np.zeros([fsps_extens, len(lam_grid_tofit)], dtype=np.float64)
     for i in range(fsps_extens):
         comp_spec_fsps[i] = fsps_spec[i+1].data
-    comp_spec_fsps = comp_spec_fsps[:,arg_lamlow:arg_lamhigh]
+    comp_spec_fsps = comp_spec_fsps[:,arg_lamlow:arg_lamhigh+1]
 
     # Read stacks
     stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
@@ -268,7 +268,7 @@ if __name__ == '__main__':
     mstar_step = 1.0
 
     # Loop over all stacks
-    num_samp_to_draw = 1e4
+    num_samp_to_draw = 5e4
     print "Running over", int(num_samp_to_draw), "random jackknifed samples."
     for stackcount in range(0, totalstacks-1, 1): # it is totalstacks-1 because the first extension is the lambda array
         
@@ -326,13 +326,14 @@ if __name__ == '__main__':
 
         # Chop off the ends of the stacked spectrum
         orig_lam_grid = np.arange(2700, 6000, lam_step)  
-        # this is the lam grid used for the stacks. it has to be defined again because it (and therefore its indices) are different from the lam grid used to resample the models.
+        # this is the lam grid used for the stacks. 
+        # it has to be defined again because it (and therefore its indices) are different from the lam grid used to resample the models.
         # redefine lam_lowfit and lam_highfit
         lam_lowfit = 3600
         lam_highfit = 6000
         lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
         arg_lamlow = np.argmin(abs(orig_lam_grid - lam_lowfit))
-        arg_lamhigh = np.argmin(abs(orig_lam_grid - lam_highfit + 100))
+        arg_lamhigh = np.argmin(abs(orig_lam_grid - lam_highfit))
         flam = flam[arg_lamlow:arg_lamhigh + 1]
         ferr = ferr[arg_lamlow:arg_lamhigh + 1]
 

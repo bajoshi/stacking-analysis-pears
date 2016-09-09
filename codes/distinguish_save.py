@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     lam_step = 100
     lam_lowfit = 3600
-    lam_highfit = 6500
+    lam_highfit = 6000
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
 
     example = fits.open('/Users/baj/Documents/GALAXEV_BC03/bc03/src/cspout_new/m62/bc2003_hr_m62_tauV0_csp_tau100_salp.fits')

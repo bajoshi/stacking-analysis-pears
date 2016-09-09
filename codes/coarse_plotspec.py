@@ -17,6 +17,7 @@ import grid_coadd as gd
 home = os.getenv('HOME')
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 figures_dir = stacking_analysis_dir + "figures/"
+savefits_dir = home + "/Desktop/FIGS/new_codes/"
 
 def plot_spectrum_indiv(flam_em_indiv, ferr_indiv, lam_em, specname):
 
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     logging.info(dt.now())
     
     # Prep for normalizing and plotting
-    h = fits.open(stacking_analysis_dir + 'coadded_PEARSgrismspectra_coarsegrid.fits')
+    h = fits.open(savefits_dir + 'coadded_PEARSgrismspectra_coarsegrid.fits')
     
     lam = h[1].data
     #n_ext = h[0].header['NUMEXT'] # you will have to edit the header and put this keyword in by hand

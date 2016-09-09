@@ -190,7 +190,7 @@ def create_fsps_lib_main():
                 hdr['METAL'] = str(metals)
                 hdr['TAU_GYR'] = str(tau)
 
-                dat = np.array([currentspec[j]])
+                dat = currentspec[j]
                 hdulist.append(fits.ImageHDU(data=dat, header=hdr))
 
     hdulist.writeto(savefits_dir + 'all_comp_spectra_fsps.fits', clobber=True)
@@ -201,7 +201,7 @@ if __name__ == "__main__":
 
     lam_step = 100
     lam_lowfit = 3600
-    lam_highfit = 6500
+    lam_highfit = 6000
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
 
     create_miles_lib_main()
