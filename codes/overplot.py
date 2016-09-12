@@ -4,6 +4,7 @@ import numpy as np
 import numpy.ma as ma
 from astropy.io import fits
 from scipy import stats
+import pandas as pd
 
 import sys
 import os
@@ -55,12 +56,12 @@ def plot_spectrum_model(lam, flux, col):
     ax.set_xlim(2500, 6000)
     #ax.legend(loc=0, numpoints=1, prop={'size':12})
 
-def get_boot_samps(bootname):
+def get_boot_samps(bootname, nsamp, orig_lam_grid):
     
     h = fits.open(bootname)
-    boot_samps = np.empty((100, 33))
+    boot_samps = np.empty((nsamp, len(orig_lam_grid)))
 
-    for i in range(100):
+    for i in range(nsamp):
         boot_samps[i] = h[i + 2].data[0]
 
     return boot_samps
@@ -201,23 +202,27 @@ if __name__ == '__main__':
 
         bootname = savefits_dir + 'bootstrap-err-stacks/' + 'spectra_bootstrap_' + ongrid.replace(',','_').replace('.','p') + '.fits'
 
-        if not os.path.isfile(bootname):
-            print "Did not find bootstrapped samples file! Using default errors..."
-            # This is a temporary step which will be removed after all stacks have their bootstrap errors
-            ferr = ferr + 0.05 * flam # putting in a 5% additional error bar
-            ax1.errorbar(lam_grid_tofit[:-5], flam, yerr=ferr, fmt='o-', color='k', linewidth=2, ecolor='r', markeredgecolor='k', capsize=0, markersize=4)
-            
-            ax1.minorticks_on()
-            ax1.tick_params('both', width=1, length=3, which='minor')
-            ax1.tick_params('both', width=1, length=4.7, which='major')
-        else:
-            boot_samps = get_boot_samps(bootname)
-            for i in range(100): # Not yet sure if I can get rid of this for loop
-                boot_samps[i] = ma.masked_array(boot_samps[i], mask = flam_mask)
-                boot_samps[i] = ma.masked_array(boot_samps[i], mask = ferr_mask)
-                boot_samps[i] = boot_samps[arg_lamlow:arg_lamhigh+1]
+        #if not os.path.isfile(bootname):
+        #    print "Did not find bootstrapped samples file! Using default errors..."
+        #    # This is a temporary step which will be removed after all stacks have their bootstrap errors
+        #    ferr = ferr + 0.05 * flam # putting in a 5% additional error bar
+        #    ax1.errorbar(lam_grid_tofit[:-5], flam, yerr=ferr, fmt='o-', color='k', linewidth=2, ecolor='r', markeredgecolor='k', capsize=0, markersize=4)
+        #    
+        #    ax1.minorticks_on()
+        #    ax1.tick_params('both', width=1, length=3, which='minor')
+        #    ax1.tick_params('both', width=1, length=4.7, which='major')
+        #else:
 
-            sns.tsplot(data=boot_samps, time=lam_grid_tofit[:-5], err_style='ci_band', ax=ax1)
+        number_boot_samps = 100
+        boot_samps = get_boot_samps(bootname, number_boot_samps, orig_lam_grid)
+
+        #boot_samps_masked = np.empty((number_boot_samps, len(orig_lam_grid[arg_lamlow:arg_lamhigh+1])))
+        #for i in range(number_boot_samps): # Not yet sure if I can get rid of this for loop
+        #    boot_samps[i] = ma.masked_array(boot_samps[i], mask = flam_mask)
+        #    boot_samps[i] = ma.masked_array(boot_samps[i], mask = ferr_mask)
+        #    boot_samps_masked[i] = boot_samps[i][arg_lamlow:arg_lamhigh+1]
+
+        ax1 = sns.tsplot(data=boot_samps[:,arg_lamlow:arg_lamhigh+1], time=lam_grid_tofit, err_style='ci_band', ax=ax1)
         ax1.set_xlim(3000, 6000)
 
         """
@@ -244,10 +249,10 @@ if __name__ == '__main__':
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
-                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit[:-5], color='r', ax=ax1)
-                ax2.plot(lam_grid_tofit[:-5], flam - currentspec, 'o', markersize=2, color='r', markeredgecolor=None)
+                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit, color='r', ax=ax1)
+                ax2.plot(lam_grid_tofit, flam - currentspec, 'o', markersize=2, color='r', markeredgecolor=None)
                 ax2.set_ylim(-1e-4, 1e-4)
-                ax2.axhline(y=0.0)
+                ax2.axhline(y=0.0, color='k', linestyle='--')
 
                 sns.despine()
 
@@ -269,10 +274,10 @@ if __name__ == '__main__':
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
-                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit[:-5], color='b', ax=ax1)
-                ax2.plot(lam_grid_tofit[:-5], flam - currentspec, 'o', markersize=2, color='b', markeredgecolor=None)
+                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit, color='b', ax=ax1)
+                ax2.plot(lam_grid_tofit, flam - currentspec, 'o', markersize=2, color='b', markeredgecolor=None)
                 ax2.set_ylim(-1e-4, 1e-4)
-                ax2.axhline(y=0.0)
+                ax2.axhline(y=0.0, color='k', linestyle='--')
 
                 sns.despine()
 
@@ -286,8 +291,9 @@ if __name__ == '__main__':
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
                 currentspec = fsps_spec[j+1].data
-                currentspec = currentspec.reshape(29)
-                # This line is a temporary step. It will be removed after I fix how the fsps spectra are saved in the fits file and run the library creating routine again.
+                #currentspec = currentspec.reshape(29)
+                # This line is a temporary step. It will be removed after I fix 
+                # how the fsps spectra are saved in the fits file and run the library creating routine again.
                 
                 ## Chop currentspec to the same shape as the stacked spectrum 
                 ## This is a temporary step which will be removed once I make all lambda grids consistent.
@@ -297,10 +303,10 @@ if __name__ == '__main__':
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
-                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit[:-5], color='g', ax=ax1)
-                ax2.plot(lam_grid_tofit[:-5], flam - currentspec, 'o', markersize=2, color='g', markeredgecolor=None)
+                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit, color='g', ax=ax1)
+                ax2.plot(lam_grid_tofit, flam - currentspec, 'o', markersize=2, color='g', markeredgecolor=None)
                 ax2.set_ylim(-1e-4, 1e-4)
-                ax2.axhline(y=0.0)
+                ax2.axhline(y=0.0, color='k', linestyle='--')
 
                 sns.despine()
 
@@ -308,5 +314,7 @@ if __name__ == '__main__':
 
         count += 1
         pdf.savefig(bbox_inches='tight')
-
-    pdf.close()
+        
+        if count == 10:
+            pdf.close()
+            sys.exit()

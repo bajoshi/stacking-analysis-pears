@@ -48,7 +48,7 @@ def main():
     lam_step = 100
     lam_grid = np.arange(2700, 6000, lam_step)
 
-    num_samp_to_draw = 1000
+    num_samp_to_draw = 100
 
     # Exclude spectra in the skipspec file and also exclude emission line spectra
     skipspec = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/specskip.txt', dtype=np.str, delimiter=',')
