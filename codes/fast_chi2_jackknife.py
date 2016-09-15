@@ -274,7 +274,7 @@ if __name__ == '__main__':
         
         flam = stacks[stackcount + 2].data[0]
         ferr = stacks[stackcount + 2].data[1]
-        ferr = ferr + 0.05 * flam # putting in a 5% additional error bar
+        ferr = ferr + 0.05 * flam  # putting in a 5% additional error bar
         ongrid = stacks[stackcount + 2].header["ONGRID"]
         numspec = int(stacks[stackcount + 2].header["NUMSPEC"])
         print "Time right now -- ", dt.now()

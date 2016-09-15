@@ -154,8 +154,8 @@ def create_fsps_lib_main():
 
     # Set params for stellar pop
     sps.params['imf_type'] = 2  # Kroupa IMF
-    sps.params['dust_type'] = 2  # Calzetti attenuation curve
-    sps.params['dust2'] = -0.7  # Not entirely sure how it fits into Calzetti's law but I think they call it the dust exponent for Calzetti law. See Conroy et al. 2009.
+    #sps.params['dust_type'] = 2  # Calzetti attenuation curve
+    #sps.params['dust2'] = -0.7  # Not entirely sure how it fits into Calzetti's law but I think they call it the dust exponent for Calzetti law. See Conroy et al. 2009.
     sps.params['sfh'] = 1  # Tau model SFH
     # This exponential decaying SFH in here is a five param model where the parameters are -
     # tau -- this is the time scale for decay; in Gyr; default 1
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     lam_highfit = 6000
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
 
-    create_miles_lib_main()
+    #create_miles_lib_main()
     create_fsps_lib_main()
     sys.exit(0)
 

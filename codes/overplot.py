@@ -13,8 +13,9 @@ import time
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import seaborn as sns
+#import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, AnchoredText
 
 from fast_chi2_jackknife import get_total_extensions
 
@@ -23,8 +24,8 @@ stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 figures_dir = stacking_analysis_dir + "figures/"
 savefits_dir = home + "/Desktop/FIGS/new_codes/"
 
-sns.set()
-sns.set_style("white")
+#sns.set()
+#sns.set_style("white")
 
 def makefig():
 
@@ -89,7 +90,7 @@ if __name__ == '__main__':
 
     # Create grid for making grid plots
     gs = gridspec.GridSpec(15,15)
-    gs.update(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.00, hspace=0.1)
+    gs.update(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.00, hspace=0.2)
 
     # Read ongrid values
     # It needs to be read only once because it is the same for all files
@@ -122,7 +123,8 @@ if __name__ == '__main__':
     fsps_extens = get_total_extensions(fsps_spec)
 
     # Make multi-dimensional arrays of parameters for all SPS libraries 
-    # This is done to make access to the fits headers easier because there is no way to directly search the headers for all extensions in a fits file simultaneously.
+    # This is done to make access to the fits headers easier because
+    # there is no way to directly search the headers for all extensions in a fits file simultaneously.
     # Once the numpy arrays have the header values in them the arrays can easily be searched by using np.where
     bc03_params = np.empty([bc03_extens, 4])  # the 4 is because the BC03 param space is 4D
     for i in range(bc03_extens):
@@ -154,6 +156,7 @@ if __name__ == '__main__':
 
         flam = stacks[stackcount + 2].data[0]
         ferr = stacks[stackcount + 2].data[1]
+        ferr = ferr + 0.05 * flam  # putting in a 5% additional error bar
         ongrid = stacks[stackcount + 2].header["ONGRID"]
         numspec = int(stacks[stackcount + 2].header["NUMSPEC"])
         print ongrid
@@ -214,7 +217,7 @@ if __name__ == '__main__':
         #else:
 
         number_boot_samps = 100
-        boot_samps = get_boot_samps(bootname, number_boot_samps, orig_lam_grid)
+        #boot_samps = get_boot_samps(bootname, number_boot_samps, orig_lam_grid)
 
         #boot_samps_masked = np.empty((number_boot_samps, len(orig_lam_grid[arg_lamlow:arg_lamhigh+1])))
         #for i in range(number_boot_samps): # Not yet sure if I can get rid of this for loop
@@ -222,8 +225,14 @@ if __name__ == '__main__':
         #    boot_samps[i] = ma.masked_array(boot_samps[i], mask = ferr_mask)
         #    boot_samps_masked[i] = boot_samps[i][arg_lamlow:arg_lamhigh+1]
 
-        ax1 = sns.tsplot(data=boot_samps[:,arg_lamlow:arg_lamhigh+1], time=lam_grid_tofit, err_style='ci_band', ax=ax1)
+        #ax1 = sns.tsplot(data=boot_samps[:,arg_lamlow:arg_lamhigh+1], time=lam_grid_tofit, err_style='ci_band', ax=ax1)
+        ax1.plot(lam_grid_tofit, flam, color='k')
+        ax1.fill_between(lam_grid_tofit, flam + ferr, flam - ferr, color='lightgray')
         ax1.set_xlim(3000, 6000)
+        ax1.xaxis.set_ticklabels([])
+        ax1.minorticks_on()
+        ax1.tick_params('both', width=1, length=3, which='minor')
+        ax1.tick_params('both', width=1, length=4.7, which='major')
 
         """
         In the comparisons below, I'm using np.allclose instead of np.setdiff1d because 
@@ -237,6 +246,15 @@ if __name__ == '__main__':
         best_tau = 10**stats.mode(logtau_bc03[count])[0]
         best_tauv = stats.mode(tauv_bc03[count])[0]
 
+        best_age_err = np.std(ages_bc03[count])
+        best_metal_err = np.std(metals_bc03[count])
+        best_tau_err = 10**np.std(logtau_bc03[count])
+        best_tauv_err = np.std(tauv_bc03[count])
+
+        print best_age, best_age_err 
+        print best_metal, best_metal_err
+        print best_tau, best_tau_err
+
         for j in range(bc03_extens):
             if np.allclose(bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)):
                 currentspec = bc03_spec[j+1].data
@@ -249,18 +267,77 @@ if __name__ == '__main__':
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
-                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit, color='r', ax=ax1)
-                ax2.plot(lam_grid_tofit, flam - currentspec, 'o', markersize=2, color='r', markeredgecolor=None)
-                ax2.set_ylim(-1e-4, 1e-4)
-                ax2.axhline(y=0.0, color='k', linestyle='--')
+                # Plot best fit parameters as anchored text boxes
+                labelbox = TextArea("BC03", textprops=dict(color='r', size=8))
+                anc_labelbox = AnchoredOffsetbox(loc=2, child=labelbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.03, 0.95),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_labelbox)
 
-                sns.despine()
+                agebox = TextArea("Age = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(10**best_age_err/1e9)) + " Gyr",
+                 textprops=dict(color='r', size=8))
+                anc_agebox = AnchoredOffsetbox(loc=2, child=agebox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.03, 0.9),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_agebox)
+
+                metalbox = TextArea("Z = " + "{:.2f}".format(float(best_metal)) + r" $\pm$ " + "{:.2f}".format(float(best_metal_err)),
+                 textprops=dict(color='r', size=8))
+                anc_metalbox = AnchoredOffsetbox(loc=2, child=metalbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.03, 0.8),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_metalbox)
+
+                taubox = TextArea(r"$\tau$ = " + "{:.2f}".format(float(best_tau)) + r" $\pm$ " + "{:.2f}".format(float(best_tau_err)) + " Gyr",
+                 textprops=dict(color='r', size=8))
+                anc_taubox = AnchoredOffsetbox(loc=2, child=taubox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.03, 0.85),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_taubox)
+
+                #tauvbox = TextArea(r"$A_v$ = " + "{:.2f}".format(float(best_tauv)) + r" $\pm$ " + "{:.2f}".format(float(best_tauv_err)),
+                # textprops=dict(color='r', size=8))
+                #anc_tauvbox = AnchoredOffsetbox(loc=2, child=tauvbox, pad=0.0, frameon=False,\
+                #                                     bbox_to_anchor=(0.03, 0.75),\
+                #                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                #ax1.add_artist(anc_tauvbox)
+
+                # Plot the best fit spectrum
+                ax1.plot(lam_grid_tofit, alpha * currentspec, color='r')
+                ax1.set_xlim(3000, 6000)
+                ax1.xaxis.set_ticklabels([])
+                ax1.yaxis.set_tick_params(labelsize=9)
+
+                ax1.minorticks_on()
+                ax1.tick_params('both', width=1, length=3, which='minor')
+                ax1.tick_params('both', width=1, length=4.7, which='major')
+                
+                # Plot the residual
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, 'o', markersize=2, color='r', markeredgecolor=None)
+
+                ax2.set_ylim(-1e-18, 1e-18)
+                ax2.set_xlim(3000, 6000)
+                ax2.yaxis.get_major_formatter().set_powerlimits((0, 1))
+                ax2.xaxis.set_tick_params(labelsize=10)
+
+                ax2.axhline(y=0.0, color='k', linestyle='--')
+                ax2.grid(True)
+                
+                ax2.minorticks_on()
+                ax2.tick_params('both', width=1, length=3, which='minor')
+                ax2.tick_params('both', width=1, length=4.7, which='major')
 
         del best_age, best_metal, best_tau, best_tauv
 
         #### MILES ####
         best_age = stats.mode(ages_miles[count])[0]
         best_metal = stats.mode(metals_miles[count])[0]
+
+        best_age_err = np.std(ages_miles[count])
+        best_metal_err = np.std(metals_miles[count])
+
+        print best_age, best_age_err 
+        print best_metal, best_metal_err
 
         for j in range(miles_extens):
             if np.allclose(miles_params[j], np.array([best_age, best_metal]).reshape(2)):
@@ -274,12 +351,53 @@ if __name__ == '__main__':
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
-                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit, color='b', ax=ax1)
-                ax2.plot(lam_grid_tofit, flam - currentspec, 'o', markersize=2, color='b', markeredgecolor=None)
-                ax2.set_ylim(-1e-4, 1e-4)
-                ax2.axhline(y=0.0, color='k', linestyle='--')
+                # Plot best fit parameters as anchored text boxes
+                labelbox = TextArea("MILES", textprops=dict(color='b', size=8))
+                anc_labelbox = AnchoredOffsetbox(loc=2, child=labelbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.28, 0.95),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_labelbox)
 
-                sns.despine()
+                agebox = TextArea("Age = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(10**best_age_err/1e9)) + " Gyr",
+                 textprops=dict(color='b', size=8))
+                anc_agebox = AnchoredOffsetbox(loc=2, child=agebox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.28, 0.9),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_agebox)
+
+                metalbox = TextArea("Z = " + "{:.2f}".format(float(best_metal)) + r" $\pm$ " + "{:.2f}".format(float(best_metal_err)),
+                 textprops=dict(color='b', size=8))
+                anc_metalbox = AnchoredOffsetbox(loc=2, child=metalbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.28, 0.85),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_metalbox)
+
+                # Plot the best fit spectrum
+                ax1.plot(lam_grid_tofit, alpha * currentspec, color='b')
+                ax1.set_xlim(3000, 6000)
+                ax1.xaxis.set_ticklabels([])
+                ax1.yaxis.set_tick_params(labelsize=9)
+
+                ax1.minorticks_on()
+                ax1.tick_params('both', width=1, length=3, which='minor')
+                ax1.tick_params('both', width=1, length=4.7, which='major')
+                
+                # Plot the residual
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, 'o', markersize=2, color='b', markeredgecolor=None)
+                
+                ax2.set_ylim(-1e-18, 1e-18)
+                ax2.set_xlim(3000, 6000)
+                ax2.yaxis.get_major_formatter().set_powerlimits((0, 1))
+                ax2.xaxis.set_tick_params(labelsize=10)
+
+                ax2.axhline(y=0.0, color='k', linestyle='--')
+                ax2.grid(True)
+                
+                ax2.minorticks_on()
+                ax2.tick_params('both', width=1, length=3, which='minor')
+                ax2.tick_params('both', width=1, length=4.7, which='major')
+
+                #break
 
         del best_age, best_metal
 
@@ -287,6 +405,14 @@ if __name__ == '__main__':
         best_age = stats.mode(ages_fsps[count])[0]
         best_metal = stats.mode(metals_fsps[count])[0]
         best_tau = 10**stats.mode(logtau_fsps[count])[0]
+
+        best_age_err = np.std(ages_fsps[count])
+        best_metal_err = np.std(metals_fsps[count])
+        best_tau_err = 10**np.std(logtau_fsps[count])
+
+        print best_age, best_age_err 
+        print best_metal, best_metal_err
+        print best_tau, best_tau_err
 
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
@@ -303,18 +429,67 @@ if __name__ == '__main__':
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
-                sns.tsplot(data=alpha * currentspec, time=lam_grid_tofit, color='g', ax=ax1)
-                ax2.plot(lam_grid_tofit, flam - currentspec, 'o', markersize=2, color='g', markeredgecolor=None)
-                ax2.set_ylim(-1e-4, 1e-4)
-                ax2.axhline(y=0.0, color='k', linestyle='--')
+                # Plot best fit parameters as anchored text boxes
+                labelbox = TextArea("FSPS", textprops=dict(color='g', size=8))
+                anc_labelbox = AnchoredOffsetbox(loc=2, child=labelbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.53, 0.95),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_labelbox)
 
-                sns.despine()
+                agebox = TextArea("Age = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(10**best_age_err/1e9)) + " Gyr",
+                 textprops=dict(color='g', size=8))
+                anc_agebox = AnchoredOffsetbox(loc=2, child=agebox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.53, 0.9),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_agebox)
+
+                taubox = TextArea(r"$\tau$ = " + "{:.2f}".format(float(best_tau)) + r" $\pm$ " + "{:.2f}".format(float(best_tau_err)) + " Gyr",
+                 textprops=dict(color='g', size=8))
+                anc_taubox = AnchoredOffsetbox(loc=2, child=taubox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.53, 0.85),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_taubox)
+
+                # Plot the best fit spectrum
+                ax1.plot(lam_grid_tofit, alpha * currentspec, color='g')
+                ax1.set_xlim(3000, 6000)
+                ax1.xaxis.set_ticklabels([])
+                ax1.yaxis.set_tick_params(labelsize=9)
+
+                ax1.minorticks_on()
+                ax1.tick_params('both', width=1, length=3, which='minor')
+                ax1.tick_params('both', width=1, length=4.7, which='major')
+                
+                # Plot the residual
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, 'o', markersize=2, color='g', markeredgecolor=None)
+                
+                ax2.set_ylim(-1e-18, 1e-18)
+                ax2.set_xlim(3000, 6000)
+                ax2.yaxis.get_major_formatter().set_powerlimits((0, 1))
+                ax2.xaxis.set_tick_params(labelsize=10)
+
+                ax2.get_yaxis().set_ticklabels(['-1', '-0.5', '0.0', '0.5', ''], fontsize=9, rotation=45)
+
+                ax2.axhline(y=0.0, color='k', linestyle='--')
+                ax2.grid(True)
+
+                ax2.minorticks_on()
+                ax2.tick_params('both', width=1, length=3, which='minor')
+                ax2.tick_params('both', width=1, length=4.7, which='major')
+
+                # Get the residual tick label to show that the axis ticks are multiplied by 10^-18 
+                resid_labelbox = TextArea(r"$\times 1 \times 10^{-18}$", textprops=dict(color='k', size=8))
+                anc_resid_labelbox = AnchoredOffsetbox(loc=2, child=resid_labelbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.01, 0.98),\
+                                                     bbox_transform=ax2.transAxes, borderpad=0.0)
+                ax2.add_artist(anc_resid_labelbox)
 
         del best_age, best_metal, best_tau
 
         count += 1
         pdf.savefig(bbox_inches='tight')
         
-        if count == 10:
-            pdf.close()
-            sys.exit()
+    pdf.close()
+    sys.exit()
+
+
