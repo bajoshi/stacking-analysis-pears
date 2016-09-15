@@ -102,6 +102,7 @@ if __name__ == '__main__':
     metals_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_bc03.txt', usecols=range(1, int(1e4) + 1))
     logtau_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_bc03.txt', usecols=range(1, int(1e4) + 1))
     tauv_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', usecols=range(1, int(1e4) + 1))
+    mass_wht_ages_bc03 = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_bc03.txt', usecols=range(1, int(1e4) + 1))
 
     #### MILES ####
     ages_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_miles.txt', usecols=range(1, int(1e4) + 1))
@@ -111,6 +112,7 @@ if __name__ == '__main__':
     ages_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_fsps.txt', usecols=range(1, int(1e4) + 1))
     metals_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_fsps.txt', usecols=range(1, int(1e4) + 1))
     logtau_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_fsps.txt', usecols=range(1, int(1e4) + 1))
+    mass_wht_ages_fsps = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_fsps.txt', usecols=range(1, int(1e4) + 1))
 
     # Open fits files with comparison spectra
     bc03_spec = fits.open(home + '/Desktop/FIGS/new_codes/all_comp_spectra_bc03.fits', memmap=False)
@@ -203,7 +205,7 @@ if __name__ == '__main__':
         ax1.set_ylabel('$f_{\lambda}\ [\mathrm{erg/s/cm^2/\AA}] $')
         ax2.set_xlabel('$\lambda\ [\AA]$')
 
-        bootname = savefits_dir + 'bootstrap-err-stacks/' + 'spectra_bootstrap_' + ongrid.replace(',','_').replace('.','p') + '.fits'
+        #bootname = savefits_dir + 'bootstrap-err-stacks/' + 'spectra_bootstrap_' + ongrid.replace(',','_').replace('.','p') + '.fits'
 
         #if not os.path.isfile(bootname):
         #    print "Did not find bootstrapped samples file! Using default errors..."
@@ -216,7 +218,7 @@ if __name__ == '__main__':
         #    ax1.tick_params('both', width=1, length=4.7, which='major')
         #else:
 
-        number_boot_samps = 100
+        #number_boot_samps = 100
         #boot_samps = get_boot_samps(bootname, number_boot_samps, orig_lam_grid)
 
         #boot_samps_masked = np.empty((number_boot_samps, len(orig_lam_grid[arg_lamlow:arg_lamhigh+1])))
@@ -245,15 +247,19 @@ if __name__ == '__main__':
         best_metal = stats.mode(metals_bc03[count])[0]
         best_tau = 10**stats.mode(logtau_bc03[count])[0]
         best_tauv = stats.mode(tauv_bc03[count])[0]
+        best_mass_wht_age = stats.mode(mass_wht_ages_bc03[count])[0]
 
-        best_age_err = np.std(ages_bc03[count])
+        best_age_err = np.std(ages_bc03[count]) * 10**best_age / (1e9 * 0.434)
+        # the number 0.434 is (1 / ln(10)) 
+        # the research notebook has this short calculation at the end 
         best_metal_err = np.std(metals_bc03[count])
-        best_tau_err = 10**np.std(logtau_bc03[count])
+        best_tau_err = np.std(logtau_bc03[count]) * best_tau / 0.434
         best_tauv_err = np.std(tauv_bc03[count])
+        best_mass_wht_age_err = np.std(mass_wht_ages_bc03[count]) * 10**best_mass_wht_age / (1e9 * 0.434)
 
-        print best_age, best_age_err 
+        print best_mass_wht_age, np.std(mass_wht_ages_bc03[count]), best_mass_wht_age_err
         print best_metal, best_metal_err
-        print best_tau, best_tau_err
+        print best_tau, np.std(logtau_bc03[count])
 
         for j in range(bc03_extens):
             if np.allclose(bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)):
@@ -268,13 +274,19 @@ if __name__ == '__main__':
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
                 # Plot best fit parameters as anchored text boxes
+                ongridbox = TextArea(ongrid, textprops=dict(color='k', size=10)) # Change this to average color and average stellar mass
+                anc_ongridbox = AnchoredOffsetbox(loc=2, child=ongridbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.03, 0.75),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_ongridbox)                
+
                 labelbox = TextArea("BC03", textprops=dict(color='r', size=8))
                 anc_labelbox = AnchoredOffsetbox(loc=2, child=labelbox, pad=0.0, frameon=False,\
                                                      bbox_to_anchor=(0.03, 0.95),\
                                                      bbox_transform=ax1.transAxes, borderpad=0.0)
                 ax1.add_artist(anc_labelbox)
 
-                agebox = TextArea("Age = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(10**best_age_err/1e9)) + " Gyr",
+                agebox = TextArea(r"$\left<t\right>_M$ = " + "{:.2f}".format(float(10**best_mass_wht_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(best_mass_wht_age_err)) + " Gyr",
                  textprops=dict(color='r', size=8))
                 anc_agebox = AnchoredOffsetbox(loc=2, child=agebox, pad=0.0, frameon=False,\
                                                      bbox_to_anchor=(0.03, 0.9),\
@@ -313,7 +325,7 @@ if __name__ == '__main__':
                 ax1.tick_params('both', width=1, length=4.7, which='major')
                 
                 # Plot the residual
-                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, 'o', markersize=2, color='r', markeredgecolor=None)
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='r', drawstyle='steps-mid')
 
                 ax2.set_ylim(-1e-18, 1e-18)
                 ax2.set_xlim(3000, 6000)
@@ -333,10 +345,10 @@ if __name__ == '__main__':
         best_age = stats.mode(ages_miles[count])[0]
         best_metal = stats.mode(metals_miles[count])[0]
 
-        best_age_err = np.std(ages_miles[count])
+        best_age_err = np.std(ages_miles[count]) * 10**best_age / (1e9 * 0.434)
         best_metal_err = np.std(metals_miles[count])
 
-        print best_age, best_age_err 
+        print best_age, np.std(ages_miles[count]), best_age_err 
         print best_metal, best_metal_err
 
         for j in range(miles_extens):
@@ -358,7 +370,7 @@ if __name__ == '__main__':
                                                      bbox_transform=ax1.transAxes, borderpad=0.0)
                 ax1.add_artist(anc_labelbox)
 
-                agebox = TextArea("Age = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(10**best_age_err/1e9)) + " Gyr",
+                agebox = TextArea(r"$\left<t\right>_M$ = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(best_age_err)) + " Gyr",
                  textprops=dict(color='b', size=8))
                 anc_agebox = AnchoredOffsetbox(loc=2, child=agebox, pad=0.0, frameon=False,\
                                                      bbox_to_anchor=(0.28, 0.9),\
@@ -383,7 +395,7 @@ if __name__ == '__main__':
                 ax1.tick_params('both', width=1, length=4.7, which='major')
                 
                 # Plot the residual
-                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, 'o', markersize=2, color='b', markeredgecolor=None)
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='b', drawstyle='steps-mid')
                 
                 ax2.set_ylim(-1e-18, 1e-18)
                 ax2.set_xlim(3000, 6000)
@@ -405,14 +417,16 @@ if __name__ == '__main__':
         best_age = stats.mode(ages_fsps[count])[0]
         best_metal = stats.mode(metals_fsps[count])[0]
         best_tau = 10**stats.mode(logtau_fsps[count])[0]
+        best_mass_wht_age = stats.mode(mass_wht_ages_fsps[count])[0]
 
-        best_age_err = np.std(ages_fsps[count])
+        best_age_err = np.std(ages_fsps[count]) * 10**best_age / (1e9 * 0.434)
         best_metal_err = np.std(metals_fsps[count])
-        best_tau_err = 10**np.std(logtau_fsps[count])
+        best_tau_err = np.std(logtau_fsps[count]) * best_tau / 0.434
+        best_mass_wht_age_err = np.std(mass_wht_ages_fsps[count]) * 10**best_mass_wht_age / (1e9 * 0.434)
 
-        print best_age, best_age_err 
+        print best_mass_wht_age, np.std(mass_wht_ages_fsps[count]), best_mass_wht_age_err
         print best_metal, best_metal_err
-        print best_tau, best_tau_err
+        print best_tau, np.std(logtau_fsps[count])
 
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
@@ -436,7 +450,7 @@ if __name__ == '__main__':
                                                      bbox_transform=ax1.transAxes, borderpad=0.0)
                 ax1.add_artist(anc_labelbox)
 
-                agebox = TextArea("Age = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(10**best_age_err/1e9)) + " Gyr",
+                agebox = TextArea(r"$\left<t\right>_M$ = " + "{:.2f}".format(float(10**best_mass_wht_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(best_mass_wht_age_err)) + " Gyr",
                  textprops=dict(color='g', size=8))
                 anc_agebox = AnchoredOffsetbox(loc=2, child=agebox, pad=0.0, frameon=False,\
                                                      bbox_to_anchor=(0.53, 0.9),\
@@ -461,14 +475,14 @@ if __name__ == '__main__':
                 ax1.tick_params('both', width=1, length=4.7, which='major')
                 
                 # Plot the residual
-                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, 'o', markersize=2, color='g', markeredgecolor=None)
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='g', drawstyle='steps-mid')
                 
                 ax2.set_ylim(-1e-18, 1e-18)
                 ax2.set_xlim(3000, 6000)
                 ax2.yaxis.get_major_formatter().set_powerlimits((0, 1))
                 ax2.xaxis.set_tick_params(labelsize=10)
 
-                ax2.get_yaxis().set_ticklabels(['-1', '-0.5', '0.0', '0.5', ''], fontsize=9, rotation=45)
+                ax2.get_yaxis().set_ticklabels(['-1', '-0.5', '0.0', '0.5', ''], fontsize=8, rotation=45)
 
                 ax2.axhline(y=0.0, color='k', linestyle='--')
                 ax2.grid(True)

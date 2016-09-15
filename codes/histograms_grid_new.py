@@ -30,6 +30,35 @@ def makefig_hist(qty):
 
     return fig, ax
 
+def get_mass_weighted_ages(library, ages, logtau, ongrid_vals):
+
+    # the previous array called ages (also called by the same name in an argument for this function)
+    # is actually formation time i.e. age of the oldest star
+    f_mass_wht_ages = open(stacking_analysis_dir + 'mass_weighted_ages_' + library + '.txt', 'wa')
+    timestep = 1e5
+    mass_wht_ages = np.empty(ages.shape)
+
+    for j in range(ages.shape[0]):
+        ongrid = ongrid_vals[j]
+        f_mass_wht_ages.write(ongrid + ' ')
+        for i in range(ages.shape[1]):
+            formtime = 10**ages[j][i]
+            timearr = np.arange(timestep, formtime, timestep) # in years
+            tau = 10**logtau[j][i] * 10**9 # in years
+            n_arr = np.log10(formtime - timearr) * np.exp(-timearr/tau) * timestep
+            d_arr = np.exp(-timearr/tau) * timestep
+            
+            n = np.sum(n_arr)
+            d = np.sum(d_arr)
+            mass_wht_ages[j][i] = n / d
+            f_mass_wht_ages.write(str(mass_wht_ages[j][i]) + ' ')
+        f_mass_wht_ages.write('\n')
+
+    print np.max(mass_wht_ages), np.min(mass_wht_ages)
+    f_mass_wht_ages.close()
+    
+    return None
+
 if __name__ == '__main__':
 
     # Start time
@@ -95,55 +124,8 @@ if __name__ == '__main__':
     quenching_times_fsps = 10**ages_fsps - 10**mass_wht_ages_fsps
     quenching_times_fsps = np.log10(quenching_times_fsps)
 
-    # mass-weighted ages
-    """
-    # the previous array called ages is actually formation time i.e. age of the oldest star
-    f_mass_wht_ages_bc03 = open(stacking_analysis_dir + 'mass_weighted_ages_bc03.txt', 'wa')
-    timestep = 1e5
-    mass_wht_ages_bc03 = np.empty(ages_bc03.shape)
-    for j in range(ages_bc03.shape[0]):
-        ongrid = ongrid_vals[j]
-        f_mass_wht_ages_bc03.write(ongrid + ' ')
-        for i in range(ages_bc03.shape[1]):
-            formtime = 10**ages_bc03[j][i]
-            timearr = np.arange(timestep, formtime, timestep) # in years
-            tau = 10**logtau_bc03[j][i] * 10**9 # in years
-            n_arr = np.log10(formtime - timearr) * np.exp(-timearr/tau) * timestep
-            d_arr = np.exp(-timearr/tau) * timestep
-            
-            n = np.sum(n_arr)
-            d = np.sum(d_arr)
-            mass_wht_ages_bc03[j][i] = n / d
-            f_mass_wht_ages_bc03.write(str(mass_wht_ages_bc03[j][i]) + ' ')
-        f_mass_wht_ages_bc03.write('\n')
-    print np.max(mass_wht_ages_bc03), np.min(mass_wht_ages_bc03)
-    f_mass_wht_ages_bc03.close()
-    sys.exit(0)
-
-    # the previous array called ages is actually formation time i.e. age of the oldest star 
-    # they haven't said this explicitly for FSPS but I'm assuming that the ages are formation times
-    f_mass_wht_ages_fsps = open(stacking_analysis_dir + 'mass_weighted_ages_fsps.txt', 'wa')
-    timestep = 1e5
-    mass_wht_ages_fsps = np.empty(ages_fsps.shape)
-    for j in range(ages_fsps.shape[0]):
-        ongrid = ongrid_vals[j]
-        f_mass_wht_ages_fsps.write(ongrid + ' ')
-        for i in range(ages_fsps.shape[1]):
-            formtime = 10**ages_fsps[j][i]
-            timearr = np.arange(timestep, formtime, timestep) # in years
-            tau = 10**logtau_fsps[j][i] * 10**9 # in years
-            n_arr = np.log10(formtime - timearr) * np.exp(-timearr/tau) * timestep
-            d_arr = np.exp(-timearr/tau) * timestep
-            
-            n = np.sum(n_arr)
-            d = np.sum(d_arr)
-            mass_wht_ages_fsps[j][i] = n / d
-            f_mass_wht_ages_fsps.write(str(mass_wht_ages_fsps[j][i]) + ' ')
-        f_mass_wht_ages_fsps.write('\n')
-    print np.max(mass_wht_ages_fsps), np.min(mass_wht_ages_fsps)
-    f_mass_wht_ages_fsps.close()
-    sys.exit(0)
-    """
+    #get_mass_weighted_ages('bc03', ages_bc03, logtau_bc03, ongrid_vals)
+    #get_mass_weighted_ages('fsps', ages_fsps, logtau_fsps, ongrid_vals)
 
     color_step = 0.6
     mstar_step = 1.0
