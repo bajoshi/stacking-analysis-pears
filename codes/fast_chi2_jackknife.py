@@ -79,7 +79,7 @@ def get_total_extensions(fitsfile):
 
     return nexten
 
-def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, library):
+def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, library, spec_hdu):
     """
     This is the function that does the actual chi2 fitting.
     """
@@ -106,6 +106,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         chi2 = np.sum(((flam - (alpha * currentspec.T).T) / ferr)**2, axis=1)
     
         if library == 'bc03':
+            bc03_spec = spec_hdu
             # This is to get only physical ages
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
@@ -121,6 +122,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                     break
 
         if library == 'miles':
+            miles_spec = spec_hdu
             # This is to get only physical ages
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
@@ -131,6 +133,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                     break
 
         if library == 'fsps':
+            fsps_spec = spec_hdu
             # This is to get only physical ages
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):

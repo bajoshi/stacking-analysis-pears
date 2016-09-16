@@ -4,7 +4,6 @@ import numpy as np
 import numpy.ma as ma
 from astropy.io import fits
 from scipy import stats
-import pandas as pd
 
 import sys
 import os
@@ -13,7 +12,6 @@ import time
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-#import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, AnchoredText
 
@@ -23,9 +21,6 @@ home = os.getenv('HOME')  # Does not have a trailing slash at the end
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 figures_dir = stacking_analysis_dir + "figures/"
 savefits_dir = home + "/Desktop/FIGS/new_codes/"
-
-#sns.set()
-#sns.set_style("white")
 
 def makefig():
 
