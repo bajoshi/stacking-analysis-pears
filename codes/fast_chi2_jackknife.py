@@ -294,8 +294,6 @@ if __name__ == '__main__':
             flam_mask[indices_to_be_masked] = 1 # now set the indices to be masked as True
             flam = ma.masked_array(flam, mask = flam_mask)
             ferr = ma.masked_array(ferr, mask = flam_mask)
-        else:
-            flam_mask = np.zeros(len(flam))
     
         # Also check if ferr might be 0 at a different index from flam... so doing this differently from the check for flam
         # mask the array where the ferr value has been set to 0 by the stacking code
@@ -305,8 +303,6 @@ if __name__ == '__main__':
             ferr_mask[indices_to_be_masked] = 1 # now set the indices to be masked as True
             flam = ma.masked_array(flam, mask = ferr_mask)
             ferr = ma.masked_array(ferr, mask = ferr_mask)            
-        else:
-            ferr_mask = np.zeros(len(ferr))
 
         # for the blue spectra only
         # mask the region with h-beta and [OIII] emission lines

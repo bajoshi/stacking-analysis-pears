@@ -17,13 +17,24 @@ stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 figures_dir = stacking_analysis_dir + "figures/"
 savefits_dir = home + "/Desktop/FIGS/new_codes/"
 
-def resample_single(lam, spec, lam_grid_tofit, lam_step):
+def resample_single(lam, spec, lam_grid_tofit):
     
     lam_em = lam
     resampled_flam = np.zeros((len(lam_grid_tofit)))
 
     for i in range(len(lam_grid_tofit)):
-        new_ind = np.where((lam_em >= lam_grid_tofit[i] - lam_step/2) & (lam_em < lam_grid_tofit[i] + lam_step/2))[0]
+
+        if i == 0:
+            lam_step_high = lam_grid_tofit[i+1] - lam_grid_tofit[i]
+            lam_step_low = lam_step_high
+        elif i == len(lam_grid_tofit) - 1:
+            lam_step_low = lam_grid_tofit[i] - lam_grid_tofit[i-1]
+            lam_step_high = lam_step_low
+        else:
+            lam_step_high = lam_grid_tofit[i+1] - lam_grid_tofit[i]
+            lam_step_low = lam_grid_tofit[i] - lam_grid_tofit[i-1]
+
+        new_ind = np.where((lam_em >= lam_grid_tofit[i] - lam_step_low) & (lam_em < lam_grid_tofit[i] + lam_step_high))[0]
         resampled_flam[i] = np.median(spec[new_ind])
 
     return resampled_flam
@@ -37,13 +48,24 @@ def rescale_single(lam, spec):
 
     return medval
 
-def resample(lam, spec, lam_grid_tofit, lam_step, total_ages):
+def resample(lam, spec, lam_grid_tofit, total_ages):
     
     lam_em = lam
     resampled_flam = np.zeros((total_ages, len(lam_grid_tofit)))
 
     for i in range(len(lam_grid_tofit)):
-        new_ind = np.where((lam_em >= lam_grid_tofit[i] - lam_step/2) & (lam_em < lam_grid_tofit[i] + lam_step/2))[0]
+
+        if i == 0:
+            lam_step_high = lam_grid_tofit[i+1] - lam_grid_tofit[i]
+            lam_step_low = lam_step_high
+        elif i == len(lam_grid_tofit) - 1:
+            lam_step_low = lam_grid_tofit[i] - lam_grid_tofit[i-1]
+            lam_step_high = lam_step_low
+        else:
+            lam_step_high = lam_grid_tofit[i+1] - lam_grid_tofit[i]
+            lam_step_low = lam_grid_tofit[i] - lam_grid_tofit[i-1]
+
+        new_ind = np.where((lam_em >= lam_grid_tofit[i] - lam_step_low) & (lam_em < lam_grid_tofit[i] + lam_step_high))[0]
         resampled_flam[:,i] = np.median(spec[:,[new_ind]], axis=2).reshape(total_ages)
 
     return resampled_flam
@@ -99,7 +121,7 @@ def create_miles_lib_main(fitting_lam_grid, final_fitsname):
         h = fits.open(file)      
 
         currentspec = h[0].data
-        currentspec = resample_single(currentlam, currentspec, fitting_lam_grid, lam_step)
+        currentspec = resample_single(currentlam, currentspec, fitting_lam_grid)
 
         #currentspec = currentspec / rescale_single(fitting_lam_grid, currentspec)
 
@@ -137,7 +159,7 @@ def create_miles_lib_main(fitting_lam_grid, final_fitsname):
 
     return None
 
-def create_fsps_lib_main(fitting_lam_grid, final_fitsname):
+def create_fsps_lib_main(fitting_lam_grid, final_fitsname, metals):
     """
     Creates a consolidated fits file for all the FSPS models.
 
@@ -147,7 +169,8 @@ def create_fsps_lib_main(fitting_lam_grid, final_fitsname):
 
     # Parameter array that I want the models for -
     logtauarr = np.arange(-2, 2, 0.2)
-    metallicities = np.array([0.0001, 0.0004, 0.004, 0.008, 0.02, 0.05])
+    # metallicities = np.array([0.0001, 0.0004, 0.004, 0.008, 0.02, 0.05])  # these are the default metallicities.
+    metallicities = metals
 
     # Create a stellar pop with interpolation in metallicity enabled and the rest set to default values
     sps = fsps.StellarPopulation(zcontinuous=1)
@@ -178,7 +201,7 @@ def create_fsps_lib_main(fitting_lam_grid, final_fitsname):
             currentlam, currentspec = sps.get_spectrum(peraa=True)
             log_ages = sps.log_age
 
-            currentspec = resample(currentlam, currentspec, fitting_lam_grid, lam_step, len(log_ages))
+            currentspec = resample(currentlam, currentspec, fitting_lam_grid, len(log_ages))
             #currentlam = fitting_lam_grid
 
             #medvals = rescale(fitting_lam_grid, currentspec, len(log_ages))
@@ -193,7 +216,7 @@ def create_fsps_lib_main(fitting_lam_grid, final_fitsname):
                 dat = currentspec[j]
                 hdulist.append(fits.ImageHDU(data=dat, header=hdr))
 
-    hdulist.writeto(savefits_dir + 'all_comp_spectra_fsps.fits', clobber=True)
+    hdulist.writeto(savefits_dir + final_fitsname, clobber=True)
 
     return None
 
