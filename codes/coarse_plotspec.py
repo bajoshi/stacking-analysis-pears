@@ -66,8 +66,6 @@ if __name__ == '__main__':
     lam = h[1].data
     #n_ext = h[0].header['NUMEXT'] # you will have to edit the header and put this keyword in by hand
     #num_spectra = n_ext - 2
-    
-    savename = 'coadded_spectra_coarsegrid.eps'
 
     data_path = home + "/Documents/PEARS/data_spectra_only/"
     threedphot = home + "/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
@@ -79,9 +77,17 @@ if __name__ == '__main__':
     ur_color = cat['urcol']
     stellarmass = cat['mstar']
     photz = cat['threedzphot']
-    
-    color_step = 0.6
+
+    # Change only the parameters here to change how the code runs
+    # Ideally you shouldn't have to change anything else.    
+    col_step = 0.6
     mstar_step = 1.0
+    final_fits_filename = 'coadded_PEARSgrismspectra_coarsegrid.fits'
+    savename = 'coadded_spectra_coarsegrid.eps'
+    col_low = 0.0
+    col_high = 3.0
+    mstar_low = 7.0
+    mstar_high = 12.0
     
     skipspec = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/specskip.txt', dtype=np.str, delimiter=',')
     em_lines = np.loadtxt(home + '/Desktop/FIGS/stacking-analysis-pears/em_lines_readin.txt', dtype=np.str, delimiter=',')
@@ -105,9 +111,9 @@ if __name__ == '__main__':
     for k in range(len(avgmassarr)):
         avgmassarr[k] = []
 
-    for i in np.arange(0.0, 3.0, color_step):
+    for i in np.arange(col_low, col_high, col_step):
         colcount = 0
-        for j in np.arange(7.0, 12.0, mstar_step):
+        for j in np.arange(mstar_low, mstar_high, mstar_step):
             
             indices = np.where((ur_color >= i) & (ur_color < i + color_step) &\
 	                   (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
@@ -133,8 +139,8 @@ if __name__ == '__main__':
 
     # Begin looping through cells to plot
     cellcount = 0
-    for i in np.arange(0.0, 3.0, color_step):
-        for j in np.arange(7.0, 12.0, mstar_step):
+    for i in np.arange(col_low, col_high, col_step):
+        for j in np.arange(mstar_low, mstar_high, mstar_step):
             
             indices = np.where((ur_color >= i) & (ur_color < i + color_step) &\
                             (stellarmass >= j) & (stellarmass < j + mstar_step))[0]

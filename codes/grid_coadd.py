@@ -11,7 +11,10 @@ from scipy.stats import gaussian_kde
 
 import matplotlib.pyplot as plt
 
-home = os.getenv('HOME')
+home = os.getenv('HOME')  # Does not have a trailing slash at the end
+stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+figures_dir = stacking_analysis_dir + "figures/"
+savefits_dir = home + "/Desktop/FIGS/new_codes/"
 
 def get_net_sig(fitsdata, filename):
 
@@ -189,8 +192,8 @@ if __name__ == '__main__':
     start = time.time()
     
     data_path = home + "/Documents/PEARS/data_spectra_only/"
-    threedphot = home + "/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
-    threed = fits.open(home + '/Documents/3D-HST/3dhst.v4.1.5.master.fits')
+    #threedphot = home + "/Documents/3D-HST/3dhst_master.phot.v4.1/3dhst_master.phot.v4.1.cat"
+    #threed = fits.open(home + '/Documents/3D-HST/3dhst.v4.1.5.master.fits')
 
     """
     # This block sets up the division by the sensitivity curve
