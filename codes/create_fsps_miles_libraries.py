@@ -76,7 +76,7 @@ def makefig():
 
     return fig, ax
 
-def create_miles_lib_main():
+def create_miles_lib_main(fitting_lam_grid, final_fitsname):
     """
     Creates a consolidated fits file from the 1900 or so individual fits file that
     were available for the MILES SPS models.
@@ -99,9 +99,9 @@ def create_miles_lib_main():
         h = fits.open(file)      
 
         currentspec = h[0].data
-        currentspec = resample_single(currentlam, currentspec, lam_grid_tofit, lam_step)
+        currentspec = resample_single(currentlam, currentspec, fitting_lam_grid, lam_step)
 
-        #currentspec = currentspec / rescale_single(lam_grid_tofit, currentspec)
+        #currentspec = currentspec / rescale_single(fitting_lam_grid, currentspec)
 
         hdr = fits.Header()
         # I included my header this way for better read access when fitting the models.
@@ -133,11 +133,11 @@ def create_miles_lib_main():
 
         hdulist.append(fits.ImageHDU(data=currentspec, header=hdr))
 
-    hdulist.writeto(savefits_dir + 'all_comp_spectra_miles.fits', clobber=True)
+    hdulist.writeto(savefits_dir + final_fitsname, clobber=True)
 
     return None
 
-def create_fsps_lib_main():
+def create_fsps_lib_main(fitting_lam_grid, final_fitsname):
     """
     Creates a consolidated fits file for all the FSPS models.
 
@@ -178,10 +178,10 @@ def create_fsps_lib_main():
             currentlam, currentspec = sps.get_spectrum(peraa=True)
             log_ages = sps.log_age
 
-            currentspec = resample(currentlam, currentspec, lam_grid_tofit, lam_step, len(log_ages))
-            #currentlam = lam_grid_tofit
+            currentspec = resample(currentlam, currentspec, fitting_lam_grid, lam_step, len(log_ages))
+            #currentlam = fitting_lam_grid
 
-            #medvals = rescale(lam_grid_tofit, currentspec, len(log_ages))
+            #medvals = rescale(fitting_lam_grid, currentspec, len(log_ages))
             #currentspec = np.divide(currentspec, medvals)
             
             for j in range(len(currentspec)):
@@ -204,8 +204,8 @@ if __name__ == "__main__":
     lam_highfit = 6000
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
 
-    #create_miles_lib_main()
-    create_fsps_lib_main()
+    create_miles_lib_main(lam_grid_tofit, 'all_comp_spec_miles.fits')
+    create_fsps_lib_main(lam_grid_tofit, 'all_comp_spec_fsps.fits')
     sys.exit(0)
 
     ### Block used for testing model changes below --
