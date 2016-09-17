@@ -354,7 +354,7 @@ if __name__ == '__main__':
                                                      bbox_transform=ax1.transAxes, borderpad=0.0)
                 ax1.add_artist(anc_labelbox)
 
-                agebox = TextArea(r"$\left<t\right>_M$ = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(best_age_err)) + " Gyr",
+                agebox = TextArea(r"$t$ = " + "{:.2f}".format(float(10**best_age/1e9)) + r" $\pm$ " + "{:.2f}".format(float(best_age_err)) + " Gyr",
                  textprops=dict(color='b', size=8))
                 anc_agebox = AnchoredOffsetbox(loc=2, child=agebox, pad=0.0, frameon=False,\
                                                      bbox_to_anchor=(0.28, 0.9),\
@@ -479,4 +479,7 @@ if __name__ == '__main__':
         pdf.savefig(bbox_inches='tight')
         
     pdf.close()
+    
+    # total run time
+    print "Total time taken --", time.time() - start, "seconds."
     sys.exit(0)
