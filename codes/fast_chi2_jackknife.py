@@ -92,6 +92,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
     tau = []
     tauv = []
     metals = []
+    best_exten = []
     #totalchi2 = []    
     #estchi2index = []
     #bestalpha = []
@@ -119,6 +120,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                     #bestchi2index.append(sortargs[k])
                     #bestalpha.append(alpha[sortargs[k]])
                     metals.append(bc03_spec[sortargs[k] + 1].header['METAL'])
+                    best_exten.append(sortargs[k] + 1)
                     break
 
         if library == 'miles':
@@ -130,6 +132,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                 if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
                     ages.append(best_age)
                     metals.append(miles_spec[sortargs[k] + 1].header['METAL'])
+                    best_exten.append(sortargs[k] + 1)
                     break
 
         if library == 'fsps':
@@ -142,6 +145,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                     tau.append(fsps_spec[sortargs[k] + 1].header['TAU_GYR'])
                     ages.append(best_age)
                     metals.append(fsps_spec[sortargs[k] + 1].header['METAL'])
+                    best_exten.append(sortargs[k] + 1)
                     break
 
     # total computational time
@@ -155,6 +159,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         tau = np.asarray(tau, dtype=np.float64)
         logtau = np.log10(tau)
         tauv = np.asarray(tauv, dtype=np.float64)
+        best_exten = np.asarray(best_exten, dtype=np.float64)
         
         print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
         print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
@@ -167,11 +172,12 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         print "Tau - ", len(np.unique(tau))
         print "Tau_v - ", len(np.unique(tauv))
 
-        return ages, metals, tau, tauv
+        return ages, metals, tau, tauv, best_exten
 
     elif library == 'miles':
         ages = np.asarray(ages, dtype=np.float64)
         metals = np.asarray(metals, dtype=np.float64)
+        best_exten = np.asarray(best_exten, dtype=np.float64)
         
         print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
         print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
@@ -180,13 +186,14 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         print "Ages - ", len(np.unique(ages))
         print "Metals - ", len(np.unique(metals))
 
-        return ages, metals
+        return ages, metals, best_exten
 
     elif library == 'fsps':
         ages = np.asarray(ages, dtype=np.float64)
         metals = np.asarray(metals, dtype=np.float64)
         tau = np.asarray(tau, dtype=np.float64)
         logtau = np.log10(tau)
+        best_exten = np.asarray(best_exten, dtype=np.float64)
         
         print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
         print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
@@ -197,7 +204,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         print "Metals - ", len(np.unique(metals))
         print "Tau - ", len(np.unique(tau))
 
-        return ages, metals, tau
+        return ages, metals, tau, best_exten
 
 if __name__ == '__main__':
 
@@ -210,14 +217,17 @@ if __name__ == '__main__':
     f_ages_bc03 = open(stacking_analysis_dir + 'jackknife_ages_bc03.txt', 'wa')
     f_metals_bc03 = open(stacking_analysis_dir + 'jackknife_metals_bc03.txt', 'wa')
     f_logtau_bc03 = open(stacking_analysis_dir + 'jackknife_logtau_bc03.txt', 'wa')
-    f_tauv_bc03 = open(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', 'wa')      
+    f_tauv_bc03 = open(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', 'wa')
+    f_exten_bc03 = open(stacking_analysis_dir + 'jackknife_exten_bc03.txt', 'wa')      
 
     f_ages_miles = open(stacking_analysis_dir + 'jackknife_ages_miles.txt', 'wa')
     f_metals_miles = open(stacking_analysis_dir + 'jackknife_metals_miles.txt', 'wa')
+    f_exten_miles = open(stacking_analysis_dir + 'jackknife_exten_miles.txt', 'wa')
 
     f_ages_fsps = open(stacking_analysis_dir + 'jackknife_ages_fsps.txt', 'wa')
     f_metals_fsps = open(stacking_analysis_dir + 'jackknife_metals_fsps.txt', 'wa')
     f_logtau_fsps = open(stacking_analysis_dir + 'jackknife_logtau_fsps.txt', 'wa')
+    f_exten_fsps = open(stacking_analysis_dir + 'jackknife_exten_fsps.txt', 'wa')
 
     # Open fits files with comparison spectra
     bc03_spec = fits.open(home + '/Desktop/FIGS/new_codes/all_comp_spectra_bc03.fits', memmap=False)
@@ -345,9 +355,9 @@ if __name__ == '__main__':
                 resampled_spec[i] = ma.masked
         resampled_spec = resampled_spec.T
 
-        ages_bc03, metals_bc03, tau_bc03, tauv_bc03 = fit_chi2(flam, ferr, comp_spec_bc03, bc03_extens, resampled_spec, num_samp_to_draw, 'bc03')
-        ages_miles, metals_miles = fit_chi2(flam, ferr, comp_spec_miles, miles_extens, resampled_spec, num_samp_to_draw, 'miles')
-        ages_fsps, metals_fsps, tau_fsps = fit_chi2(flam, ferr, comp_spec_fsps, fsps_extens, resampled_spec, num_samp_to_draw, 'fsps')
+        ages_bc03, metals_bc03, tau_bc03, tauv_bc03, exten_bc03 = fit_chi2(flam, ferr, comp_spec_bc03, bc03_extens, resampled_spec, num_samp_to_draw, 'bc03', bc03_spec)
+        ages_miles, metals_miles, exten_miles = fit_chi2(flam, ferr, comp_spec_miles, miles_extens, resampled_spec, num_samp_to_draw, 'miles', miles_spec)
+        ages_fsps, metals_fsps, tau_fsps, exten_fsps = fit_chi2(flam, ferr, comp_spec_fsps, fsps_extens, resampled_spec, num_samp_to_draw, 'fsps', fsps_spec)
 
         logtau_bc03 = np.log10(tau_bc03)
         logtau_fsps = np.log10(tau_fsps)
@@ -374,6 +384,11 @@ if __name__ == '__main__':
             f_tauv_bc03.write(str(tauv_bc03[k]) + ' ')
         f_tauv_bc03.write('\n')
 
+        f_exten_bc03.write(ongrid + ' ')
+        for k in range(len(exten_bc03)):
+            f_exten_bc03.write(str(exten_bc03[k]) + ' ')
+        f_exten_bc03.write('\n')
+
         ### MILES ###
         f_ages_miles.write(ongrid + ' ')
         for k in range(len(ages_miles)):
@@ -384,6 +399,11 @@ if __name__ == '__main__':
         for k in range(len(metals_miles)):
             f_metals_miles.write(str(metals_miles[k]) + ' ')
         f_metals_miles.write('\n')
+
+        f_exten_miles.write(ongrid + ' ')
+        for k in range(len(exten_miles)):
+            f_exten_miles.write(str(exten_miles[k]) + ' ')
+        f_exten_miles.write('\n')
 
         ### FSPS ###
         f_ages_fsps.write(ongrid + ' ')
@@ -400,6 +420,11 @@ if __name__ == '__main__':
         for k in range(len(logtau_fsps)):
             f_logtau_fsps.write(str(logtau_fsps[k]) + ' ')
         f_logtau_fsps.write('\n')
+
+        f_exten_fsps.write(ongrid + ' ')
+        for k in range(len(exten_fsps)):
+            f_exten_fsps.write(str(exten_fsps[k]) + ' ')
+        f_exten_fsps.write('\n')
 
         ########### Plots between parameters ##########
         """
@@ -463,13 +488,16 @@ if __name__ == '__main__':
     f_metals_bc03.close()
     f_logtau_bc03.close()
     f_tauv_bc03.close()
+    f_exten_bc03.close()
 
     f_ages_miles.close()
     f_metals_miles.close()
+    f_exten_miles.close()
 
     f_ages_fsps.close()
     f_metals_fsps.close()
     f_logtau_fsps.close()
+    f_exten_fsps.close()
 
     # total run time
     print "Total time taken --", time.time() - start, "seconds."

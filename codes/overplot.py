@@ -91,23 +91,24 @@ if __name__ == '__main__':
     # It needs to be read only once because it is the same for all files
     ongrid_vals = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_bc03.txt', dtype=np.str, usecols=range(0,1,1))
 
+    num_jackknife_samps = 5e4
     # Read files with params from jackknife runs
     #### BC03 ####
-    ages_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_bc03.txt', usecols=range(1, int(1e4) + 1))
-    metals_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_bc03.txt', usecols=range(1, int(1e4) + 1))
-    logtau_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_bc03.txt', usecols=range(1, int(1e4) + 1))
-    tauv_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', usecols=range(1, int(1e4) + 1))
-    mass_wht_ages_bc03 = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_bc03.txt', usecols=range(1, int(1e4) + 1))
+    ages_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    metals_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    logtau_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    tauv_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    mass_wht_ages_bc03 = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
 
     #### MILES ####
-    ages_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_miles.txt', usecols=range(1, int(1e4) + 1))
-    metals_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_miles.txt', usecols=range(1, int(1e4) + 1))
+    ages_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_miles.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    metals_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_miles.txt', usecols=range(1, int(num_jackknife_samps) + 1))
 
     #### FSPS ####
-    ages_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_fsps.txt', usecols=range(1, int(1e4) + 1))
-    metals_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_fsps.txt', usecols=range(1, int(1e4) + 1))
-    logtau_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_fsps.txt', usecols=range(1, int(1e4) + 1))
-    mass_wht_ages_fsps = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_fsps.txt', usecols=range(1, int(1e4) + 1))
+    ages_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    metals_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    logtau_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    mass_wht_ages_fsps = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
 
     # Open fits files with comparison spectra
     bc03_spec = fits.open(home + '/Desktop/FIGS/new_codes/all_comp_spectra_bc03.fits', memmap=False)
@@ -260,12 +261,6 @@ if __name__ == '__main__':
             if np.allclose(bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)):
                 currentspec = bc03_spec[j+1].data
 
-                ## Chop currentspec to the same shape as the stacked spectrum 
-                ## This is a temporary step which will be removed once I make all lambda grids consistent.
-                #arg_low = np.argmin(abs(lam_grid_tofit - stack_lam_lowfit))
-                #arg_high = np.argmin(abs(lam_grid_tofit - stack_lam_highfit))
-                #currentspec = currentspec[arg_low:arg_high+1]
-
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
                 # Plot best fit parameters as anchored text boxes
@@ -349,12 +344,6 @@ if __name__ == '__main__':
         for j in range(miles_extens):
             if np.allclose(miles_params[j], np.array([best_age, best_metal]).reshape(2)):
                 currentspec = miles_spec[j+1].data
-                
-                ## Chop currentspec to the same shape as the stacked spectrum 
-                ## This is a temporary step which will be removed once I make all lambda grids consistent.
-                #arg_low = np.argmin(abs(lam_grid_tofit - stack_lam_lowfit))
-                #arg_high = np.argmin(abs(lam_grid_tofit - stack_lam_highfit))
-                #currentspec = currentspec[arg_low:arg_high+1]
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
@@ -426,15 +415,6 @@ if __name__ == '__main__':
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
                 currentspec = fsps_spec[j+1].data
-                #currentspec = currentspec.reshape(29)
-                # This line is a temporary step. It will be removed after I fix 
-                # how the fsps spectra are saved in the fits file and run the library creating routine again.
-                
-                ## Chop currentspec to the same shape as the stacked spectrum 
-                ## This is a temporary step which will be removed once I make all lambda grids consistent.
-                #arg_low = np.argmin(abs(lam_grid_tofit - stack_lam_lowfit))
-                #arg_high = np.argmin(abs(lam_grid_tofit - stack_lam_highfit))
-                #currentspec = currentspec[arg_low:arg_high+1]
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
@@ -499,6 +479,4 @@ if __name__ == '__main__':
         pdf.savefig(bbox_inches='tight')
         
     pdf.close()
-    sys.exit()
-
-
+    sys.exit(0)
