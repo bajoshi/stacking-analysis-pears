@@ -62,6 +62,49 @@ def get_boot_samps(bootname, nsamp, orig_lam_grid):
 
     return boot_samps
 
+def get_avg_color_stellarmass(stack_hdu, col_low, col_high, col_step, mstar_low, mstar_high, mstar_step, ur_color, stellarmass):
+
+    h = stack_hdu
+
+    # Find the averages of all grid cells in a particular row/column
+    # While these are useful numbers to have, they are currently only used in the plotting routine.
+    cellcount = 0
+
+    avgcolarr = np.zeros(5)
+    avgmassarr = np.zeros(5)
+        
+    avgmassarr = avgmassarr.tolist()
+    for k in range(len(avgmassarr)):
+        avgmassarr[k] = []
+
+    for i in np.arange(col_low, col_high, col_step):
+        colcount = 0
+        for j in np.arange(mstar_low, mstar_high, mstar_step):
+            
+            indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
+                       (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
+            
+            row = int(i/col_step)
+            column = int((j - 7.0)/mstar_step)
+
+            if indices.size:
+                avgcol = h[cellcount+2].header['AVGCOL']
+                avgmass = h[cellcount+2].header['AVGMASS']
+                avgcolarr[row] += float(avgcol)
+                avgmassarr[column].append(float(avgmass))
+
+                cellcount += 1
+                colcount += 1
+            else:
+                continue
+
+        avgcolarr[row] /= (colcount)
+
+    for x in range(len(avgmassarr)):
+        avgmassarr[x] = np.sum(avgmassarr[x]) / len(avgmassarr[x])
+
+    return avgcolarr, avgmassarr
+
 if __name__ == '__main__':
 
     # Start time
@@ -70,7 +113,7 @@ if __name__ == '__main__':
     print "Starting at --", dt.now()
 
     # Read in stacks
-    stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
+    stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_PEARSgrismspectra_coarsegrid.fits')
     totalstacks = get_total_extensions(stacks)
 
     # Set up lambda grid
@@ -78,6 +121,23 @@ if __name__ == '__main__':
     lam_lowfit = 3600
     lam_highfit = 6000
     lam_grid_tofit = np.arange(lam_lowfit, lam_highfit, lam_step)
+
+    # Parameters for the original grid
+    # Used here only for getting average colors and stellar masses
+    cat = np.genfromtxt(home + '/Desktop/FIGS/new_codes/color_stellarmass.txt',
+                       dtype=None, names=True, skip_header=2)
+
+    ur_color = cat['urcol']
+    stellarmass = cat['mstar']
+
+    col_step = 0.6
+    mstar_step = 1.0
+    col_low = 0.0
+    col_high = 3.0
+    mstar_low = 7.0
+    mstar_high = 12.0
+
+    avgcol, avgmass = get_avg_color_stellarmass(stacks, col_low, col_high, col_step, mstar_low, mstar_high, mstar_step, ur_color, stellarmass)
 
     # Create pdf file to plot figures in
     pdfname = figures_dir + 'overplot_all_sps.pdf'
@@ -253,10 +313,6 @@ if __name__ == '__main__':
         best_tauv_err = np.std(tauv_bc03[count])
         best_mass_wht_age_err = np.std(mass_wht_ages_bc03[count]) * 10**best_mass_wht_age / (1e9 * 0.434)
 
-        print best_mass_wht_age, np.std(mass_wht_ages_bc03[count]), best_mass_wht_age_err
-        print best_metal, best_metal_err
-        print best_tau, np.std(logtau_bc03[count])
-
         for j in range(bc03_extens):
             if np.allclose(bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)):
                 currentspec = bc03_spec[j+1].data
@@ -264,11 +320,30 @@ if __name__ == '__main__':
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
 
                 # Plot best fit parameters as anchored text boxes
-                ongridbox = TextArea(ongrid, textprops=dict(color='k', size=10)) # Change this to average color and average stellar mass
-                anc_ongridbox = AnchoredOffsetbox(loc=2, child=ongridbox, pad=0.0, frameon=False,\
-                                                     bbox_to_anchor=(0.03, 0.75),\
+                i = ongrid.split(',')[0]
+                j = ongrid.split(',')[1]
+                row = int(float(i)/col_step)
+                column = int((float(j) - 7.0)/mstar_step)
+
+                #ongridbox = TextArea(ongrid, textprops=dict(color='k', size=10)) # Change this to average color and average stellar mass
+                #anc_ongridbox = AnchoredOffsetbox(loc=2, child=ongridbox, pad=0.0, frameon=False,\
+                #                                     bbox_to_anchor=(0.03, 0.75),\
+                #                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                #ax1.add_artist(anc_ongridbox)                
+
+                currentcol = avgcol[row]
+                avgcolbox = TextArea(r"$\left<\mathrm{(U-R)_{rest}}\right>$ = " + "{:.2f}".format(currentcol), textprops=dict(color='k', size=10))
+                anc_avgcolbox = AnchoredOffsetbox(loc=2, child=avgcolbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.03, 0.7),\
                                                      bbox_transform=ax1.transAxes, borderpad=0.0)
-                ax1.add_artist(anc_ongridbox)                
+                ax1.add_artist(anc_avgcolbox)  
+
+                currentmass = avgmass[column]
+                avgmassbox = TextArea(r"$\left<\mathrm{log(\frac{M_*}{M_\odot})}\right>$ = " + "{:.2f}".format(currentmass), textprops=dict(color='k', size=10))
+                anc_avgmassbox = AnchoredOffsetbox(loc=2, child=avgmassbox, pad=0.0, frameon=False,\
+                                                     bbox_to_anchor=(0.03, 0.65),\
+                                                     bbox_transform=ax1.transAxes, borderpad=0.0)
+                ax1.add_artist(anc_avgmassbox) 
 
                 labelbox = TextArea("BC03", textprops=dict(color='r', size=8))
                 anc_labelbox = AnchoredOffsetbox(loc=2, child=labelbox, pad=0.0, frameon=False,\
@@ -315,7 +390,7 @@ if __name__ == '__main__':
                 ax1.tick_params('both', width=1, length=4.7, which='major')
                 
                 # Plot the residual
-                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='r', drawstyle='steps-mid')
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='r', drawstyle='steps')
 
                 ax2.set_ylim(-1e-18, 1e-18)
                 ax2.set_xlim(3000, 6000)
@@ -337,9 +412,6 @@ if __name__ == '__main__':
 
         best_age_err = np.std(ages_miles[count]) * 10**best_age / (1e9 * 0.434)
         best_metal_err = np.std(metals_miles[count])
-
-        print best_age, np.std(ages_miles[count]), best_age_err 
-        print best_metal, best_metal_err
 
         for j in range(miles_extens):
             if np.allclose(miles_params[j], np.array([best_age, best_metal]).reshape(2)):
@@ -379,7 +451,7 @@ if __name__ == '__main__':
                 ax1.tick_params('both', width=1, length=4.7, which='major')
                 
                 # Plot the residual
-                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='b', drawstyle='steps-mid')
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='b', drawstyle='steps')
                 
                 ax2.set_ylim(-1e-18, 1e-18)
                 ax2.set_xlim(3000, 6000)
@@ -407,10 +479,6 @@ if __name__ == '__main__':
         best_metal_err = np.std(metals_fsps[count])
         best_tau_err = np.std(logtau_fsps[count]) * best_tau / 0.434
         best_mass_wht_age_err = np.std(mass_wht_ages_fsps[count]) * 10**best_mass_wht_age / (1e9 * 0.434)
-
-        print best_mass_wht_age, np.std(mass_wht_ages_fsps[count]), best_mass_wht_age_err
-        print best_metal, best_metal_err
-        print best_tau, np.std(logtau_fsps[count])
 
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
@@ -450,7 +518,7 @@ if __name__ == '__main__':
                 ax1.tick_params('both', width=1, length=4.7, which='major')
                 
                 # Plot the residual
-                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='g', drawstyle='steps-mid')
+                ax2.plot(lam_grid_tofit, flam - alpha * currentspec, '-', color='g', drawstyle='steps')
                 
                 ax2.set_ylim(-1e-18, 1e-18)
                 ax2.set_xlim(3000, 6000)
@@ -479,7 +547,7 @@ if __name__ == '__main__':
         pdf.savefig(bbox_inches='tight')
         
     pdf.close()
-    
+
     # total run time
     print "Total time taken --", time.time() - start, "seconds."
     sys.exit(0)

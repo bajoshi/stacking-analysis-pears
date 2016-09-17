@@ -67,7 +67,7 @@ if __name__ == '__main__':
     print "Starting at --", dt.now()
 
     # Read in stacks
-    stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
+    stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_PEARSgrismspectra_coarsegrid.fits')
     totalstacks = get_total_extensions(stacks)
 
     # Create grid for making grid plots
@@ -98,13 +98,14 @@ if __name__ == '__main__':
     # It needs to be read only once because it is the same for all files
     ongrid_vals = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_bc03.txt', dtype=np.str, usecols=range(0,1,1))
 
+    num_jackknife_samps = 5e4
     # Read files with params from jackknife runs
     #### BC03 ####
-    ages_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_bc03.txt', usecols=range(1, int(1e4) + 1))
-    metals_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_bc03.txt', usecols=range(1, int(1e4) + 1))
-    logtau_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_bc03.txt', usecols=range(1, int(1e4) + 1))
-    tauv_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', usecols=range(1, int(1e4) + 1))
-    mass_wht_ages_bc03 = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_bc03.txt', usecols=range(1, int(1e4) + 1))
+    ages_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    metals_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    logtau_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    tauv_bc03 = np.loadtxt(stacking_analysis_dir + 'jackknife_tauv_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    mass_wht_ages_bc03 = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_bc03.txt', usecols=range(1, int(num_jackknife_samps) + 1))
 
     av_bc03 = (2.5 / np.log(10)) * tauv_bc03 * 10
 
@@ -112,20 +113,21 @@ if __name__ == '__main__':
     quenching_times_bc03 = np.log10(quenching_times_bc03)
 
     #### MILES ####
-    ages_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_miles.txt', usecols=range(1, int(1e4) + 1))
-    metals_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_miles.txt', usecols=range(1, int(1e4) + 1))
+    ages_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_miles.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    metals_miles = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_miles.txt', usecols=range(1, int(num_jackknife_samps) + 1))
 
     #### FSPS ####
-    ages_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_fsps.txt', usecols=range(1, int(1e4) + 1))
-    metals_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_fsps.txt', usecols=range(1, int(1e4) + 1))
-    logtau_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_fsps.txt', usecols=range(1, int(1e4) + 1))
-    mass_wht_ages_fsps = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_fsps.txt', usecols=range(1, int(1e4) + 1))
+    ages_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_ages_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    metals_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_metals_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    logtau_fsps = np.loadtxt(stacking_analysis_dir + 'jackknife_logtau_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
+    mass_wht_ages_fsps = np.loadtxt(stacking_analysis_dir + 'mass_weighted_ages_fsps.txt', usecols=range(1, int(num_jackknife_samps) + 1))
 
     quenching_times_fsps = 10**ages_fsps - 10**mass_wht_ages_fsps
     quenching_times_fsps = np.log10(quenching_times_fsps)
 
     #get_mass_weighted_ages('bc03', ages_bc03, logtau_bc03, ongrid_vals)
     #get_mass_weighted_ages('fsps', ages_fsps, logtau_fsps, ongrid_vals)
+    #sys.exit(0)
 
     color_step = 0.6
     mstar_step = 1.0

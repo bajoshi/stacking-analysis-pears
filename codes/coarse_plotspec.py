@@ -115,10 +115,10 @@ if __name__ == '__main__':
         colcount = 0
         for j in np.arange(mstar_low, mstar_high, mstar_step):
             
-            indices = np.where((ur_color >= i) & (ur_color < i + color_step) &\
+            indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
 	                   (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
             
-            row = int(i/color_step)
+            row = int(i/col_step)
             column = int((j - 7.0)/mstar_step)
 
             if indices.size:
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     for i in np.arange(col_low, col_high, col_step):
         for j in np.arange(mstar_low, mstar_high, mstar_step):
             
-            indices = np.where((ur_color >= i) & (ur_color < i + color_step) &\
+            indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
                             (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
                             
             print "ONGRID", i, j
@@ -182,7 +182,7 @@ if __name__ == '__main__':
             """
 
             # Create subplots for different grid positions
-            row = 4 - int(i/color_step)
+            row = 4 - int(i/col_step)
             column = int((j - 7.0)/mstar_step)
             ax = plt.subplot(gs[row*3:row*3+3, column*3:column*3+3])
             ax.set_ylim(0,2)

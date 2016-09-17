@@ -264,7 +264,7 @@ if __name__ == '__main__':
     comp_spec_fsps = comp_spec_fsps[:,arg_lamlow:arg_lamhigh+1]
 
     # Read stacks
-    stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_coarsegrid_PEARSgrismspectra.fits')
+    stacks = fits.open(home + '/Desktop/FIGS/new_codes/coadded_PEARSgrismspectra_coarsegrid.fits')
     fig_savedir = home + '/Desktop/FIGS/new_codes/jackknife_figs/coarse/'
 
     totalstacks = get_total_extensions(stacks)
