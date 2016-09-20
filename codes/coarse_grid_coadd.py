@@ -147,7 +147,7 @@ if __name__ == '__main__':
             # maybe I should also try doing a mean after 3sigma clipping and compare
             for y in range(len(lam_grid)):
                 if old_flam[y]:
-                    old_flamerr[y] = 1.253 * np.std(old_flam[y]) / np.sqrt(len(old_flam[y]))
+                    old_flamerr[y] = np.sqrt((1.253 * np.std(old_flam[y]) / np.sqrt(len(old_flam[y])))**2 + np.sum(old_flamerr[y]) / gal_current_bin)
                     old_flam[y] = np.median(old_flam[y])
                 else:
                     old_flam[y] = 0.0
@@ -179,7 +179,7 @@ if __name__ == '__main__':
             gal_per_bin[row,column] = gal_current_bin
     
     print added_gal, skipped_gal
-    print gal_per_bin
+    print np.flipud(gal_per_bin)
     print np.sum(gal_per_bin, axis=None)
     hdulist.writeto(savefits_dir + final_fits_filename, clobber=True)
     

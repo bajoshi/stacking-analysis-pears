@@ -39,7 +39,7 @@ def plot_spectrum_indiv(flam_em_indiv, ferr_indiv, lam_em, specname):
 def plot_spectrum_median(flux, flux_err, lam, ongrid, numspec):
     
     ax.errorbar(lam, flux, yerr=flux_err, fmt='o-', color='k', linewidth=2, label=ongrid+','+numspec,\
-                ecolor='r', markeredgecolor='k', capsize=0, markersize=4)
+                ecolor='r', markeredgecolor='k', capsize=0, markersize=4, zorder=10)
 
     ax.minorticks_on()
     ax.tick_params('both', width=1, length=3, which='minor')
