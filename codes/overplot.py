@@ -217,10 +217,10 @@ if __name__ == '__main__':
         ferr = ferr + 0.05 * flam  # putting in a 5% additional error bar
         ongrid = stacks[stackcount + 2].header["ONGRID"]
         numspec = int(stacks[stackcount + 2].header["NUMSPEC"])
-        print ongrid
+        #print ongrid
 
         if numspec < 5:
-            print "Too few spectra in stack. Continuing to the next grid cell..."
+            #print "Too few spectra in stack. Continuing to the next grid cell..."
             continue
 
         # Mask flam and ferr arrays
@@ -313,17 +313,19 @@ if __name__ == '__main__':
         best_tauv_err = np.std(tauv_bc03[count])
         best_mass_wht_age_err = np.std(mass_wht_ages_bc03[count]) * 10**best_mass_wht_age / (1e9 * 0.434)
 
+        # Plot best fit parameters as anchored text boxes
+        i = ongrid.split(',')[0]
+        j = ongrid.split(',')[1]
+        row = int(float(i)/col_step)
+        column = int((float(j) - 7.0)/mstar_step)
+
+        print 'bc03', best_age, best_tau, best_mass_wht_age, avgmass[column]
+
         for j in range(bc03_extens):
             if np.allclose(bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)):
                 currentspec = bc03_spec[j+1].data
 
                 alpha = np.sum(flam * currentspec / ferr**2) / np.sum(currentspec**2 / ferr**2)
-
-                # Plot best fit parameters as anchored text boxes
-                i = ongrid.split(',')[0]
-                j = ongrid.split(',')[1]
-                row = int(float(i)/col_step)
-                column = int((float(j) - 7.0)/mstar_step)
 
                 #ongridbox = TextArea(ongrid, textprops=dict(color='k', size=10)) # Change this to average color and average stellar mass
                 #anc_ongridbox = AnchoredOffsetbox(loc=2, child=ongridbox, pad=0.0, frameon=False,\
@@ -479,6 +481,8 @@ if __name__ == '__main__':
         best_metal_err = np.std(metals_fsps[count])
         best_tau_err = np.std(logtau_fsps[count]) * best_tau / 0.434
         best_mass_wht_age_err = np.std(mass_wht_ages_fsps[count]) * 10**best_mass_wht_age / (1e9 * 0.434)
+
+        print 'fsps', best_age, best_tau, best_mass_wht_age, avgmass[column]
 
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
