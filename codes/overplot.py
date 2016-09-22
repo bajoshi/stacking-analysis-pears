@@ -319,7 +319,7 @@ if __name__ == '__main__':
         row = int(float(i)/col_step)
         column = int((float(j) - 7.0)/mstar_step)
 
-        print 'bc03', best_age, best_tau, best_mass_wht_age, avgmass[column]
+        print 'bc03', best_age, best_age_err, best_tau, best_tau_err, best_mass_wht_age, best_mass_wht_age_err, avgmass[column]
 
         for j in range(bc03_extens):
             if np.allclose(bc03_params[j], np.array([best_age, best_metal, best_tau, best_tauv]).reshape(4)):
@@ -482,7 +482,7 @@ if __name__ == '__main__':
         best_tau_err = np.std(logtau_fsps[count]) * best_tau / 0.434
         best_mass_wht_age_err = np.std(mass_wht_ages_fsps[count]) * 10**best_mass_wht_age / (1e9 * 0.434)
 
-        print 'fsps', best_age, best_tau, best_mass_wht_age, avgmass[column]
+        print 'fsps', best_age, best_age_err, best_tau, best_tau_err, best_mass_wht_age, best_mass_wht_age_err, avgmass[column]
 
         for j in range(fsps_extens):
             if np.allclose(fsps_params[j], np.array([best_age, best_metal, best_tau]).reshape(3)):
