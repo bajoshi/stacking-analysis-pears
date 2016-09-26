@@ -15,7 +15,7 @@ from fast_chi2_jackknife import get_total_extensions
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 figures_dir = stacking_analysis_dir + "figures/"
-savefits_dir = home + "/Desktop/FIGS/new_codes/"
+savefits_dir = home + "/Desktop/FIGS/new_codes/fits_comp_spectra/"
 
 def resample_single(lam, spec, lam_grid_tofit):
     
