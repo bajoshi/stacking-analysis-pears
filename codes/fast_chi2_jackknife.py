@@ -94,7 +94,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
     metals = []
     best_exten = []
     #totalchi2 = []    
-    #estchi2index = []
+    #bestchi2index = []
     #bestalpha = []
     for i in range(int(num_samp_to_draw)): # loop over jackknife runs
         #if i%1000 == 0: print i
@@ -112,7 +112,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
                 best_age = float(bc03_spec[sortargs[k] + 1].header['LOG_AGE'])
-                if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
+                if (best_age < 9 + np.log10(7.5)) & (best_age > 9 + np.log10(0.1)):
                     tau.append(bc03_spec[sortargs[k] + 1].header['TAU_GYR'])
                     tauv.append(bc03_spec[sortargs[k] + 1].header['TAUV'])
                     ages.append(best_age)
@@ -129,7 +129,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
                 best_age = float(miles_spec[sortargs[k] + 1].header['LOG_AGE'])
-                if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
+                if (best_age < 9 + np.log10(7.5)) & (best_age > 9 + np.log10(0.1)):
                     ages.append(best_age)
                     metals.append(miles_spec[sortargs[k] + 1].header['METAL'])
                     best_exten.append(sortargs[k] + 1)
@@ -141,7 +141,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
                 best_age = float(fsps_spec[sortargs[k] + 1].header['LOG_AGE'])
-                if (best_age < 9 + np.log10(8)) & (best_age > 9 + np.log10(0.1)):
+                if (best_age < 9 + np.log10(7.5)) & (best_age > 9 + np.log10(0.1)):
                     tau.append(fsps_spec[sortargs[k] + 1].header['TAU_GYR'])
                     ages.append(best_age)
                     metals.append(fsps_spec[sortargs[k] + 1].header['METAL'])

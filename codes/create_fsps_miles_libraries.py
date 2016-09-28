@@ -208,13 +208,20 @@ def create_fsps_lib_main(fitting_lam_grid, final_fitsname, metals):
             #currentspec = np.divide(currentspec, medvals)
             
             for j in range(len(currentspec)):
-                hdr = fits.Header()
-                hdr['LOG_AGE'] = str(log_ages[j])
-                hdr['METAL'] = str(metals)
-                hdr['TAU_GYR'] = str(tau)
+                if np.median(currentspec[j]) < 1e-30:
+                    # These are the spectra where it has saved values that are very close to zero
+                    # but not exactly zero and that was throwing off the fitting code.
+                    # Also these values (which are bogus) have a blue slope and 
+                    # look like a SF galaxy's blue spectrum; almost like a blackbody.
+                    continue
+                else:
+                    hdr = fits.Header()
+                    hdr['LOG_AGE'] = str(log_ages[j])
+                    hdr['METAL'] = str(metals)
+                    hdr['TAU_GYR'] = str(tau)
 
-                dat = currentspec[j]
-                hdulist.append(fits.ImageHDU(data=dat, header=hdr))
+                    dat = currentspec[j]
+                    hdulist.append(fits.ImageHDU(data=dat, header=hdr))
 
     hdulist.writeto(savefits_dir + final_fitsname, clobber=True)
 
