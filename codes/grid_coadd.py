@@ -326,17 +326,6 @@ if __name__ == '__main__':
                 # Divide by median value at 4400A to 4600A to rescale. Multiplying by median value of the flux medians to get it back to physical units
                 flam_em = (flam_em / medarr[u]) * medval
                 ferr = (ferr / medarr[u]) * medval
-                
-                """
-                # Set any negative points in spectrum to 0.
-                # If more than 30% of the points in a spectrum are negative then skip it.
-                if np.any(flam_em < 0.0):
-                    if len(np.where(flam_em < 0.0)[0]) > 0.3 * len(flam_em):
-                        continue
-                    flam_em_neg_ind = np.where(flam_em < 0.0)[0]
-                    flam_em[flam_em_neg_ind] = 0.0
-                    ferr[flam_em_neg_ind] = 0.0
-                """
 
                 # These (skipspec) were looked at by eye and seemed crappy
                 # I'm also excluding spectra with emission lines.
