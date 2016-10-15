@@ -2,7 +2,7 @@ from __future__ import division
 
 from astropy.io import fits
 import numpy as np
-import fsps
+#import fsps
 
 import matplotlib.pyplot as plt
 
@@ -13,9 +13,14 @@ import os
 from fast_chi2_jackknife import get_total_extensions
 
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
-stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
-figures_dir = stacking_analysis_dir + "figures/"
+massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
+massive_figures_dir = massive_galaxies_dir + "figures/"
 savefits_dir = home + "/Desktop/FIGS/new_codes/fits_comp_spectra/"
+stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+new_codes_dir = home + "/Desktop/FIGS/new_codes/"
+
+sys.path.append(massive_galaxies_dir + 'codes/')
+from fast_chi2_jackknife_massive_galaxies import get_interplsf
 
 def resample_single(lam, spec, lam_grid_tofit):
     
@@ -98,7 +103,7 @@ def makefig():
 
     return fig, ax
 
-def create_miles_lib_main(fitting_lam_grid, final_fitsname):
+def create_miles_lib_main(fitting_lam_grid, pearsid, redshift):
     """
     Creates a consolidated fits file from the 1900 or so individual fits file that
     were available for the MILES SPS models.
@@ -109,6 +114,7 @@ def create_miles_lib_main(fitting_lam_grid, final_fitsname):
     """
 
     milesdir = os.getenv('HOME') + '/Documents/MILES_BaSTI_ku_1.30_fits/'
+    final_fits_name = 'all_comp_spectra_miles_withlsf_' + str(pearsid) + '.fits'
 
     hdu = fits.PrimaryHDU()
     hdulist = fits.HDUList(hdu)
@@ -121,6 +127,10 @@ def create_miles_lib_main(fitting_lam_grid, final_fitsname):
         h = fits.open(file)      
 
         currentspec = h[0].data
+
+        # get interpolated lsf and convolve and then resample
+        interplsf = get_interplsf(pearsid, redshift)
+        currentspec = convolve_fft(currentspec, interplsf)
         currentspec = resample_single(currentlam, currentspec, fitting_lam_grid)
 
         #currentspec = currentspec / rescale_single(fitting_lam_grid, currentspec)
@@ -159,13 +169,15 @@ def create_miles_lib_main(fitting_lam_grid, final_fitsname):
 
     return None
 
-def create_fsps_lib_main(fitting_lam_grid, final_fitsname, metals):
+def create_fsps_lib_main(fitting_lam_grid, pearsid, redshift, metals):
     """
     Creates a consolidated fits file for all the FSPS models.
 
     This is done to decrease file I/O time by only reading in one large fits file
     during the program that fits models.    
     """
+
+    final_fits_name = 'all_comp_spectra_fsps_withlsf_' + str(pearsid) + '.fits'
 
     # Parameter array that I want the models for -
     logtauarr = np.arange(-2, 2, 0.2)
@@ -191,6 +203,9 @@ def create_fsps_lib_main(fitting_lam_grid, final_fitsname, metals):
     hdu = fits.PrimaryHDU()
     hdulist = fits.HDUList(hdu)    
 
+    # get interpolated lsf and convolve and then resample
+    interplsf = get_interplsf(pearsid, redshift)
+
     # Loop over parameter space and generate model spectra 
     count = 0
     for metals in metallicities:
@@ -200,6 +215,9 @@ def create_fsps_lib_main(fitting_lam_grid, final_fitsname, metals):
             sps.params['logzsol'] = np.log10(metals / 0.02)  # it wants this in log(Z/Z_sol)
             currentlam, currentspec = sps.get_spectrum(peraa=True)
             log_ages = sps.log_age
+            
+            for k in range(len(currentspec)):
+                currentspec[k] = convolve_fft(currentspec[k], interplsf)
 
             currentspec = resample(currentlam, currentspec, fitting_lam_grid, len(log_ages))
             #currentlam = fitting_lam_grid
@@ -220,7 +238,7 @@ def create_fsps_lib_main(fitting_lam_grid, final_fitsname, metals):
                     hdr['METAL'] = str(metals)
                     hdr['TAU_GYR'] = str(tau)
 
-                    dat = currentspec[j]
+                    dat = currentspec[j]                    
                     hdulist.append(fits.ImageHDU(data=dat, header=hdr))
 
     hdulist.writeto(savefits_dir + final_fitsname, clobber=True)
