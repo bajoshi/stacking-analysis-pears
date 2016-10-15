@@ -3,6 +3,7 @@ from __future__ import division
 from astropy.io import fits
 import numpy as np
 #import fsps
+from astropy.convolution import convolve_fft
 
 import matplotlib.pyplot as plt
 
@@ -114,7 +115,7 @@ def create_miles_lib_main(fitting_lam_grid, pearsid, redshift):
     """
 
     milesdir = os.getenv('HOME') + '/Documents/MILES_BaSTI_ku_1.30_fits/'
-    final_fits_name = 'all_comp_spectra_miles_withlsf_' + str(pearsid) + '.fits'
+    final_fitsname = 'all_comp_spectra_miles_withlsf_' + str(pearsid) + '.fits'
 
     hdu = fits.PrimaryHDU()
     hdulist = fits.HDUList(hdu)
@@ -177,7 +178,7 @@ def create_fsps_lib_main(fitting_lam_grid, pearsid, redshift, metals):
     during the program that fits models.    
     """
 
-    final_fits_name = 'all_comp_spectra_fsps_withlsf_' + str(pearsid) + '.fits'
+    final_fitsname = 'all_comp_spectra_fsps_withlsf_' + str(pearsid) + '.fits'
 
     # Parameter array that I want the models for -
     logtauarr = np.arange(-2, 2, 0.2)
