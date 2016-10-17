@@ -117,6 +117,11 @@ def create_miles_lib_main(fitting_lam_grid, pearsid, redshift):
     milesdir = os.getenv('HOME') + '/Documents/MILES_BaSTI_ku_1.30_fits/'
     final_fitsname = 'all_comp_spectra_miles_withlsf_' + str(pearsid) + '.fits'
 
+    # get interpolated lsf and convolve and then resample
+    interplsf = get_interplsf(pearsid, redshift)
+    if interplsf is None:
+        return None
+
     hdu = fits.PrimaryHDU()
     hdulist = fits.HDUList(hdu)
 
@@ -129,8 +134,6 @@ def create_miles_lib_main(fitting_lam_grid, pearsid, redshift):
 
         currentspec = h[0].data
 
-        # get interpolated lsf and convolve and then resample
-        interplsf = get_interplsf(pearsid, redshift)
         currentspec = convolve_fft(currentspec, interplsf)
         currentspec = resample_single(currentlam, currentspec, fitting_lam_grid)
 
@@ -180,6 +183,11 @@ def create_fsps_lib_main(fitting_lam_grid, pearsid, redshift, metals):
 
     final_fitsname = 'all_comp_spectra_fsps_withlsf_' + str(pearsid) + '.fits'
 
+    # get interpolated lsf and convolve and then resample
+    interplsf = get_interplsf(pearsid, redshift)
+    if interplsf is None:
+        return None
+
     # Parameter array that I want the models for -
     logtauarr = np.arange(-2, 2, 0.2)
     # metallicities = np.array([0.0001, 0.0004, 0.004, 0.008, 0.02, 0.05])  # these are the default metallicities.
@@ -203,9 +211,6 @@ def create_fsps_lib_main(fitting_lam_grid, pearsid, redshift, metals):
     # Create fits file for saving all consolidated spectra
     hdu = fits.PrimaryHDU()
     hdulist = fits.HDUList(hdu)    
-
-    # get interpolated lsf and convolve and then resample
-    interplsf = get_interplsf(pearsid, redshift)
 
     # Loop over parameter space and generate model spectra 
     count = 0
