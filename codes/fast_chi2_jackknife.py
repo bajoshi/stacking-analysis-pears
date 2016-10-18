@@ -93,9 +93,9 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
     tauv = []
     metals = []
     best_exten = []
-    #totalchi2 = []    
+    totalchi2 = []    
     #bestchi2index = []
-    #bestalpha = []
+    bestalpha = []
     for i in range(int(num_samp_to_draw)): # loop over jackknife runs
         #if i%1000 == 0: print i
         flam = resampled_spec[i]
@@ -116,9 +116,9 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                     tau.append(bc03_spec[sortargs[k] + 1].header['TAU_GYR'])
                     tauv.append(bc03_spec[sortargs[k] + 1].header['TAUV'])
                     ages.append(best_age)
-                    #totalchi2.append(chi2[sortargs[k]])
+                    totalchi2.append(chi2[sortargs[k]])
                     #bestchi2index.append(sortargs[k])
-                    #bestalpha.append(alpha[sortargs[k]])
+                    bestalpha.append(alpha[sortargs[k]])
                     metals.append(bc03_spec[sortargs[k] + 1].header['METAL'])
                     best_exten.append(sortargs[k] + 1)
                     break
@@ -133,6 +133,8 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                     ages.append(best_age)
                     metals.append(miles_spec[sortargs[k] + 1].header['METAL'])
                     best_exten.append(sortargs[k] + 1)
+                    totalchi2.append(chi2[sortargs[k]])
+                    bestalpha.append(alpha[sortargs[k]])
                     break
 
         if library == 'fsps':
@@ -146,6 +148,8 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
                     ages.append(best_age)
                     metals.append(fsps_spec[sortargs[k] + 1].header['METAL'])
                     best_exten.append(sortargs[k] + 1)
+                    totalchi2.append(chi2[sortargs[k]])
+                    bestalpha.append(alpha[sortargs[k]])
                     break
 
     # total computational time
@@ -160,6 +164,8 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         logtau = np.log10(tau)
         tauv = np.asarray(tauv, dtype=np.float64)
         best_exten = np.asarray(best_exten, dtype=np.float64)
+        totalchi2 = np.asarray(totalchi2, dtype=np.float64)
+        bestalpha = np.asarray(bestalpha, dtype=np.float64)
         
         print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
         print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
@@ -172,12 +178,14 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         print "Tau - ", len(np.unique(tau))
         print "Tau_v - ", len(np.unique(tauv))
 
-        return ages, metals, tau, tauv, best_exten
+        return ages, metals, tau, tauv, best_exten, totalchi2, bestalpha
 
     elif library == 'miles':
         ages = np.asarray(ages, dtype=np.float64)
         metals = np.asarray(metals, dtype=np.float64)
         best_exten = np.asarray(best_exten, dtype=np.float64)
+        totalchi2 = np.asarray(totalchi2, dtype=np.float64)
+        bestalpha = np.asarray(bestalpha, dtype=np.float64)
         
         print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
         print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
@@ -186,7 +194,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         print "Ages - ", len(np.unique(ages))
         print "Metals - ", len(np.unique(metals))
 
-        return ages, metals, best_exten
+        return ages, metals, best_exten, totalchi2, bestalpha
 
     elif library == 'fsps':
         ages = np.asarray(ages, dtype=np.float64)
@@ -194,6 +202,8 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         tau = np.asarray(tau, dtype=np.float64)
         logtau = np.log10(tau)
         best_exten = np.asarray(best_exten, dtype=np.float64)
+        totalchi2 = np.asarray(totalchi2, dtype=np.float64)
+        bestalpha = np.asarray(bestalpha, dtype=np.float64)
         
         print "Ages: Median +- std dev = ", np.median(ages), "+-", np.std(ages)
         print "Metals: Median +- std dev = ", np.median(metals), "+-", np.std(metals)
@@ -204,7 +214,7 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
         print "Metals - ", len(np.unique(metals))
         print "Tau - ", len(np.unique(tau))
 
-        return ages, metals, tau, best_exten
+        return ages, metals, tau, best_exten, totalchi2, bestalpha
 
 if __name__ == '__main__':
 
