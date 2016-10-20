@@ -109,7 +109,7 @@ if __name__ == '__main__':
     data = np.array(zip(pears_id, fieldname, pearsra, pearsdec, ur_color, stellarmass, threed_id, threed_z),\
                     dtype=[('pears_id', int), ('fieldname', '|S7'), ('pearsra', float), ('pearsdec', float), ('ur_color', float), ('stellarmass', float), ('threed_id', int), ('threed_z', float)])
 
-    np.savetxt(outdir + 'color_stellarmass.txt', data, fmt=['%d', '%s', '%.4f', '%.4f', '%.2f', '%.2f', '%d', '%.2f'], delimiter=' ',\
+    np.savetxt(outdir + 'color_stellarmass.txt', data, fmt=['%d', '%s', '%.6f', '%.6f', '%.2f', '%.2f', '%d', '%.2f'], delimiter=' ',\
                header='The PEARS id is given here as only an integer.' + '\n' +\
                'The user must figure out if it is part of northern or southern fields.' + '\n' +\
                'pearsid field pearsra pearsdec urcol mstar threedid threedzphot')
