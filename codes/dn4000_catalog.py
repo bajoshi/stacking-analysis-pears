@@ -21,7 +21,7 @@ I think this code should also have the same contamination tolerances that grid_c
 
 def dn4000(lam, spec, spec_err):
     """
-        Make sure the supplied lambda is in angstroms and the spectrum is in f_lambda.
+        Make sure the supplied lambda is in angstroms and the spectrum is in f_lambda -- IN THE REST FRAME!!!
     """
 
     arg3850 = np.argmin(abs(lam - 3850))
@@ -47,7 +47,7 @@ def dn4000(lam, spec, spec_err):
 
 def d4000(lam, spec, spec_err):
     """
-        Make sure the supplied lambda is in angstroms and the spectrum is in f_lambda.
+        Make sure the supplied lambda is in angstroms and the spectrum is in f_lambda -- IN THE REST FRAME!!!
     """
 
     arg3750 = np.argmin(abs(lam - 3750))
@@ -73,7 +73,7 @@ def d4000(lam, spec, spec_err):
 
 if __name__ == '__main__':
     
-    cat = np.genfromtxt(home + '/Desktop/FIGS/new_codes/color_stellarmass.txt',
+    cat = np.genfromtxt(home + '/Desktop/FIGS/stacking-analysis-pears/color_stellarmass.txt',
                    dtype=None, names=True, skip_header=2)
 
     pears_id = cat['pearsid']
@@ -102,3 +102,24 @@ if __name__ == '__main__':
     np.savetxt(stacking_analysis_dir + 'pears_4000break_catalog.txt', data, fmt=['%d', '%.3f', '%.6f', '%.6f', '%.4f', '%.4f', '%.4f', '%.4f'], delimiter=' ',\
                header='Catalog for all galaxies that matched between 3DHST and PEARS. \n' +
                'pears_id redshift ra dec dn4000 dn4000_err d4000 d4000_err')
+
+    # Read in FIGS spc files
+
+    gn1 = fits.open(home + '/Desktop/FIGS/spc_files/GN1_G102_2.combSPC.fits')
+    gn2 = fits.open(home + '/Desktop/FIGS/spc_files/GN2_G102_2.combSPC.fits')
+    gs1 = fits.open(home + '/Desktop/FIGS/spc_files/GS1_G102_2.combSPC.fits')
+    gs2 = fits.open(home + '/Desktop/FIGS/spc_files/GS2_G102_2.combSPC.fits')
+
+    allspec = [gn1, gn2, gs1, gs2]
+
+    for spec in allspec:
+        for figsid in field:
+
+            lam          = spec["BEAM_%sA" % (figsid)].data["LAMBDA"]     # Wavelength (A) 
+            avg_flux     = spec["BEAM_%sA" % (figsid)].data["AVG_FLUX"]   # Flux (erg/s/cm^2/A)
+            avg_ferr     = spec["BEAM_%sA" % (figsid)].data["STD_FLUX"]   # Flux error (erg/s/cm^2/A)
+            avg_wht_flux = spec["BEAM_%sA" % (figsid)].data["AVG_WFLUX"]  # Weighted Flux (erg/s/cm^2/A)
+            avg_wht_ferr = spec["BEAM_%sA" % (figsid)].data["STD_WFLUX"]  # Weighted Flux error (erg/s/cm^2/A)
+
+
+
