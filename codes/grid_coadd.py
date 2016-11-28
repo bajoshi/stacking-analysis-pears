@@ -137,12 +137,13 @@ def rescale(ids, zs):
     # Return the maximum in array of median values
     return medarr, medval, np.std(medarr)
 
-def fileprep(pears_index, redshift):
+def fileprep(pears_index, redshift, field):
 
     data_path = home + "/Documents/PEARS/data_spectra_only/"
     # Get the correct filename and the number of extensions
-    filename = data_path + 'h_pears_n_id' + str(pears_index) + '.fits'
-    if not os.path.isfile(filename):
+    if field == 'GOODS-N':
+        filename = data_path + 'h_pears_n_id' + str(pears_index) + '.fits'
+    elif field == 'GOODS-S':
         filename = data_path + 'h_pears_s_id' + str(pears_index) + '.fits'
 
     fitsfile = fits.open(filename)

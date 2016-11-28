@@ -32,7 +32,9 @@ def cycle_through(flam_em, ferr, lam_em, specname):
 
     plt.show()
 
-def plot_spectrum_indiv(flam_em_indiv, ferr_indiv, lam_em_indiv, specname_indiv, i, j, label=False, labelmax=True):
+    return None
+
+def plot_spectrum_indiv(flam_em_indiv, ferr_indiv, lam_em_indiv, specname_indiv, label=False, labelmax=True):
     
     # matplotlib will not plot nan values so I'm setting 0's to nan's here.
     # This is only to make the plot look better.
@@ -69,6 +71,8 @@ def plot_spectrum_indiv(flam_em_indiv, ferr_indiv, lam_em_indiv, specname_indiv,
     ax.tick_params('both', width=1, length=4.7, which='major')
     ax.set_xlim(2500, 6000)
 
+    return None
+
 def plot_spectrum_median(flux, flux_err, lam_em, ongrid, numspec, ymax_lim):
     
     # matplotlib will not plot nan values so I'm setting 0's to nan's here.
@@ -88,6 +92,8 @@ def plot_spectrum_median(flux, flux_err, lam_em, ongrid, numspec, ymax_lim):
     ax.set_ylim(0,ymax_lim)
     #ax.set_yscale('log')
     ax.legend(loc=0)
+
+    return None
 
 def get_ylim_stack(flux, flux_err, lam_em):
 
@@ -115,10 +121,14 @@ def plot_spectrum_bc03(lam, flux, bestparams, legendstyle):
                                      bbox_transform=ax.transAxes, borderpad=0.0)
     ax.add_artist(anchored_box)
 
+    return None
+
 def shade_em_lines():
 
     ymin, ymax = ax.get_ylim()
     ax.fill_between(x=np.arange(4800,5200,100), y1=ymax, y2=ymin, facecolor='gray', alpha=0.5)
+
+    return None
 
 def resample_bc03(lam_model, spec):
     
@@ -303,7 +313,7 @@ if __name__ == '__main__':
                     continue
                 else:
                     indiv_count += 1
-                    plot_spectrum_indiv(flam_em, ferr, lam_em, specname, i, j, label=False, labelmax=False) # plot individual spectrum
+                    plot_spectrum_indiv(flam_em, ferr, lam_em, specname, label=False, labelmax=False) # plot individual spectrum
 
             # plot stacked spectrum
             # Running this again to get it on top
