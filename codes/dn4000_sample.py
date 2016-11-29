@@ -78,8 +78,14 @@ if __name__ == '__main__':
 
     #### SDSS ####
     # these are from SDSS DR8
-    galspecindx = fits.open(newcodes_dir + 'galSpecIndx-dr8.fits')
-    galspecinfo = fits.open(newcodes_dir + 'galSpecInfo-dr8.fits')
+    galspecindx = fits.open(newcodes_dir + 'galSpecIndx-dr9.fits')
+    galspecinfo = fits.open(newcodes_dir + 'galSpecInfo-dr9.fits')
+ 
+    # get id, plate, mjd, and fiber numbers
+    sdss_id = galspecindx[1].data['SPECOBJID']
+    plateid = galspecindx[1].data['PLATEID']
+    mjd = galspecindx[1].data['MJD']
+    fiberid = galspecindx[1].data['FIBERID']
 
     # get dn4000 and redshift arrays
     dn4000_sdss = galspecindx[1].data['D4000_N_SUB']
@@ -103,6 +109,25 @@ if __name__ == '__main__':
     redshift_sdss_plot = redshift_sdss[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx]
 
     print len(dn4000_sdss_plot)  # 866883
+
+    # write fits names to a text file to download these spectra
+    fh = open(newcodes_dir + 'sdss_spectra_dr9/' + 'speclist.txt', 'wa')
+
+    for i in range(700):
+        current_plateid = plateid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100]
+        current_mjd = mjd[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100]
+        current_fiberid = str(fiberid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
+        if len(current_fiberid) == 1:
+            current_fiberid = "000" + current_fiberid
+        elif len(current_fiberid) == 2:
+            current_fiberid = "00" + current_fiberid
+        elif len(current_fiberid) == 3:
+            current_fiberid = "0" + current_fiberid
+        specstring = "0" + str(current_plateid) + "/" + "spec-0" + str(current_plateid) + "-" + str(current_mjd) + "-" + current_fiberid + ".fits"
+        fh.write(specstring + '\n')
+
+    fh.close()
+    sys.exit(0)
 
     # Make sure that all the galaxies in the sample are unique
     # there is the possibility of duplicate entries only in hte redshift
