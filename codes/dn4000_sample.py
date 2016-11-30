@@ -5,13 +5,84 @@ from astropy.io import fits
 
 import sys
 import os
+import glob
 
 import matplotlib.pyplot as plt
 
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
 massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
 massive_figures_dir = massive_galaxies_dir + "figures/"
+stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 newcodes_dir = home + "/Desktop/FIGS/new_codes/"
+
+sys.path.append(stacking_analysis_dir + 'codes/')
+import dn4000_catalog as dct
+
+def check_sdss():
+
+    sdss_spectra_dr9_dir = newcodes_dir + 'sdss_spectra_dr9/'
+    specdetails = np.genfromtxt(sdss_spectra_dr9_dir + 'spec_details.txt', dtype=None, delimiter=' ', names=['filename', 'z', 'dn4000'])
+
+    #for fname in glob.glob('lite/' + specdetails[filename])
+
+    #os.path.isfile('lite/' + )
+
+    return None
+
+def save_speclist_sdss(plateid, mjd, fiberid, redshift_sdss, dn4000_sdss, sdss_use_indx, sig_4000break_indices_sdss, dn4000_sdss_range_indx, gen_list):
+
+    if gen_list == 'spec':
+
+        # write fits names to a text file to download these spectra
+        fh = open(newcodes_dir + 'sdss_spectra_dr9/' + 'speclist.txt', 'wa')
+
+        for i in range(700):
+            current_plateid = plateid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100]
+            current_mjd = mjd[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100]
+            current_fiberid = str(fiberid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
+            if len(current_fiberid) == 1:
+                current_fiberid = "000" + current_fiberid
+            elif len(current_fiberid) == 2:
+                current_fiberid = "00" + current_fiberid
+            elif len(current_fiberid) == 3:
+                current_fiberid = "0" + current_fiberid
+            specstring = "0" + str(current_plateid) + "/" + "spec-0" + str(current_plateid) + "-" + str(current_mjd) + "-" + current_fiberid + ".fits"
+            fh.write(specstring + '\n')
+
+        fh.close()
+        del fh
+    
+    # WGET command used
+    # cd into sdss_spectra_dr9 directory first
+    # wget -nv -r -nH --cut-dirs=7 -i speclist.txt -B http://data.sdss3.org/sas/dr9/sdss/spectro/redux/26/spectra/lite/
+
+    elif gen_list == 'spec_details':
+
+        # write fits names to a text file to download these spectra
+        fh = open(newcodes_dir + 'sdss_spectra_dr9/' + 'spec_details.txt', 'wa')
+
+        for i in range(700):
+            current_plateid = str(plateid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
+            current_mjd = str(mjd[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
+            current_fiberid = str(fiberid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
+            if len(current_fiberid) == 1:
+                current_fiberid = "000" + current_fiberid
+            elif len(current_fiberid) == 2:
+                current_fiberid = "00" + current_fiberid
+            elif len(current_fiberid) == 3:
+                current_fiberid = "0" + current_fiberid
+            specstring = "0" + current_plateid + "/" + "spec-0" + current_plateid + "-" + current_mjd + "-" + current_fiberid + ".fits"
+
+            current_z = str(redshift_sdss[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
+            current_dn4000 = str(dn4000_sdss[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
+            detailstring = current_z + ' ' + current_dn4000
+
+            fh.write(specstring + ' ' + detailstring + '\n')
+
+        fh.close()
+        del fh
+
+    return None
 
 if __name__ == '__main__':
     
@@ -25,6 +96,7 @@ if __name__ == '__main__':
     gs1_cat = np.genfromtxt(home + '/Desktop/FIGS/stacking-analysis-pears/figs_gs1_4000break_catalog.txt',\
      dtype=None, names=True, skip_header=1)
 
+    #### PEARS ####
     pears_redshift_indices = np.where((pears_cat['redshift'] >= 0.558) & (pears_cat['redshift'] <= 1.317))[0]
 
     # galaxies in the possible redshift range
@@ -77,15 +149,15 @@ if __name__ == '__main__':
     #print len(sig_4000break_indices_gs1)  # 28
 
     #### SDSS ####
-    # these are from SDSS DR8
-    galspecindx = fits.open(newcodes_dir + 'galSpecIndx-dr9.fits')
-    galspecinfo = fits.open(newcodes_dir + 'galSpecInfo-dr9.fits')
+    # these are from SDSS DR9
+    galspecindx = fits.open(newcodes_dir + 'sdss_fits_files/' + 'galSpecindx-dr9.fits')
+    galspecinfo = fits.open(newcodes_dir + 'sdss_fits_files/' + 'galSpecinfo-dr9.fits')
  
     # get id, plate, mjd, and fiber numbers
     sdss_id = galspecindx[1].data['SPECOBJID']
-    plateid = galspecindx[1].data['PLATEID']
-    mjd = galspecindx[1].data['MJD']
-    fiberid = galspecindx[1].data['FIBERID']
+    plateid = galspecinfo[1].data['PLATEID']
+    mjd = galspecinfo[1].data['MJD']
+    fiberid = galspecinfo[1].data['FIBERID']
 
     # get dn4000 and redshift arrays
     dn4000_sdss = galspecindx[1].data['D4000_N_SUB']
@@ -94,10 +166,10 @@ if __name__ == '__main__':
 
     # apply basic cuts
     sdss_use_indx = np.where((galspecinfo[1].data['Z_WARNING'] == 0) &\
-     (galspecinfo[1].data['TARGETTYPE'] == 'GALAXY') & (galspecinfo[1].data['SPECTROTYPE'] == 'GALAXY') &\
+     (galspecinfo[1].data['TARGETTYPE'] == 'GALAXY') & (galspecinfo[1].data['SPECTROTYPE'] == 'GALAXY') & (galspecinfo[1].data['PRIMTARGET'] == 64) &\
      (galspecinfo[1].data['RELIABLE'] == 1))[0]
 
-    print len(sdss_use_indx)  # 869037
+    print len(sdss_use_indx)  # 869029
 
     # apply more cuts i.e. significance and break range
     sig_4000break_indices_sdss = np.where(((dn4000_sdss[sdss_use_indx] / dn4000_err_sdss[sdss_use_indx]) >= 5.0) &\
@@ -108,26 +180,25 @@ if __name__ == '__main__':
 
     redshift_sdss_plot = redshift_sdss[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx]
 
-    print len(dn4000_sdss_plot)  # 866883
+    print len(dn4000_sdss_plot)  # 74343
 
-    # write fits names to a text file to download these spectra
-    fh = open(newcodes_dir + 'sdss_spectra_dr9/' + 'speclist.txt', 'wa')
+    #save_speclist_sdss(plateid, mjd, fiberid, redshift_sdss, dn4000_sdss, sdss_use_indx, sig_4000break_indices_sdss, dn4000_sdss_range_indx, 'spec_details')
+    #sys.exit(0)
 
-    for i in range(700):
-        current_plateid = plateid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100]
-        current_mjd = mjd[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100]
-        current_fiberid = str(fiberid[sdss_use_indx][sig_4000break_indices_sdss][dn4000_sdss_range_indx][i+100])
-        if len(current_fiberid) == 1:
-            current_fiberid = "000" + current_fiberid
-        elif len(current_fiberid) == 2:
-            current_fiberid = "00" + current_fiberid
-        elif len(current_fiberid) == 3:
-            current_fiberid = "0" + current_fiberid
-        specstring = "0" + str(current_plateid) + "/" + "spec-0" + str(current_plateid) + "-" + str(current_mjd) + "-" + current_fiberid + ".fits"
-        fh.write(specstring + '\n')
+    #### SHELS ####
 
-    fh.close()
-    sys.exit(0)
+    shels_names = ['ID', 'z', 'Dn4000']
+    shels_cat = np.genfromtxt(massive_galaxies_dir + 'shels_gal_prop.txt', dtype=None, names=shels_names, usecols=(0, 4, 8), skip_header=33)
+
+    # get dn4000 adn redshifts
+    dn4000_shels = shels_cat['Dn4000']
+    redshift_shels = shels_cat['z']
+
+    # apply cuts
+    shels_use_indx = np.where((dn4000_shels != -9.99) & (redshift_shels != -9.99))[0]
+
+    dn4000_shels_plot = dn4000_shels[shels_use_indx]
+    redshift_shels_plot = redshift_shels[shels_use_indx]
 
     # Make sure that all the galaxies in the sample are unique
     # there is the possibility of duplicate entries only in hte redshift
@@ -251,17 +322,17 @@ if __name__ == '__main__':
     #ax.plot(redshift_figs_plot, dn4000_figs_plot, 'o', markersize=2, color='b', markeredgecolor='b')
 
     ax.errorbar(redshift_pears_plot, dn4000_pears_plot, yerr=dn4000_err_pears_plot,\
-     fmt='.', color='k', markeredgecolor='k', capsize=0, markersize=7)
+     fmt='.', color='k', markeredgecolor='k', capsize=0, markersize=7, elinewidth=0.5)
     ax.errorbar(redshift_figs_plot, dn4000_figs_plot, yerr=dn4000_err_figs_plot,\
-     fmt='.', color='b', markeredgecolor='b', capsize=0, markersize=7)
-
-    ax.plot(redshift_sdss_plot, dn4000_sdss_plot, '.', markersize=1, color='lightgray')
+     fmt='.', color='b', markeredgecolor='b', capsize=0, markersize=7, elinewidth=0.5)
+    ax.plot(redshift_sdss_plot, dn4000_sdss_plot, '.', markersize=1, color='slategray')
+    ax.plot(redshift_shels_plot, dn4000_shels_plot, '.', markersize=2, color='seagreen')
 
     ax.axhline(y=1, linewidth=1, linestyle='--', color='g')
 
     ax.set_xlim(0,1.85)
 
     # save the figure
-    fig.savefig(massive_figures_dir + 'dn4000_redshift.png')
+    fig.savefig(massive_figures_dir + 'dn4000_redshift.png', dpi=150)
 
     sys.exit(0)
