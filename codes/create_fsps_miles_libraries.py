@@ -21,7 +21,7 @@ stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 new_codes_dir = home + "/Desktop/FIGS/new_codes/"
 
 sys.path.append(massive_galaxies_dir + 'codes/')
-import fast_chi2_jackknife_massive_galaxies as fcj
+import fast_chi2_jackknife_massive_galaxies as fcjm
 
 def resample_single(lam, spec, lam_grid_tofit):
     
@@ -118,7 +118,7 @@ def create_miles_lib_main(fitting_lam_grid, pearsid, redshift):
     final_fitsname = 'all_comp_spectra_miles_withlsf_' + str(pearsid) + '.fits'
 
     # get interpolated lsf and convolve and then resample
-    interplsf = fcj.get_interplsf(pearsid, redshift)
+    interplsf = fcjm.get_interplsf(pearsid, redshift)
     if interplsf is None:
         return None
 
@@ -184,7 +184,7 @@ def create_fsps_lib_main(fitting_lam_grid, pearsid, redshift, metals):
     final_fitsname = 'all_comp_spectra_fsps_withlsf_' + str(pearsid) + '.fits'
 
     # get interpolated lsf and convolve and then resample
-    interplsf = fcj.get_interplsf(pearsid, redshift)
+    interplsf = fcjm.get_interplsf(pearsid, redshift)
     if interplsf is None:
         return None
 
