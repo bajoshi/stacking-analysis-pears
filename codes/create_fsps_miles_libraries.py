@@ -2,7 +2,7 @@ from __future__ import division
 
 from astropy.io import fits
 import numpy as np
-import fsps
+#import fsps
 from astropy.convolution import convolve_fft
 
 import matplotlib.pyplot as plt
