@@ -3,6 +3,7 @@ from __future__ import division
 import numpy as np
 import numpy.ma as ma
 from astropy.io import fits
+from astropy.cosmology import Planck15 as cosmo
 
 import sys
 import os
@@ -79,7 +80,7 @@ def get_total_extensions(fitsfile):
 
     return nexten
 
-def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, library, spec_hdu):
+def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, library, spec_hdu, redshift):
     """
     This is the function that does the actual chi2 fitting.
     """
@@ -112,7 +113,8 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
                 best_age = float(bc03_spec[sortargs[k] + 1].header['LOG_AGE'])
-                if (best_age < 9 + np.log10(7.5)) & (best_age > 9 + np.log10(0.1)):
+                age_at_z = cosmo.age(redshift).value * 1e9 # in yr
+                if (best_age < np.log10(age_at_z)) & (best_age > 9 + np.log10(0.1)):
                     tau.append(bc03_spec[sortargs[k] + 1].header['TAU_GYR'])
                     tauv.append(bc03_spec[sortargs[k] + 1].header['TAUV'])
                     ages.append(best_age)
@@ -129,7 +131,8 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
                 best_age = float(miles_spec[sortargs[k] + 1].header['LOG_AGE'])
-                if (best_age < 9 + np.log10(7.5)) & (best_age > 9 + np.log10(0.1)):
+                age_at_z = cosmo.age(redshift).value * 1e9 # in yr
+                if (best_age < np.log10(age_at_z)) & (best_age > 9 + np.log10(0.1)):
                     ages.append(best_age)
                     metals.append(miles_spec[sortargs[k] + 1].header['METAL'])
                     best_exten.append(sortargs[k] + 1)
@@ -143,7 +146,8 @@ def fit_chi2(flam, ferr, comp_spec, nexten, resampled_spec, num_samp_to_draw, li
             sortargs = np.argsort(chi2)
             for k in range(len(chi2)):
                 best_age = float(fsps_spec[sortargs[k] + 1].header['LOG_AGE'])
-                if (best_age < 9 + np.log10(7.5)) & (best_age > 9 + np.log10(0.1)):
+                age_at_z = cosmo.age(redshift).value * 1e9 # in yr
+                if (best_age < np.log10(age_at_z)) & (best_age > 9 + np.log10(0.1)):
                     tau.append(fsps_spec[sortargs[k] + 1].header['TAU_GYR'])
                     ages.append(best_age)
                     metals.append(fsps_spec[sortargs[k] + 1].header['METAL'])
