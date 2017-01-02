@@ -43,9 +43,10 @@ def get_net_sig(fitsdata, filename):
         return netsig
             
     except ValueError as detail:
-        logging.warning(filename)
+        #logging.warning(filename)
         #logging.warning(detail.value)
-        logging.warning("The above spectrum will be given net sig of -99. Not sure of this error yet.")
+        #logging.warning("The above spectrum will be given net sig of -99. Not sure of this error yet.")
+        return -99.0
     except ZeroDivisionError:
         #logging.warning(filename)
         #logging.warning("Division by zero! The net sig here cannot be trusted. Setting Net Sig to -99.")
