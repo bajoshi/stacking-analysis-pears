@@ -1,13 +1,15 @@
 from __future__ import division
+
+import numpy as np
+from astropy.io import fits
+from scipy.stats import gaussian_kde
+from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
+
 import os
 import sys
 import time
 import datetime
 import logging
-
-import numpy as np
-from astropy.io import fits
-from scipy.stats import gaussian_kde
 
 import matplotlib.pyplot as plt
 
@@ -138,7 +140,30 @@ def rescale(ids, zs):
     # Return the maximum in array of median values
     return medarr, medval, np.std(medarr)
 
-def fileprep(pears_index, redshift, field):
+def smoothspec(flam, width, kernel_type):
+    """
+    This function will "smooth" the supplied spectrum by the specified 
+    width, which is the width of the kernel that it uses; in pixels.
+
+    The default width is 1 pixels. i.e. this will not smooth at all.
+    
+    The default kernel type is gaussian but the user can also choose to
+    use a box kernel.
+
+    These defaults are defined in fileprep instead of here. This is because 
+    all my codes use fileprep
+    """
+
+    if kernel_type == 'gauss':
+        gauss_kernel = Gaussian1DKernel(width)
+        smoothed_flam = convolve(flam, gauss_kernel)
+    elif kernel_type == 'box':
+        box_kernel = Box1DKernel(width)
+        smoothed_flam = convolve(flam, box_kernel)
+
+    return smoothed_flam
+
+def fileprep(pears_index, redshift, field, apply_smoothing=True, width=1, kernel_type='gauss'):
 
     data_path = home + "/Documents/PEARS/data_spectra_only/"
     # Get the correct filename and the number of extensions
@@ -155,15 +180,19 @@ def fileprep(pears_index, redshift, field):
     # Get highest netsig to find the spectrum to be added
     if n_ext > 1:
         netsiglist = []
+        palist = []
         for count in range(n_ext):
             fitsdata = fitsfile[count+1].data
             netsig = get_net_sig(fitsdata, filename)
             netsiglist.append(netsig)
+            palist.append(fitsfile[count+1].header['POSANG'])
         netsiglist = np.array(netsiglist)
         maxnetsigarg = np.argmax(netsiglist)
         spec_toadd = fitsfile[maxnetsigarg+1].data
+        pa_chosen = fitsfile[maxnetsigarg+1].header['POSANG']
     elif n_ext == 1:
         spec_toadd = fitsfile[1].data
+        pa_chosen = fitsfile[1].header['POSANG']
         
     # Now get the spectrum to be added
     lam_obs = spec_toadd['LAMBDA']
@@ -173,21 +202,24 @@ def fileprep(pears_index, redshift, field):
         
     # Subtract Contamination
     flam_obs = flam_obs - contam
+
+    if apply_smoothing:
+        flam_obs = smoothspec(flam_obs, width, kernel_type)
         
-    # First chop off the ends and only look at the observed spectrum from 6000A to 9500A
+    # Now chop off the ends and only look at the observed spectrum from 6000A to 9500A
     arg6000 = np.argmin(abs(lam_obs - 6000))
     arg9500 = np.argmin(abs(lam_obs - 9500))
         
     lam_obs = lam_obs[arg6000:arg9500]
     flam_obs = flam_obs[arg6000:arg9500]
     ferr = ferr[arg6000:arg9500]
-        
+
     # Now unredshift the spectrum
     lam_em = lam_obs / (1 + redshift)
     flam_em = flam_obs * (1 + redshift)
     # check the relations for unredshifting
 
-    return lam_em, flam_em, ferr, specname
+    return lam_em, flam_em, ferr, specname, pa_chosen
 
 if __name__ == '__main__':    
     # Start time
