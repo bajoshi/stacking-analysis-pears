@@ -188,11 +188,13 @@ def fileprep(pears_index, redshift, field, apply_smoothing=True, width=1, kernel
             palist.append(fitsfile[count+1].header['POSANG'])
         netsiglist = np.array(netsiglist)
         maxnetsigarg = np.argmax(netsiglist)
+        netsig_chosen = np.max(netsiglist)
         spec_toadd = fitsfile[maxnetsigarg+1].data
         pa_chosen = fitsfile[maxnetsigarg+1].header['POSANG']
     elif n_ext == 1:
         spec_toadd = fitsfile[1].data
         pa_chosen = fitsfile[1].header['POSANG']
+        netsig_chosen = get_net_sig(fitsfile[1].data, filename)
         
     # Now get the spectrum to be added
     lam_obs = spec_toadd['LAMBDA']
@@ -219,9 +221,10 @@ def fileprep(pears_index, redshift, field, apply_smoothing=True, width=1, kernel
     flam_em = flam_obs * (1 + redshift)
     # check the relations for unredshifting
 
-    return lam_em, flam_em, ferr, specname, pa_chosen
+    return lam_em, flam_em, ferr, specname, pa_chosen, netsig_chosen
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
+    
     # Start time
     start = time.time()
     
