@@ -17,6 +17,10 @@ home = os.getenv('HOME')  # Does not have a trailing slash at the end
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
 figures_dir = stacking_analysis_dir + "figures/"
 savefits_dir = home + "/Desktop/FIGS/new_codes/"
+massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
+
+sys.path.append(massive_galaxies_dir + 'codes/')
+import combine_pas as cb
 
 def get_net_sig(fitsdata, filename):
 
@@ -163,7 +167,7 @@ def smoothspec(flam, width, kernel_type):
 
     return smoothed_flam
 
-def fileprep(pears_index, redshift, field, apply_smoothing=True, width=1, kernel_type='gauss'):
+def fileprep(pears_index, redshift, field, recarray, apply_smoothing=True, width=1, kernel_type='gauss', use_single_pa=True):
 
     data_path = home + "/Documents/PEARS/data_spectra_only/"
     # Get the correct filename and the number of extensions
@@ -177,51 +181,86 @@ def fileprep(pears_index, redshift, field, apply_smoothing=True, width=1, kernel
 
     specname = os.path.basename(filename)
 
-    # Get highest netsig to find the spectrum to be added
-    if n_ext > 1:
-        netsiglist = []
-        palist = []
-        for count in range(n_ext):
-            fitsdata = fitsfile[count+1].data
-            netsig = get_net_sig(fitsdata, filename)
-            netsiglist.append(netsig)
-            palist.append(fitsfile[count+1].header['POSANG'])
-        netsiglist = np.array(netsiglist)
-        maxnetsigarg = np.argmax(netsiglist)
-        netsig_chosen = np.max(netsiglist)
-        spec_toadd = fitsfile[maxnetsigarg+1].data
-        pa_chosen = fitsfile[maxnetsigarg+1].header['POSANG']
-    elif n_ext == 1:
-        spec_toadd = fitsfile[1].data
-        pa_chosen = fitsfile[1].header['POSANG']
-        netsig_chosen = get_net_sig(fitsfile[1].data, filename)
-        
-    # Now get the spectrum to be added
-    lam_obs = spec_toadd['LAMBDA']
-    flam_obs = spec_toadd['FLUX']
-    ferr = spec_toadd['FERROR']
-    contam = spec_toadd['CONTAM']
-        
-    # Subtract Contamination
-    flam_obs = flam_obs - contam
+    if use_single_pa:
+        # Get highest netsig to find the spectrum to be added
+        if n_ext > 1:
+            netsiglist = []
+            palist = []
+            for count in range(n_ext):
+                fitsdata = fitsfile[count+1].data
+                netsig = get_net_sig(fitsdata, filename)
+                netsiglist.append(netsig)
+                palist.append(fitsfile[count+1].header['POSANG'])
+            netsiglist = np.array(netsiglist)
+            maxnetsigarg = np.argmax(netsiglist)
+            netsig_chosen = np.max(netsiglist)
+            spec_toadd = fitsfile[maxnetsigarg+1].data
+            pa_chosen = fitsfile[maxnetsigarg+1].header['POSANG']
+        elif n_ext == 1:
+            spec_toadd = fitsfile[1].data
+            pa_chosen = fitsfile[1].header['POSANG']
+            netsig_chosen = get_net_sig(fitsfile[1].data, filename)
+            
+        # Now get the spectrum to be added
+        lam_obs = spec_toadd['LAMBDA']
+        flam_obs = spec_toadd['FLUX']
+        ferr = spec_toadd['FERROR']
+        contam = spec_toadd['CONTAM']
+            
+        # Subtract Contamination
+        flam_obs = flam_obs - contam
 
-    if apply_smoothing:
-        flam_obs = smoothspec(flam_obs, width, kernel_type)
-        
-    # Now chop off the ends and only look at the observed spectrum from 6000A to 9500A
-    arg6000 = np.argmin(abs(lam_obs - 6000))
-    arg9500 = np.argmin(abs(lam_obs - 9500))
-        
-    lam_obs = lam_obs[arg6000:arg9500]
-    flam_obs = flam_obs[arg6000:arg9500]
-    ferr = ferr[arg6000:arg9500]
+        # apply smoothing if necessary
+        if apply_smoothing:
+            flam_obs = smoothspec(flam_obs, width, kernel_type)
+            
+        # Now chop off the ends and only look at the observed spectrum from 6000A to 9500A
+        arg6000 = np.argmin(abs(lam_obs - 6000))
+        arg9500 = np.argmin(abs(lam_obs - 9500))
+            
+        lam_obs = lam_obs[arg6000:arg9500]
+        flam_obs = flam_obs[arg6000:arg9500]
+        ferr = ferr[arg6000:arg9500]
 
-    # Now unredshift the spectrum
-    lam_em = lam_obs / (1 + redshift)
-    flam_em = flam_obs * (1 + redshift)
-    # check the relations for unredshifting
+        # Now unredshift the spectrum
+        lam_em = lam_obs / (1 + redshift)
+        flam_em = flam_obs * (1 + redshift)
+        ferr_em = ferr * (1 + redshift)
+        # check the relations for deredshifting
 
-    return lam_em, flam_em, ferr, specname, pa_chosen, netsig_chosen
+        return lam_em, flam_em, ferr_em, specname, pa_chosen, netsig_chosen
+
+    else: 
+        idarg = np.where(recarray['pearsid'] == pears_index)[0]
+        idarg = int(idarg)  # correct shape if necessary
+        # i.e. if the next few lines dont get an integer then the shape is off and it'll barf when it tries the convolution
+
+        lam_grid = recarray['lam_grid'][idarg]
+        comb_flam = recarray['combined_flam'][idarg]
+        comb_flamerr = recarray['combined_ferr'][idarg]
+        rejected_pa = recarray['rejected_pa'][idarg]
+        combined_pa = recarray['combined_pa'][idarg]
+        # the combined flux in here should already be contamination subtracted
+
+        # apply smoothing if necessary
+        if apply_smoothing:
+            comb_flam = smoothspec(comb_flam, width, kernel_type)
+            
+        # Now chop off the ends and only look at the observed spectrum from 6000A to 9500A
+        arg6000 = np.argmin(abs(lam_grid - 6000))
+        arg9500 = np.argmin(abs(lam_grid - 9500))
+            
+        lam_grid = lam_grid[arg6000:arg9500]
+        comb_flam = comb_flam[arg6000:arg9500]
+        comb_flamerr = comb_flamerr[arg6000:arg9500]
+
+        # Now unredshift the spectrum
+        lam_em = lam_grid / (1 + redshift)
+        flam_em = comb_flam * (1 + redshift)
+        ferr_em = comb_flamerr * (1 + redshift)
+        # check the relations for deredshifting
+
+        return lam_em, flam_em, ferr_em, specname, combined_pa
 
 if __name__ == '__main__':
     
