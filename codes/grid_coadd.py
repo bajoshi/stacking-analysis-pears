@@ -230,8 +230,9 @@ def fileprep(pears_index, redshift, field, recarray, apply_smoothing=True, width
 
         return lam_em, flam_em, ferr_em, specname, pa_chosen, netsig_chosen
 
-    else: 
+    else:
         idarg = np.where(recarray['pearsid'] == pears_index)[0]
+        print idarg
         idarg = int(idarg)  # correct shape if necessary
         # i.e. if the next few lines dont get an integer then the shape is off and it'll barf when it tries the convolution
 
