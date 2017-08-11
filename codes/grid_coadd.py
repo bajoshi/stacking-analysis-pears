@@ -22,7 +22,27 @@ massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
 sys.path.append(massive_galaxies_dir + 'codes/')
 import combine_pas as cb
 
-def get_net_sig(fitsdata, filename):
+def get_net_sig(*args):
+    """
+    This function simply needs either the fits extension that 
+    contains the spectrum for which netsig is to be computed
+    or 
+    the counts and the errors on the counts as separate arrays.
+
+    It should be able to figure out what you gave but if you
+    give it the separate arrays then make sure that the counts 
+    arrays comes before the counts error array.
+
+    DO NOT give it any additional arguments or it will fail.
+    """
+
+    if len(args) == 1:
+        fitsdata = args[0]
+        count_arr = fitsdata['COUNT']
+        error_arr = fitsdata['ERROR']
+    elif len(args) == 2:
+        count_arr = args[0]
+        error_arr = args[1]
 
     try:
         signal_sum = 0
@@ -30,17 +50,17 @@ def get_net_sig(fitsdata, filename):
         totalsum = 0
         cumsum = []
         
-        if np.count_nonzero(fitsdata['ERROR']) != len(fitsdata['ERROR']):
+        if np.count_nonzero(error_arr) != len(error_arr):
             raise ZeroDivisionError
         
-        sn = fitsdata['COUNT']/fitsdata['ERROR']
+        sn = count_arr/error_arr
         sn_sorted = np.sort(sn)
         sn_sorted_reversed = sn_sorted[::-1]
     
-        for _count_ in range(len(fitsdata)):
+        for _count_ in range(len(count_arr)):
             idx = np.where(sn==sn_sorted_reversed[_count_])
-            signal_sum += fitsdata['COUNT'][idx]
-            noise_sum += fitsdata['ERROR'][idx]**2
+            signal_sum += count_arr[idx]
+            noise_sum += error_arr[idx]**2
             totalsum = signal_sum/np.sqrt(noise_sum)
             cumsum.append(totalsum)
 
