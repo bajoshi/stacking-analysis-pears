@@ -13,7 +13,7 @@ mpl.rcParams.update(pgf_preamble)
 
 home = os.getenv('HOME')
 
-def measure_north(matchedfile, fieldname, ur_color, stellarmass, pears_north_master, pears_south_master):
+def get_color_stellarmass(matchedfile, fieldname, ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master):
 
     count = 0
 
@@ -36,12 +36,15 @@ def measure_north(matchedfile, fieldname, ur_color, stellarmass, pears_north_mas
 
         if (mstar > 10.5) and (fieldname in all_fields_northnames):
           mastercat_idx = np.where(pears_north_master['pears_id'] == current_id)
-          print fieldname, current_id, threedra, threeddec, threed_zphot, mstar, '{:.2f}'.format(urcol), pears_north_master['imag'][mastercat_idx][0]
+          current_imag = '{:.2f}'.format(pears_north_master['imag'][mastercat_idx][0])
+          print fieldname, current_id, threedra, threeddec, threed_zphot, mstar, '{:.2f}'.format(urcol), current_imag
+          imag_arr.append(current_imag)
+          zphot_arr.append('{:.2f}'.format(threed_zphot))
           count += 1
 
     print "total galaxies in chosen range", count, "for field", fieldname
 
-    return ur_color, stellarmass
+    return ur_color, stellarmass, imag_arr, zphot_arr
 
 if __name__ == '__main__':
 
@@ -88,17 +91,39 @@ if __name__ == '__main__':
 
     ur_color = []
     stellarmass = []
+    imag_arr = []
+    zphot_arr = []
 
-    ur_color, stellarmass = measure_north(cdfn1, 'cdfn1', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfn2, 'cdfn2', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfn3, 'cdfn3', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfn4, 'cdfn4', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfs1, 'cdfs1', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfs2, 'cdfs2', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfs3, 'cdfs3', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfs4, 'cdfs4', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfs_new, 'cdfs_new', ur_color, stellarmass, pears_north_master, pears_south_master)
-    ur_color, stellarmass = measure_north(cdfs_udf, 'cdfs_udf', ur_color, stellarmass, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn1, 'cdfn1', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn2, 'cdfn2', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn3, 'cdfn3', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn4, 'cdfn4', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs1, 'cdfs1', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs2, 'cdfs2', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs3, 'cdfs3', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs4, 'cdfs4', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs_new, 'cdfs_new', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs_udf, 'cdfs_udf', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+
+    # convert all lists to numpy arrays
+    ur_color = np.asarray(ur_color, dtype=np.float)
+    stellarmass = np.asarray(stellarmass, dtype=np.float)
+    imag_arr = np.asarray(imag_arr, dtype=np.float)
+    zphot_arr = np.asarray(zphot_arr, dtype=np.float)
+
+    # make histogram of mag and zphot
+    valid_mag = np.where(imag_arr <= 23)[0]
+    print len(valid_mag), "galaxies in chosen mag range"
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.hist(imag_arr[valid_mag], 8)
+
+    plt.clf()
+    plt.cla()
+    plt.close()
+
+    sys.exit(0)
 
     mstar_min = np.argmin(stellarmass)
     log_ml = -0.55 + 0.45*ur_color[mstar_min]
