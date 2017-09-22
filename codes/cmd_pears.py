@@ -34,13 +34,14 @@ def get_color_stellarmass(matchedfile, fieldname, ur_color, stellarmass, imag_ar
         ur_color.append(urcol)
         stellarmass.append(mstar)
 
-        if (mstar > 10.5) and (fieldname in all_fields_northnames):
+        if (mstar >= 10.5) and (threed_zphot >= 0.5) and (threed_zphot <= 2.0) and (fieldname in all_fields_northnames):
           mastercat_idx = np.where(pears_north_master['pears_id'] == current_id)
           current_imag = '{:.2f}'.format(pears_north_master['imag'][mastercat_idx][0])
-          print fieldname, current_id, threedra, threeddec, threed_zphot, mstar, '{:.2f}'.format(urcol), current_imag
-          imag_arr.append(current_imag)
-          zphot_arr.append('{:.2f}'.format(threed_zphot))
-          count += 1
+          if current_imag <= 20.0:
+              print fieldname, current_id, threedra, threeddec, threed_zphot, mstar, '{:.2f}'.format(urcol), current_imag
+              imag_arr.append(current_imag)
+              zphot_arr.append('{:.2f}'.format(threed_zphot))
+              count += 1
 
     print "total galaxies in chosen range", count, "for field", fieldname
 
