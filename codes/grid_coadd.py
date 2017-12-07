@@ -187,8 +187,9 @@ def smoothspec(flam, width, kernel_type):
 
     return smoothed_flam
 
-def fileprep(pears_index, redshift, field, recarray, apply_smoothing=True, width=1, kernel_type='gauss', use_single_pa=True):
+def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kernel_type='gauss', use_single_pa=True):
 
+    # read in spectrum file
     data_path = home + "/Documents/PEARS/data_spectra_only/"
     # Get the correct filename and the number of extensions
     if field == 'GOODS-N':
@@ -226,6 +227,12 @@ def fileprep(pears_index, redshift, field, recarray, apply_smoothing=True, width
         flam_obs = spec_toadd['FLUX']
         ferr = spec_toadd['FERROR']
         contam = spec_toadd['CONTAM']
+
+        # Must include more input checks and better error handling
+        # check that input wavelength array is not empty
+        if not lam_obs.size:
+            print pears_index, " in ", field, " has an empty wav array. Returning empty array..."
+            return lam_obs, flam_obs, ferr, specname, pa_chosen, netsig_chosen
             
         # Subtract Contamination
         flam_obs = flam_obs - contam
@@ -251,8 +258,12 @@ def fileprep(pears_index, redshift, field, recarray, apply_smoothing=True, width
         return lam_em, flam_em, ferr_em, specname, pa_chosen, netsig_chosen
 
     else:
+        # read recarray if you're using a combined spectrum
+        recarray = np.load(massive_galaxies_dir + 'pears_pa_combination_info_' + field + '.npy')
+
+        # find id in recarray        
         idarg = np.where(recarray['pearsid'] == pears_index)[0]
-        print idarg
+        #print idarg
         idarg = int(idarg)  # correct shape if necessary
         # i.e. if the next few lines dont get an integer then the shape is off and it'll barf when it tries the convolution
 
