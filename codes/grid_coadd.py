@@ -273,6 +273,14 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
         rejected_pa = recarray['rejected_pa'][idarg]
         combined_pa = recarray['combined_pa'][idarg]
         # the combined flux in here should already be contamination subtracted
+        print pears_index, combined_pa
+
+        # the combined pa might be a list type so make sure that it is a string
+        if type(combined_pa) is list:
+            if len(combined_pa) == 1:
+                combined_pa = combined_pa[0]
+                if 'PA' not in combined_pa:
+                    combined_pa = 'PA' + combined_pa
 
         # apply smoothing if necessary
         if apply_smoothing:
