@@ -70,34 +70,29 @@ def get_net_sig(*args):
         sn = ma.array(sn, mask=mask)
         sn_sorted = np.sort(sn)
         sn_sorted_reversed = sn_sorted[::-1]
-        reverse_mask = mask[::-1]
+        reverse_mask = ma.getmask(sn_sorted_reversed)
         # I need the reverse mask for checking since I'm reversing the sn sorted array
         # and I need to only compute the netsig using unmasked elements.
         # This is because I need to check that the reverse sorted array will not have 
         # a blank element when I use the where function later causing the rest of the 
         # code block to mess up. Therefore, the mask I'm checking i.e. the reverse_mask
         # and the sn_sorted_reversed array need to have the same order.
+        sort_arg = np.argsort(sn)
+        sort_arg_rev = sort_arg[::-1]
 
-        # testing block
-        #if np.count_nonzero(error_arr) != len(error_arr):
-        #    print "Error array has zeros in it."
-        #    print error_arr
-        #    print mask
-        #    print sn
-        #    print sn_sorted_reversed
-        #    sys.exit(0)
-    
-        for _count_ in range(len(count_arr)):
+        i = 0
+        for _count_ in sort_arg_rev:
             # if it a masked element then don't do anything
-            if reverse_mask[_count_]:
+            if reverse_mask[i]:
+                i += 1
                 continue
             else:
-                idx = np.where(sn==sn_sorted_reversed[_count_])[0]
-                signal_sum += count_arr[idx]
-                noise_sum += error_arr[idx]**2
+                signal_sum += count_arr[_count_]
+                noise_sum += error_arr[_count_]**2
                 totalsum = signal_sum/np.sqrt(noise_sum)
-                #print reverse_mask[_count_], sn_sorted_reversed[_count_], idx, totalsum # Line useful for debugging. Do not remove. Just uncomment.
+                #print reverse_mask[i], sn_sorted_reversed[i], _count_, signal_sum, totalsum  # Line useful for debugging. Do not remove. Just uncomment.
                 cumsum.append(totalsum)
+                i += 1
 
         cumsum = np.asarray(cumsum)
         if not cumsum.size:
@@ -244,6 +239,7 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
             netsiglist = []
             palist = []
             for count in range(n_ext):
+                #print "At PA", count  # Line useful for debugging. Do not remove. Just uncomment.
                 fitsdata = fitsfile[count+1].data
                 netsig = get_net_sig(fitsdata)
                 netsiglist.append(netsig)
