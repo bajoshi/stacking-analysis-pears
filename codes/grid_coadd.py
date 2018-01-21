@@ -1,6 +1,7 @@
 from __future__ import division
 
 import numpy as np
+import numpy.ma as ma
 from astropy.io import fits
 from scipy.stats import gaussian_kde
 from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
@@ -44,38 +45,73 @@ def get_net_sig(*args):
         count_arr = args[0]
         error_arr = args[1]
 
+    # Make sure that the arrays are not empty to begin with
+    if not count_arr.size:
+        print "Returning -99.0 for NetSig due to empty signal and/or noise array for this object (or some PA for this object)."
+        return -99.0
+    if not error_arr.size:
+        print "Returning -99.0 for NetSig due to empty signal and/or noise array for this object (or some PA for this object)."
+        return -99.0
+
+    # Also check that the error array does not have ALL zeros
+    if np.all(error_arr == 0.0):
+        print "Returning -99.0 for NetSig due to noise array containing all 0 for this object (or some PA for this object)."
+        return -99.0
+
     try:
         signal_sum = 0
         noise_sum = 0
         totalsum = 0
         cumsum = []
         
-        if np.count_nonzero(error_arr) != len(error_arr):
-            raise ZeroDivisionError
-        
         sn = count_arr/error_arr
+        # mask NaNs in this array to deal with the division by errors than are 0
+        mask = ~np.isfinite(sn)
+        sn = ma.array(sn, mask=mask)
         sn_sorted = np.sort(sn)
         sn_sorted_reversed = sn_sorted[::-1]
+        reverse_mask = mask[::-1]
+        # I need the reverse mask for checking since I'm reversing the sn sorted array
+        # and I need to only compute the netsig using unmasked elements.
+        # This is because I need to check that the reverse sorted array will not have 
+        # a blank element when I use the where function later causing the rest of the 
+        # code block to mess up. Therefore, the mask I'm checking i.e. the reverse_mask
+        # and the sn_sorted_reversed array need to have the same order.
+
+        # testing block
+        #if np.count_nonzero(error_arr) != len(error_arr):
+        #    print "Error array has zeros in it."
+        #    print error_arr
+        #    print mask
+        #    print sn
+        #    print sn_sorted_reversed
+        #    sys.exit(0)
     
         for _count_ in range(len(count_arr)):
-            idx = np.where(sn==sn_sorted_reversed[_count_])
-            signal_sum += count_arr[idx]
-            noise_sum += error_arr[idx]**2
-            totalsum = signal_sum/np.sqrt(noise_sum)
-            cumsum.append(totalsum)
+            # if it a masked element then don't do anything
+            if reverse_mask[_count_]:
+                continue
+            else:
+                idx = np.where(sn==sn_sorted_reversed[_count_])[0]
+                signal_sum += count_arr[idx]
+                noise_sum += error_arr[idx]**2
+                totalsum = signal_sum/np.sqrt(noise_sum)
+                #print reverse_mask[_count_], sn_sorted_reversed[_count_], idx, totalsum # Line useful for debugging. Do not remove. Just uncomment.
+                cumsum.append(totalsum)
 
-        netsig = np.amax(cumsum)
+        cumsum = np.asarray(cumsum)
+        if not cumsum.size:
+            print "Exiting due to empty cumsum array. More debugging needed."
+            print "Cumulative sum array:", cumsum
+            sys.exit(0)
+        netsig = np.nanmax(cumsum)
         
         return netsig
             
-    except ValueError as detail:
-        #logging.warning(filename)
-        #logging.warning(detail.value)
-        #logging.warning("The above spectrum will be given net sig of -99. Not sure of this error yet.")
-        return -99.0
     except ZeroDivisionError:
-        #logging.warning(filename)
-        #logging.warning("Division by zero! The net sig here cannot be trusted. Setting Net Sig to -99.")
+        logging.warning("Division by zero! The net sig here cannot be trusted. Setting Net Sig to -99.")
+        print "Exiting. This error should not have come up anymore."
+        sys.exit(0)
         return -99.0
 
 def get_interp_spec(lam, flam, ferr):
@@ -209,7 +245,7 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
             palist = []
             for count in range(n_ext):
                 fitsdata = fitsfile[count+1].data
-                netsig = get_net_sig(fitsdata, filename)
+                netsig = get_net_sig(fitsdata)
                 netsiglist.append(netsig)
                 palist.append(fitsfile[count+1].header['POSANG'])
             netsiglist = np.array(netsiglist)
@@ -220,7 +256,7 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
         elif n_ext == 1:
             spec_toadd = fitsfile[1].data
             pa_chosen = fitsfile[1].header['POSANG']
-            netsig_chosen = get_net_sig(fitsfile[1].data, filename)
+            netsig_chosen = get_net_sig(fitsfile[1].data)
             
         # Now get the spectrum to be added
         lam_obs = spec_toadd['LAMBDA']
@@ -249,7 +285,7 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
         flam_obs = flam_obs[arg6000:arg9500]
         ferr = ferr[arg6000:arg9500]
 
-        # Now unredshift the spectrum
+        # Now deredshift the spectrum
         lam_em = lam_obs / (1 + redshift)
         flam_em = flam_obs * (1 + redshift)
         ferr_em = ferr * (1 + redshift)
