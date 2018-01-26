@@ -271,6 +271,7 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
 
         # apply smoothing if necessary
         if apply_smoothing:
+            #print "Will apply smoothing using Gaussian kernel of width", width, "to", pears_index, "in", field
             flam_obs = smoothspec(flam_obs, width, kernel_type)
             
         # Now chop off the ends and only look at the observed spectrum from 6000A to 9500A
