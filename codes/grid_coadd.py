@@ -239,11 +239,13 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
             netsiglist = []
             palist = []
             for count in range(n_ext):
-                #print "At PA", count  # Line useful for debugging. Do not remove. Just uncomment.
+                #print "At PA", fitsfile[count+1].header['POSANG']  # Line useful for debugging. Do not remove. Just uncomment.
                 fitsdata = fitsfile[count+1].data
                 netsig = get_net_sig(fitsdata)
                 netsiglist.append(netsig)
                 palist.append(fitsfile[count+1].header['POSANG'])
+                print "At PA", fitsfile[count+1].header['POSANG'], "with NetSig", netsig  
+                # Above line also useful for debugging. Do not remove. Just uncomment.
             netsiglist = np.array(netsiglist)
             maxnetsigarg = np.argmax(netsiglist)
             netsig_chosen = np.max(netsiglist)
