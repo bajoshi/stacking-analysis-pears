@@ -244,7 +244,7 @@ def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kerne
                 netsig = get_net_sig(fitsdata)
                 netsiglist.append(netsig)
                 palist.append(fitsfile[count+1].header['POSANG'])
-                print "At PA", fitsfile[count+1].header['POSANG'], "with NetSig", netsig  
+                #print "At PA", fitsfile[count+1].header['POSANG'], "with NetSig", netsig  
                 # Above line also useful for debugging. Do not remove. Just uncomment.
             netsiglist = np.array(netsiglist)
             maxnetsigarg = np.argmax(netsiglist)
