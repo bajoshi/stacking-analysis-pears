@@ -55,7 +55,7 @@ def get_net_sig(*args):
 
     # Also check that the error array does not have ALL zeros
     if np.all(error_arr == 0.0):
-        print "Returning -99.0 for NetSig due to noise array containing all 0 for this object (or some PA for this object)."
+        #print "Returning -99.0 for NetSig due to noise array containing all 0 for this object (or some PA for this object)."
         return -99.0
 
     try:
