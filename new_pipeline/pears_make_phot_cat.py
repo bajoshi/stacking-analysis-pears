@@ -283,6 +283,8 @@ def main():
                 else:
                     flux_errors_list_of_lists[k].append(phot_errors_arr[k])
 
+            galaxy_count += 1
+
         catcount += 1
 
     print "Total galaxies considered:", galaxy_count
