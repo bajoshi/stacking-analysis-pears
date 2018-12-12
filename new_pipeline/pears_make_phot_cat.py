@@ -55,7 +55,7 @@ def get_all_filters():
     all_filters = [uband_curve, f435w_filt_curve, f606w_filt_curve, f775w_filt_curve, f850lp_filt_curve, \
     f125w_filt_curve, f140w_filt_curve, f160w_filt_curve, irac1_curve, irac2_curve, irac3_curve, irac4_curve]
 
-	return all_filters
+    return all_filters
 
 def main():
     
@@ -330,8 +330,8 @@ def main():
         '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', \
         '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f'], delimiter=' ')
 
-	return None
+    return None
 
 if __name__ == '__main__':
-	main()
-	sys.exit(0)
+    main()
+    sys.exit(0)
