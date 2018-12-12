@@ -26,7 +26,8 @@ def get_color_stellarmass(matchedfile, fieldname, ur_color, stellarmass, imag_ar
         threeddec = cat['threeddec'][i]
         threed_zphot = cat['threed_zphot'][i]
         
-        threedindex = np.where((threed[1].data['phot_id'] == threedid) & (abs(threed[1].data['ra'] - threedra) < 1e-3) & (abs(threed[1].data['dec'] - threeddec) < 1e-3))[0][0]
+        threedindex = np.where((threed[1].data['phot_id'] == threedid) & (abs(threed[1].data['ra'] - threedra) < 1e-3) \
+        	& (abs(threed[1].data['dec'] - threeddec) < 1e-3))[0][0]
 
         mstar = threed[1].data[threedindex]['lmass']
         urcol = -2.5*np.log10(threed[1].data[threedindex]['L156']/threed[1].data[threedindex]['L158'])
@@ -95,16 +96,26 @@ if __name__ == '__main__':
     imag_arr = []
     zphot_arr = []
 
-    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn1, 'cdfn1', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn2, 'cdfn2', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn3, 'cdfn3', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfn4, 'cdfn4', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs1, 'cdfs1', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs2, 'cdfs2', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs3, 'cdfs3', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs4, 'cdfs4', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs_new, 'cdfs_new', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
-    #ur_color, stellarmass, imag_arr, zphot_arr = get_color_stellarmass(cdfs_udf, 'cdfs_udf', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfn1, 'cdfn1', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfn2, 'cdfn2', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfn3, 'cdfn3', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfn4, 'cdfn4', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfs1, 'cdfs1', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfs2, 'cdfs2', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfs3, 'cdfs3', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfs4, 'cdfs4', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfs_new, 'cdfs_new', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
+    #ur_color, stellarmass, imag_arr, zphot_arr = \
+    get_color_stellarmass(cdfs_udf, 'cdfs_udf', ur_color, stellarmass, imag_arr, zphot_arr, pears_north_master, pears_south_master)
 
     # convert all lists to numpy arrays
     ur_color = np.asarray(ur_color, dtype=np.float)
