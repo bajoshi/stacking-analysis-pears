@@ -98,7 +98,6 @@ def main():
     field_list = []
     ra_list = []
     dec_list = []
-    zphot_list = []
 
     u_mag_list = []
     f435w_mag_list = []
@@ -153,7 +152,6 @@ def main():
     
             threed_ra = phot_cat_3dhst['ra']
             threed_dec = phot_cat_3dhst['dec']
-            current_3d_photz = float(cat['zphot'][i])
 
             print "At ID:", current_id, "in:", current_field
 
@@ -256,7 +254,7 @@ def main():
             field_list.append(current_field)
             ra_list.append(current_ra)
             dec_list.append(current_dec)
-            zphot_list.append(current_3d_photz)
+            #zphot_list.append(current_3d_photz)
 
             # ------- Finite photometry and error values ------- #
             for k in range(len(phot_fluxes_arr)):
@@ -284,7 +282,6 @@ def main():
     field_list = np.asarray(field_list)
     ra_list = np.asarray(ra_list)
     dec_list = np.asarray(dec_list)
-    zphot_list = np.asarray(zphot_list)
 
     u_mag_list = np.asarray(u_mag_list)
     f435w_mag_list = np.asarray(f435w_mag_list)
@@ -313,13 +310,13 @@ def main():
     irac4_mag_err_list = np.asarray(irac4_mag_err_list)
 
     # Now save as one large ascii file
-    data = np.array(zip(id_list, field_list, ra_list, dec_list, zphot_list, \
+    data = np.array(zip(id_list, field_list, ra_list, dec_list, \
         u_mag_list, f435w_mag_list, f606w_mag_list, f775w_mag_list, f850lp_mag_list, f125w_mag_list, f140w_mag_list, f160w_mag_list, \
         irac1_mag_list, irac2_mag_list, irac3_mag_list, irac4_mag_list, \
         u_mag_err_list, f435w_mag_err_list, f606w_mag_err_list, f775w_mag_err_list, f850lp_mag_err_list, f125w_mag_err_list, \
         f140w_mag_err_list, f160w_mag_err_list, \
         irac1_mag_err_list, irac2_mag_err_list, irac3_mag_err_list, irac4_mag_err_list), \
-        dtype=[('id_list', int), ('field_list', '|S7'), ('ra_list', float), ('dec_list', float), ('zphot_list', float), 
+        dtype=[('id_list', int), ('field_list', '|S7'), ('ra_list', float), ('dec_list', float), \
         ('u_mag_list', float), ('f435w_mag_list', float), ('f606w_mag_list', float), ('f775w_mag_list', float), \
         ('f850lp_mag_list', float), ('f125w_mag_list', float), ('f140w_mag_list', float), ('f160w_mag_list', float), \
         ('irac1_mag_list', float), ('irac2_mag_list', float), ('irac3_mag_list', float), ('irac4_mag_list', float), \
@@ -328,7 +325,7 @@ def main():
         ('irac1_mag_err_list', float), ('irac2_mag_err_list', float), ('irac3_mag_err_list', float), ('irac4_mag_err_list', float)])
 
     np.savetxt(massive_galaxies_dir + 'pears_all_photometry.txt', data, \
-        fmt=['%d', '%s', '%.6f', '%.6f', '%.3f', \
+        fmt=['%d', '%s', '%.6f', '%.6f', \
         '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', \
         '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f'], delimiter=' ')
 
