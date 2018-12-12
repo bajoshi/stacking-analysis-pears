@@ -110,38 +110,38 @@ def main():
     ra_list = []
     dec_list = []
 
-    u_mag_list = []
-    f435w_mag_list = []
-    f606w_mag_list = []
-    f775w_mag_list = []
-    f850lp_mag_list = []
-    f125w_mag_list = []
-    f140w_mag_list = []
-    f160w_mag_list = []
-    irac1_mag_list = []
-    irac2_mag_list = []
-    irac3_mag_list = []
-    irac4_mag_list = []
+    u_flux_list = []
+    f435w_flux_list = []
+    f606w_flux_list = []
+    f775w_flux_list = []
+    f850lp_flux_list = []
+    f125w_flux_list = []
+    f140w_flux_list = []
+    f160w_flux_list = []
+    irac1_flux_list = []
+    irac2_flux_list = []
+    irac3_flux_list = []
+    irac4_flux_list = []
 
-    u_mag_err_list = []
-    f435w_mag_err_list = []
-    f606w_mag_err_list = []
-    f775w_mag_err_list = []
-    f850lp_mag_err_list = []
-    f125w_mag_err_list = []
-    f140w_mag_err_list = []
-    f160w_mag_err_list = []
-    irac1_mag_err_list = []
-    irac2_mag_err_list = []
-    irac3_mag_err_list = []
-    irac4_mag_err_list = []
+    u_flux_err_list = []
+    f435w_flux_err_list = []
+    f606w_flux_err_list = []
+    f775w_flux_err_list = []
+    f850lp_flux_err_list = []
+    f125w_flux_err_list = []
+    f140w_flux_err_list = []
+    f160w_flux_err_list = []
+    irac1_flux_err_list = []
+    irac2_flux_err_list = []
+    irac3_flux_err_list = []
+    irac4_flux_err_list = []
 
-    fluxes_list_of_lists = [u_mag_list, f435w_mag_list, f606w_mag_list, f775w_mag_list, f850lp_mag_list, \
-    f125w_mag_list, f140w_mag_list, f160w_mag_list, irac1_mag_list, irac2_mag_list, irac3_mag_list, irac4_mag_list]
+    fluxes_list_of_lists = [u_flux_list, f435w_flux_list, f606w_flux_list, f775w_flux_list, f850lp_flux_list, \
+    f125w_flux_list, f140w_flux_list, f160w_flux_list, irac1_flux_list, irac2_flux_list, irac3_flux_list, irac4_flux_list]
 
-    flux_errors_list_of_lists = [u_mag_err_list, f435w_mag_err_list, f606w_mag_err_list, f775w_mag_err_list, f850lp_mag_err_list, \
-    f125w_mag_err_list, f140w_mag_err_list, f160w_mag_err_list, \
-    irac1_mag_err_list, irac2_mag_err_list, irac3_mag_err_list, irac4_mag_err_list]
+    flux_errors_list_of_lists = [u_flux_err_list, f435w_flux_err_list, f606w_flux_err_list, f775w_flux_err_list, f850lp_flux_err_list, \
+    f125w_flux_err_list, f140w_flux_err_list, f160w_flux_err_list, \
+    irac1_flux_err_list, irac2_flux_err_list, irac3_flux_err_list, irac4_flux_err_list]
 
     # ------------------------------- Looping over all PEARS objects ------------------------------- #
     # Loop over all objects in the PEARS master catalogs
@@ -296,51 +296,55 @@ def main():
     ra_list = np.asarray(ra_list)
     dec_list = np.asarray(dec_list)
 
-    u_mag_list = np.asarray(u_mag_list)
-    f435w_mag_list = np.asarray(f435w_mag_list)
-    f606w_mag_list = np.asarray(f606w_mag_list)
-    f775w_mag_list = np.asarray(f775w_mag_list)
-    f850lp_mag_list = np.asarray(f850lp_mag_list)
-    f125w_mag_list = np.asarray(f125w_mag_list)
-    f140w_mag_list = np.asarray(f140w_mag_list)
-    f160w_mag_list = np.asarray(f160w_mag_list)
-    irac1_mag_list = np.asarray(irac1_mag_list)
-    irac2_mag_list = np.asarray(irac2_mag_list)
-    irac3_mag_list = np.asarray(irac3_mag_list)
-    irac4_mag_list = np.asarray(irac4_mag_list)
+    u_flux_list = np.asarray(u_flux_list)
+    f435w_flux_list = np.asarray(f435w_flux_list)
+    f606w_flux_list = np.asarray(f606w_flux_list)
+    f775w_flux_list = np.asarray(f775w_flux_list)
+    f850lp_flux_list = np.asarray(f850lp_flux_list)
+    f125w_flux_list = np.asarray(f125w_flux_list)
+    f140w_flux_list = np.asarray(f140w_flux_list)
+    f160w_flux_list = np.asarray(f160w_flux_list)
+    irac1_flux_list = np.asarray(irac1_flux_list)
+    irac2_flux_list = np.asarray(irac2_flux_list)
+    irac3_flux_list = np.asarray(irac3_flux_list)
+    irac4_flux_list = np.asarray(irac4_flux_list)
 
-    u_mag_err_list = np.asarray(u_mag_err_list)
-    f435w_mag_err_list = np.asarray(f435w_mag_err_list)
-    f606w_mag_err_list = np.asarray(f606w_mag_err_list)
-    f775w_mag_err_list = np.asarray(f775w_mag_err_list)
-    f850lp_mag_err_list = np.asarray(f850lp_mag_err_list)
-    f125w_mag_err_list = np.asarray(f125w_mag_err_list)
-    f140w_mag_err_list = np.asarray(f140w_mag_err_list)
-    f160w_mag_err_list = np.asarray(f160w_mag_err_list)
-    irac1_mag_err_list = np.asarray(irac1_mag_err_list)
-    irac2_mag_err_list = np.asarray(irac2_mag_err_list)
-    irac3_mag_err_list = np.asarray(irac3_mag_err_list)
-    irac4_mag_err_list = np.asarray(irac4_mag_err_list)
+    u_flux_err_list = np.asarray(u_flux_err_list)
+    f435w_flux_err_list = np.asarray(f435w_flux_err_list)
+    f606w_flux_err_list = np.asarray(f606w_flux_err_list)
+    f775w_flux_err_list = np.asarray(f775w_flux_err_list)
+    f850lp_flux_err_list = np.asarray(f850lp_flux_err_list)
+    f125w_flux_err_list = np.asarray(f125w_flux_err_list)
+    f140w_flux_err_list = np.asarray(f140w_flux_err_list)
+    f160w_flux_err_list = np.asarray(f160w_flux_err_list)
+    irac1_flux_err_list = np.asarray(irac1_flux_err_list)
+    irac2_flux_err_list = np.asarray(irac2_flux_err_list)
+    irac3_flux_err_list = np.asarray(irac3_flux_err_list)
+    irac4_flux_err_list = np.asarray(irac4_flux_err_list)
 
     # Now save as one large ascii file
     data = np.array(zip(id_list, field_list, ra_list, dec_list, \
-        u_mag_list, f435w_mag_list, f606w_mag_list, f775w_mag_list, f850lp_mag_list, f125w_mag_list, f140w_mag_list, f160w_mag_list, \
-        irac1_mag_list, irac2_mag_list, irac3_mag_list, irac4_mag_list, \
-        u_mag_err_list, f435w_mag_err_list, f606w_mag_err_list, f775w_mag_err_list, f850lp_mag_err_list, f125w_mag_err_list, \
-        f140w_mag_err_list, f160w_mag_err_list, \
-        irac1_mag_err_list, irac2_mag_err_list, irac3_mag_err_list, irac4_mag_err_list), \
+        u_flux_list, f435w_flux_list, f606w_flux_list, f775w_flux_list, f850lp_flux_list, \
+        f125w_flux_list, f140w_flux_list, f160w_flux_list, irac1_flux_list, irac2_flux_list, irac3_flux_list, irac4_flux_list, \
+        u_flux_err_list, f435w_flux_err_list, f606w_flux_err_list, f775w_flux_err_list, f850lp_flux_err_list, f125w_flux_err_list, \
+        f140w_flux_err_list, f160w_flux_err_list, \
+        irac1_flux_err_list, irac2_flux_err_list, irac3_flux_err_list, irac4_flux_err_list), \
         dtype=[('id_list', int), ('field_list', '|S7'), ('ra_list', float), ('dec_list', float), \
-        ('u_mag_list', float), ('f435w_mag_list', float), ('f606w_mag_list', float), ('f775w_mag_list', float), \
-        ('f850lp_mag_list', float), ('f125w_mag_list', float), ('f140w_mag_list', float), ('f160w_mag_list', float), \
-        ('irac1_mag_list', float), ('irac2_mag_list', float), ('irac3_mag_list', float), ('irac4_mag_list', float), \
-        ('u_mag_err_list', float), ('f435w_mag_err_list', float), ('f606w_mag_err_list', float), ('f775w_mag_err_list', float), 
-        ('f850lp_mag_err_list', float), ('f125w_mag_err_list', float), ('f140w_mag_err_list', float), ('f160w_mag_err_list', float), \
-        ('irac1_mag_err_list', float), ('irac2_mag_err_list', float), ('irac3_mag_err_list', float), ('irac4_mag_err_list', float)])
+        ('u_flux_list', float), ('f435w_flux_list', float), ('f606w_flux_list', float), ('f775w_flux_list', float), \
+        ('f850lp_flux_list', float), ('f125w_flux_list', float), ('f140w_flux_list', float), ('f160w_flux_list', float), \
+        ('irac1_flux_list', float), ('irac2_flux_list', float), ('irac3_flux_list', float), ('irac4_flux_list', float), \
+        ('u_flux_err_list', float), ('f435w_flux_err_list', float), ('f606w_flux_err_list', float), ('f775w_flux_err_list', float), 
+        ('f850lp_flux_err_list', float), ('f125w_flux_err_list', float), ('f140w_flux_err_list', float), ('f160w_flux_err_list', float), \
+        ('irac1_flux_err_list', float), ('irac2_flux_err_list', float), ('irac3_flux_err_list', float), ('irac4_flux_err_list', float)])
 
     np.savetxt(massive_galaxies_dir + 'pears_all_photometry.txt', data, \
         fmt=['%d', '%s', '%.6f', '%.6f', \
-        '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', \
-        '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f'], delimiter=' ')
+        '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', \
+        '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e'], delimiter=' ', \
+        header='PearsID field ra dec U_flux f435w_flux f606w_flux f775w_flux f850lp_flux' + \
+        ' f125w_flux f140w_flux f160w_flux irac1_flux irac2_flux irac3_flux irac4_flux' + \
+        ' U_flux_err f435w_flux_err f606w_flux_err f775w_flux_err f850lp_flux_err' + \
+        ' f125w_flux_err f140w_flux_err f160w_flux_err irac1_flux_err irac2_flux_err irac3_flux_err irac4_flux_err')
 
     return None
 
