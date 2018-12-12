@@ -15,10 +15,8 @@ figs_dir = home + "/Desktop/FIGS/"
 massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
 threedhst_datadir = home + "/Desktop/3dhst_data/"
 
-sys.path.append(massive_galaxies_dir)
 sys.path.append(massive_galaxies_dir + 'codes/')
 sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
-import matching as mt
 from pears_and_3dhst import read_3dhst_cats
 import fullfitting_grism_broadband_emlines as ff
 
@@ -265,7 +263,6 @@ def main():
             field_list.append(current_field)
             ra_list.append(current_ra)
             dec_list.append(current_dec)
-            #zphot_list.append(current_3d_photz)
 
             # ------- Finite photometry and error values ------- #
             for k in range(len(phot_fluxes_arr)):
