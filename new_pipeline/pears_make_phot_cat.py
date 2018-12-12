@@ -337,7 +337,7 @@ def main():
         ('f850lp_flux_err_list', float), ('f125w_flux_err_list', float), ('f140w_flux_err_list', float), ('f160w_flux_err_list', float), \
         ('irac1_flux_err_list', float), ('irac2_flux_err_list', float), ('irac3_flux_err_list', float), ('irac4_flux_err_list', float)])
 
-    np.savetxt(massive_galaxies_dir + 'pears_all_photometry.txt', data, \
+    np.savetxt(stacking_analysis_dir + 'pears_all_photometry.txt', data, \
         fmt=['%d', '%s', '%.6f', '%.6f', \
         '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', \
         '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e', '%.3e'], delimiter=' ', \
