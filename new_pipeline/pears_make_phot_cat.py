@@ -155,6 +155,8 @@ def main():
             threed_dec = phot_cat_3dhst['dec']
             current_3d_photz = float(cat['zphot'][i])
 
+            print "At ID:", current_id, "in:", current_field
+
             # ------------------------------- Match and get photometry data ------------------------------- #
             # find obj ra,dec
             cat_idx = np.where(cat['pearsid'] == current_id)[0]
