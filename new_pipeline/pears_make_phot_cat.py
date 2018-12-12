@@ -22,6 +22,8 @@ import matching as mt
 from pears_and_3dhst import read_3dhst_cats
 import fullfitting_grism_broadband_emlines as ff
 
+speed_of_light = 299792458e10  # angsroms per second
+
 def get_all_filters():
 
     # ------------------------------- Read in filter curves ------------------------------- #
@@ -92,6 +94,15 @@ def main():
 
     # Lists to loop over
     all_master_cats = [pears_ncat, pears_scat]
+
+    # Read in Vega spectrum and get it in the appropriate forms
+    vega = np.genfromtxt(massive_galaxies_dir + 'grismz_pipeline/' + 'vega_reference.dat', dtype=None, \
+        names=['wav', 'flam'], skip_header=7)
+
+    vega_lam = vega['wav']
+    vega_spec_flam = vega['flam']
+    vega_nu = speed_of_light / vega_lam
+    vega_spec_fnu = vega_lam**2 * vega_spec_flam / speed_of_light
 
     # save lists for comparing after code is done
     id_list = []
