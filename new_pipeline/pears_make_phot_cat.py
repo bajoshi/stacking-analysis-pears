@@ -17,7 +17,6 @@ threedhst_datadir = home + "/Desktop/3dhst_data/"
 
 sys.path.append(massive_galaxies_dir + 'codes/')
 sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
-from pears_and_3dhst import read_3dhst_cats
 import fullfitting_grism_broadband_emlines as ff
 
 speed_of_light = 299792458e10  # angsroms per second
@@ -59,11 +58,7 @@ def get_all_filters():
 
 def main():
     
-    # ------------------------------- Read in PEARS + 3DHST catalogs ------------------------------- #
-    # Read 3dhst cats
-    threed_ncat, threed_scat, threed_v41_phot = read_3dhst_cats()
-
-    # Read PEARS cats
+    # ------------------------------- Read in PEARS catalogs ------------------------------- #
     pears_ncat = np.genfromtxt(home + '/Documents/PEARS/master_catalogs/h_pears_north_master.cat', dtype=None,\
                                names=['pearsid', 'ra', 'dec', 'imag'], usecols=(0,1,2,3))
     pears_scat = np.genfromtxt(home + '/Documents/PEARS/master_catalogs/h_pears_south_master.cat', dtype=None,\
