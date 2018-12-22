@@ -21,3 +21,7 @@ import fullfitting_grism_broadband_emlines as ff
 
 speed_of_light = 299792458e10  # angsroms per second
 
+if __name__ == '__main__':
+    
+
+    sys.exit(0)
