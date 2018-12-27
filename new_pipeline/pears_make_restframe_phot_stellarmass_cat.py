@@ -31,13 +31,13 @@ def main():
     print "Starting at --", dt.now()
 
     # Get directories
-    figs_data_dir = '/Volumes/Bhavins_backup/bc03_models_npy_spectra/'
+    figs_data_dir = "/Volumes/Bhavins_backup/bc03_models_npy_spectra/"
     threedhst_datadir = "/Volumes/Bhavins_backup/3dhst_data/"
     # This is if working on the laptop. 
     # Then you must be using the external hard drive where the models are saved.
     if not os.path.isdir(figs_data_dir):
         import pysynphot  # only import pysynphot on firstlight becasue that's the only place where I installed it.
-        figs_data_dir = 'figs_dir'  # this path only exists on firstlight
+        figs_data_dir = figs_dir  # this path only exists on firstlight
         threedhst_datadir = home + "/Desktop/3dhst_data/"  # this path only exists on firstlight
         if not os.path.isdir(figs_data_dir):
             print "Model files not found. Exiting..."
@@ -76,18 +76,18 @@ def main():
     # ---------------------------------- Read in look-up tables for model mags ------------------------------------- #
     # Using the look-up table now since it should be much faster
     # First get them all into an appropriate shape
-    u = np.load(figs_data_dir + 'all_model_mags_u.npy')
-    f435w = np.load(figs_data_dir + 'all_model_mags_f435w.npy')
-    f606w = np.load(figs_data_dir + 'all_model_mags_f606w.npy')
-    f775w = np.load(figs_data_dir + 'all_model_mags_f775w.npy')
-    f850lp = np.load(figs_data_dir + 'all_model_mags_f850lp.npy')
-    f125w = np.load(figs_data_dir + 'all_model_mags_f125w.npy')
-    f140w = np.load(figs_data_dir + 'all_model_mags_f140w.npy')
-    f160w = np.load(figs_data_dir + 'all_model_mags_f160w.npy')
-    irac1 = np.load(figs_data_dir + 'all_model_mags_irac1.npy')
-    irac2 = np.load(figs_data_dir + 'all_model_mags_irac2.npy')
-    irac3 = np.load(figs_data_dir + 'all_model_mags_irac3.npy')
-    irac4 = np.load(figs_data_dir + 'all_model_mags_irac4.npy')
+    u = np.load(figs_data_dir + 'all_model_mags_par_u.npy')
+    f435w = np.load(figs_data_dir + 'all_model_mags_par_f435w.npy')
+    f606w = np.load(figs_data_dir + 'all_model_mags_par_f606w.npy')
+    f775w = np.load(figs_data_dir + 'all_model_mags_par_f775w.npy')
+    f850lp = np.load(figs_data_dir + 'all_model_mags_par_f850lp.npy')
+    f125w = np.load(figs_data_dir + 'all_model_mags_par_f125w.npy')
+    f140w = np.load(figs_data_dir + 'all_model_mags_par_f140w.npy')
+    f160w = np.load(figs_data_dir + 'all_model_mags_par_f160w.npy')
+    irac1 = np.load(figs_data_dir + 'all_model_mags_par_irac1.npy')
+    irac2 = np.load(figs_data_dir + 'all_model_mags_par_irac2.npy')
+    irac3 = np.load(figs_data_dir + 'all_model_mags_par_irac3.npy')
+    irac4 = np.load(figs_data_dir + 'all_model_mags_par_irac4.npy')
 
     # put them in a list since I need to iterate over it
     all_model_flam = [u, f435w, f606w, f775w, f850lp, f125w, f140w, f160w, irac1, irac2, irac3, irac4]
@@ -107,6 +107,11 @@ def main():
 
         current_id = pears_phot_cat['PearsID'][i]
         current_field = pears_phot_cat['field'][i]
+
+        print "\n"
+        print "Galaxies done so far:", i
+        print "At ID", current_id, "in", current_field
+        print "Total time taken:", time.time() - start, "seconds."
 
         # ------------------------------- Make unified photometry arrays ------------------------------- #
         flam_U = pears_phot_cat['U_flux'][i]
