@@ -32,6 +32,7 @@ def main():
 
     # Get directories
     figs_data_dir = "/Volumes/Bhavins_backup/bc03_models_npy_spectra/"
+    cspout = "/Volumes/Bhavins_backup/bc03_models_npy_spectra/cspout_2016updated_galaxev/"
     threedhst_datadir = "/Volumes/Bhavins_backup/3dhst_data/"
     # This is if working on the laptop. 
     # Then you must be using the external hard drive where the models are saved.
@@ -39,6 +40,7 @@ def main():
         import pysynphot  # only import pysynphot on firstlight becasue that's the only place where I installed it.
         figs_data_dir = figs_dir  # this path only exists on firstlight
         threedhst_datadir = home + "/Desktop/3dhst_data/"  # this path only exists on firstlight
+        cspout = home + '/Documents/galaxev_bc03_2016update/bc03/src/cspout_2016updated_galaxev/'
         if not os.path.isdir(figs_data_dir):
             print "Model files not found. Exiting..."
             sys.exit(0)
