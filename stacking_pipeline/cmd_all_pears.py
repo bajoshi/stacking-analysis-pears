@@ -19,8 +19,6 @@ sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
 from pears_and_3dhst import read_3dhst_cats
 import fullfitting_grism_broadband_emlines as ff
 
-speed_of_light = 299792458e10  # angsroms per second
-
 if __name__ == '__main__':
     
 

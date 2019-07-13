@@ -21,7 +21,7 @@ sys.path.append(massive_galaxies_dir + 'codes/')
 sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
 import photoz as phot
 
-speed_of_light = 299792458e10  # angsroms per second
+speed_of_light_ang = 299792458e10  # angsroms per second
 
 def main():
 

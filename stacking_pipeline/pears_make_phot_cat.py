@@ -19,8 +19,6 @@ sys.path.append(massive_galaxies_dir + 'codes/')
 sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
 import fullfitting_grism_broadband_emlines as ff
 
-speed_of_light = 299792458e10  # angsroms per second
-
 def get_all_filters():
 
     # ------------------------------- Read in filter curves ------------------------------- #
