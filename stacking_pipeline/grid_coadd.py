@@ -171,166 +171,14 @@ def rescale(ids, zs):
     # Return the maximum in array of median values
     return medarr, medval, np.std(medarr)
 
-def smoothspec(flam, width, kernel_type):
-    """
-    This function will "smooth" the supplied spectrum by the specified 
-    width, which is the width of the kernel that it uses; in pixels.
+def create_stacks(cat, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, start):
 
-    The default width is 1 pixels. i.e. this will not smooth at all.
-    
-    The default kernel type is gaussian but the user can also choose to
-    use a box kernel.
-
-    These defaults are defined in fileprep instead of here. This is because 
-    all my codes use fileprep
-    """
-
-    if kernel_type == 'gauss':
-        gauss_kernel = Gaussian1DKernel(width)
-        smoothed_flam = convolve(flam, gauss_kernel)
-    elif kernel_type == 'box':
-        box_kernel = Box1DKernel(width)
-        smoothed_flam = convolve(flam, box_kernel)
-
-    return smoothed_flam
-
-def fileprep(pears_index, redshift, field, apply_smoothing=False, width=1, kernel_type='gauss', use_single_pa=True):
-
-    # read in spectrum file
-    data_path = home + "/Documents/PEARS/data_spectra_only/"
-    # Get the correct filename and the number of extensions
-    if field == 'GOODS-N':
-        filename = data_path + 'h_pears_n_id' + str(pears_index) + '.fits'
-    elif field == 'GOODS-S':
-        filename = data_path + 'h_pears_s_id' + str(pears_index) + '.fits'
-
-    fitsfile = fits.open(filename)
-    n_ext = fitsfile[0].header['NEXTEND']
-
-    specname = os.path.basename(filename)
-
-    if use_single_pa:
-        # Get highest netsig to find the spectrum to be added
-        if n_ext > 1:
-            netsiglist = []
-            palist = []
-            for count in range(n_ext):
-                #print "At PA", fitsfile[count+1].header['POSANG']  
-                # Above line useful for debugging. Do not remove. Just uncomment.
-                fitsdata = fitsfile[count+1].data
-                netsig = get_net_sig(fitsdata)
-                netsiglist.append(netsig)
-                palist.append(fitsfile[count+1].header['POSANG'])
-                #print "At PA", fitsfile[count+1].header['POSANG'], "with NetSig", netsig  
-                # Above line also useful for debugging. Do not remove. Just uncomment.
-            netsiglist = np.array(netsiglist)
-            maxnetsigarg = np.argmax(netsiglist)
-            netsig_chosen = np.max(netsiglist)
-            spec_toadd = fitsfile[maxnetsigarg+1].data
-            pa_chosen = fitsfile[maxnetsigarg+1].header['POSANG']
-        elif n_ext == 1:
-            spec_toadd = fitsfile[1].data
-            pa_chosen = fitsfile[1].header['POSANG']
-            netsig_chosen = get_net_sig(fitsfile[1].data)
-            
-        # Now get the spectrum to be added
-        lam_obs = spec_toadd['LAMBDA']
-        flam_obs = spec_toadd['FLUX']
-        ferr = spec_toadd['FERROR']
-        contam = spec_toadd['CONTAM']
-
-        # Must include more input checks and better error handling
-        # check that input wavelength array is not empty
-        if not lam_obs.size:
-            print pears_index, " in ", field, " has an empty wav array. Returning empty array..."
-            return lam_obs, flam_obs, ferr, specname, pa_chosen, netsig_chosen
-            
-        # Subtract Contamination
-        flam_obs = flam_obs - contam
-
-        # apply smoothing if necessary
-        if apply_smoothing:
-            #print "Will apply smoothing using Gaussian kernel of width", width, "to", pears_index, "in", field
-            flam_obs = smoothspec(flam_obs, width, kernel_type)
-            
-        # Now chop off the ends and only look at the observed spectrum from 6000A to 9500A
-        arg6000 = np.argmin(abs(lam_obs - 6000))
-        arg9500 = np.argmin(abs(lam_obs - 9500))
-            
-        lam_obs = lam_obs[arg6000:arg9500]
-        flam_obs = flam_obs[arg6000:arg9500]
-        ferr = ferr[arg6000:arg9500]
-
-        # Now deredshift the spectrum
-        lam_em = lam_obs / (1 + redshift)
-        flam_em = flam_obs * (1 + redshift)
-        ferr_em = ferr * (1 + redshift)
-        # check the relations for deredshifting
-
-        return lam_em, flam_em, ferr_em, specname, pa_chosen, netsig_chosen
-
-    else:
-        # read recarray if you're using a combined spectrum
-        recarray = np.load(massive_galaxies_dir + 'pears_pa_combination_info_' + field + '.npy')
-
-        # find id in recarray        
-        idarg = np.where(recarray['pearsid'] == pears_index)[0]
-        #print idarg
-        idarg = int(idarg)  # correct shape if necessary
-        # i.e. if the next few lines dont get an integer then the shape is off and it'll barf when it tries the convolution
-
-        lam_grid = recarray['lam_grid'][idarg]
-        comb_flam = recarray['combined_flam'][idarg]
-        comb_flamerr = recarray['combined_ferr'][idarg]
-        rejected_pa = recarray['rejected_pa'][idarg]
-        combined_pa = recarray['combined_pa'][idarg]
-        # the combined flux in here should already be contamination subtracted
-        print pears_index, combined_pa
-
-        # the combined pa might be a list type so make sure that it is a string
-        if type(combined_pa) is list:
-            if len(combined_pa) == 1:
-                combined_pa = combined_pa[0]
-                if 'PA' not in combined_pa:
-                    combined_pa = 'PA' + combined_pa
-
-        # apply smoothing if necessary
-        if apply_smoothing:
-            comb_flam = smoothspec(comb_flam, width, kernel_type)
-            
-        # Now chop off the ends and only look at the observed spectrum from 6000A to 9500A
-        arg6000 = np.argmin(abs(lam_grid - 6000))
-        arg9500 = np.argmin(abs(lam_grid - 9500))
-            
-        lam_grid = lam_grid[arg6000:arg9500]
-        comb_flam = comb_flam[arg6000:arg9500]
-        comb_flamerr = comb_flamerr[arg6000:arg9500]
-
-        # Now unredshift the spectrum
-        lam_em = lam_grid / (1 + redshift)
-        flam_em = comb_flam * (1 + redshift)
-        ferr_em = comb_flamerr * (1 + redshift)
-        # check the relations for deredshifting
-
-        return lam_em, flam_em, ferr_em, specname, combined_pa
-
-if __name__ == '__main__':
-    
-    # Start time
-    start = time.time()
-    dt = datetime.datetime
-    print "Coaddition started at --",
-    print dt.now()
-    
-    # ----------------------------------------- READ IN CATALOGS ----------------------------------------- #
     # Read in catalog of all PEARS fitting results and assign arrays
     # For now we need the id+field, spz, stellar mass, and u-r color
-    cat = np.genfromtxt(stacking_analysis_dir + 'color_stellarmass.txt', dtype=None, names=True)
-    
     pears_id = cat['pearsid']
     pears_field = cat['field']
     ur_color = cat['urcol']
-    stellarmass = cat['mstar']
+    stellar_mass = cat['mstar']
     spz = cat['spz']
 
     # ----------------------------------------- Code config params ----------------------------------------- #
@@ -340,32 +188,40 @@ if __name__ == '__main__':
     lam_grid = np.arange(2700, 6000, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
-    # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range
-    col_step = 0.3
-    mstar_step = 0.5
+    # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range    
     col_low = 0.0
     col_high = 3.0
+    col_step = 0.3
+
     mstar_low = 7.0
     mstar_high = 12.0
+    mstar_step = 0.5
     
     # ----------------------------------------- Other preliminaries ----------------------------------------- #
 
     # ----------------------------------------- Begin creating stacks ----------------------------------------- #
     added_gal = 0
     skipped_gal = 0
-    gal_per_bin = np.zeros((len(np.arange(col_low, col_high, col_step)), \
+
+    # Create empty array to store num of galaxies in each cell
+    gal_per_cell = np.zeros((len(np.arange(col_low, col_high, col_step)), \
         len(np.arange(mstar_low, mstar_high, mstar_step))))
     
-    for i in np.arange(col_low, col_high, col_step):
-        for j in np.arange(mstar_low, mstar_high, mstar_step):
+    for col in np.arange(col_low, col_high, col_step):
+        for ms in np.arange(mstar_low, mstar_high, mstar_step):
             
-            gal_current_bin = 0
+            gal_current_cell = 0
             
-            logging.info("\n ONGRID %.1f %.1f", i, j)
-            print "ONGRID", i, j
+            print "\n", "Stacking in cell:"
+            print "Color range:", col, col+col_step
+            print "Stellar mass range:", ms, ms+mstar_step
             
-            indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
-                            (stellarmass >= j) & (stellarmass < j + mstar_step))[0]
+            # Find the indices (corresponding to catalog entries)
+            # that are within 
+            indices = np.where((ur_color >= col) & (ur_color < col + col_step) &\
+                            (stellar_mass >= ms) & (stellar_mass < ms + mstar_step))[0]
+
+            print "Number of spectra to coadd in this grid cell -- .", len(pears_id[indices])
             
             old_flam = np.zeros(len(lam_grid))
             old_flamerr = np.zeros(len(lam_grid))
@@ -374,8 +230,8 @@ if __name__ == '__main__':
             
             old_flam = old_flam.tolist()
             old_flamerr = old_flamerr.tolist()
-            
-            logging.info("Number of spectra to coadd in this grid cell -- %d.", len(pears_id[indices]))
+
+            sys.exit(0)
 
             # this is to get the blue cloud sample
             """
@@ -402,16 +258,29 @@ if __name__ == '__main__':
                 # This converts every element (which are all 0 to begin with) 
                 # in the flux and flux error arrays to an empty list
                 # This is done so that function add_spec() can now append to every element
-                if u == 0.0:
+                if u == 0:
                     for x in range(len(lam_grid)):
                         old_flam[x] = []
                         old_flamerr[x] = []
             
-                # Get redshift from previously saved 3DHST photz catalog
-                redshift = photz[indices][u]
+                # Get redshift from catalog
+                current_redshift = spz[indices][u]
+
+                current_id = pears_id[indices][u]
+                current_field = pears_field[indices][u]
                 
-                # Get rest frame values for all quantities
-                lam_em, flam_em, ferr, specname = fileprep(pears_id[indices][u], redshift)
+                # ----------------------------- Get data ----------------------------- #
+                grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
+                = ngp.get_data(current_id, current_field)
+
+                if return_code == 0:
+                    print current_id, current_field
+                    print "Return code should not have been 0. Skipping this galaxy."
+                    continue
+ 
+                # Match with photometry catalog and get photometry data
+
+
                 
                 """
                 # Divide by the grism sensitivity curve
@@ -442,7 +311,7 @@ if __name__ == '__main__':
                 else:
                     # add the spectrum
                     added_gal += 1
-                    gal_current_bin += 1
+                    gal_current_cell += 1
                     old_flam, old_flamerr, num_points, num_galaxies = \
                     add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, \
                         num_points, num_galaxies, lam_grid, lam_step)
@@ -459,7 +328,7 @@ if __name__ == '__main__':
                 if old_flam[y]:
                     old_flamerr[y] = \
                     np.sqrt((1.253 * np.std(old_flam[y]) / \
-                        np.sqrt(len(old_flam[y])))**2 + np.sum(old_flamerr[y]) / gal_current_bin)
+                        np.sqrt(len(old_flam[y])))**2 + np.sum(old_flamerr[y]) / gal_current_cell)
                     old_flam[y] = np.median(old_flam[y])
                 else:
                     old_flam[y] = 0.0
@@ -475,7 +344,7 @@ if __name__ == '__main__':
             #hdr["PCOUNT"]  = "                   0 / number of parameters"
             #hdr["GCOUNT "] = "                   1 / number of groups"
             hdr["ONGRID"]  = str(i) + "," + str(j)
-            hdr["NUMSPEC"] = str(int(gal_current_bin))
+            hdr["NUMSPEC"] = str(int(gal_current_cell))
             hdr["NORMVAL"] = str(medval)
                    
             dat = np.array((old_flam, old_flamerr)).reshape(2, len(lam_grid))
@@ -483,16 +352,55 @@ if __name__ == '__main__':
 
             row = int(i/col_step)
             column = int((j - mstar_low)/mstar_step)
-            gal_per_bin[row,column] = gal_current_bin
+            gal_per_cell[row,column] = gal_current_cell
 
-            print "ONGRID", i, j, "added", gal_current_bin, "spectra."
+            print "ONGRID", i, j, "added", gal_current_cell, "spectra."
             print '\n'
+
+    # Time taken
+    print "Time taken for stacking --", "{:.2f}".format(time.time() - start), "seconds"
     
     print added_gal, skipped_gal
-    print np.flipud(gal_per_bin)
-    print np.sum(gal_per_bin, axis=None)
+    print np.flipud(gal_per_cell)
+    print np.sum(gal_per_cell, axis=None)
+
+    return None
     
+if __name__ == '__main__':
+    
+    # Start time
+    start = time.time()
+    dt = datetime.datetime
+    print "Coaddition started at --",
+    print dt.now()
+    
+    # ----------------------------------------- READ IN CATALOGS ----------------------------------------- #
+    # ---------- Once catalog for each redshift interval ---------- # 
+    cat = np.genfromtxt(stacking_analysis_dir + 'color_stellarmass.txt', dtype=None, names=True)
+
+    # ------------------------------- Read in photometry and grism+photometry catalogs ------------------------------- #
+    # GOODS-N from 3DHST
+    # The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
+    # The combined grism+photometry fits, redshifts, and derived parameters are given in v4.1.5 (Momcheva et al. 2016)
+    photometry_names = ['id', 'ra', 'dec', 'f_F160W', 'e_F160W', 'f_F435W', 'e_F435W', 'f_F606W', 'e_F606W', \
+    'f_F775W', 'e_F775W', 'f_F850LP', 'e_F850LP', 'f_F125W', 'e_F125W', 'f_F140W', 'e_F140W', \
+    'f_U', 'e_U', 'f_IRAC1', 'e_IRAC1', 'f_IRAC2', 'e_IRAC2', 'f_IRAC3', 'e_IRAC3', 'f_IRAC4', 'e_IRAC4', \
+    'IRAC1_contam', 'IRAC2_contam', 'IRAC3_contam', 'IRAC4_contam']
+    goodsn_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodsn_3dhst.v4.1.cats/Catalog/goodsn_3dhst.v4.1.cat', \
+        dtype=None, names=photometry_names, \
+        usecols=(0,3,4, 9,10, 15,16, 27,28, 39,40, 45,46, 48,49, 54,55, 12,13, 63,64, 66,67, 69,70, 72,73, 90,91,92,93), \
+        skip_header=3)
+    goodss_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodss_3dhst.v4.1.cats/Catalog/goodss_3dhst.v4.1.cat', \
+        dtype=None, names=photometry_names, \
+        usecols=(0,3,4, 9,10, 18,19, 30,31, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
+        skip_header=3)
+
+    # ----------------------------------------- Now create stacks ----------------------------------------- #
+    # Separate grid stack for each redshift interval
+    # This function will create and save the stacks in a fits file
+    create_stacks(cat, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, start)
+
     # Total time taken
-    print "Time taken for coaddition -- %.2f seconds", time.time() - start
+    print "Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes."
 
     sys.exit(0)
