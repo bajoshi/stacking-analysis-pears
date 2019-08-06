@@ -143,6 +143,27 @@ def compare_with_threedhst():
 
     ax.minorticks_on()
 
+    # Show stellar mass histogram from this work as inset figure
+    left, bottom, width, height = [0.21, 0.65, 0.3, 0.2]
+    ax_ins = fig.add_axes([left, bottom, width, height])
+
+    ax_ins.set_xlabel(r'$\rm log(M^{this\, work}_s)\ [M_\odot]$', fontsize=12)
+    ax_ins.set_ylabel(r'$\rm \# objects$', fontsize=12)
+
+    binsize = 0.5
+    total_bins = int((13.0 - 4.0)/binsize)
+
+    ax_ins.hist(pears_ms, total_bins, range=(4.0, 13.0), histtype='step', linewidth=1.2, color='k')
+
+    ax_ins.set_xticks(np.arange(4.0, 13.5, 1.0))
+    ax_ins.minorticks_on()
+
+    # Other info on plot
+    num = len(pears_ms)
+    ax_ins.text(0.04, 0.92, r'$\rm N\, =\, $' + str(num), \
+    verticalalignment='top', horizontalalignment='left', \
+    transform=ax_ins.transAxes, color='k', size=12)
+
     fig.savefig(stacking_figures_dir + 'pears_vs_3d_ms_comparison.pdf', \
         dpi=300, bbox_inches='tight')
 
