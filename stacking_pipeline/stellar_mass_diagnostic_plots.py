@@ -35,6 +35,11 @@ def make_stellar_mass_hist():
     stellar_mass = np.asarray(stellar_mass)
     ms = np.log10(stellar_mass)  # plot log of stellar mass to make it easier to see
 
+    # Number of objects with believable stellar masses
+    ms_val_idx = np.where((ms >= 8.0) & (ms <= 12.0))[0]
+    print "Number of galaxies with stellar masses between 10^8 and 10^12 M_sol:",
+    print len(ms_val_idx)
+
     # Now make plot
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -247,7 +252,7 @@ def match_get_threed_ms(goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, \
 
 def main():
 
-    #make_stellar_mass_hist()
+    make_stellar_mass_hist()
     compare_with_threedhst()
 
     return None
