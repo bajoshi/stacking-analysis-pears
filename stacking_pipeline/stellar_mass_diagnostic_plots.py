@@ -250,10 +250,48 @@ def match_get_threed_ms(goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, \
 
     return threed_ms
 
+def make_z_hist():
+
+    # Define empty list for redshifts
+    zp = []
+
+    # Loop over all results and store redshift values
+    for fl in glob.glob(full_pears_results_dir + 'redshift_fitting_results_*.txt'):
+        f = np.genfromtxt(fl, dtype=None, names=True, skip_header=1)
+        zp.append(f['zp_minchi2'])
+
+    # Now make plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xlabel(r'$\rm z_{phot}$', fontsize=15)
+    ax.set_ylabel(r'$\rm \# objects$', fontsize=15)
+
+    binsize = 0.1
+    total_bins = int((6.0 - 0.0)/binsize)
+
+    ax.hist(zp, total_bins, range=(0.0, 6.0), histtype='step', linewidth=1.2, color='k')
+
+    ax.minorticks_on()
+    ax.set_xticks(np.arange(0.0, 6.1, 0.5))
+
+    # Other info on plot
+    num = len(zp)
+    ax.text(0.75, 0.95, r'$\rm N\, =\, $' + str(num), \
+    verticalalignment='top', horizontalalignment='left', \
+    transform=ax.transAxes, color='k', size=15)
+    
+    fig.savefig(stacking_figures_dir + 'zphot_hist.pdf', \
+        dpi=300, bbox_inches='tight')
+
+
+    return None
+
 def main():
 
-    make_stellar_mass_hist()
-    compare_with_threedhst()
+    #make_stellar_mass_hist()
+    #compare_with_threedhst()
+    make_z_hist()
 
     return None
 
