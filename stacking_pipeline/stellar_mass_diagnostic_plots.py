@@ -250,7 +250,7 @@ def match_get_threed_ms(goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, \
 
     return threed_ms
 
-def make_z_hist():
+def get_zp_array():
 
     # Define empty list for redshifts
     zp = []
@@ -259,6 +259,15 @@ def make_z_hist():
     for fl in glob.glob(full_pears_results_dir + 'redshift_fitting_results_*.txt'):
         f = np.genfromtxt(fl, dtype=None, names=True, skip_header=1)
         zp.append(f['zp_minchi2'])
+
+    # Convert to numpy array
+    zp = np.asarray(zp)
+
+    return zp
+
+def make_z_hist():
+
+    zp = get_zp_array()
 
     # Now make plot
     fig = plt.figure()
@@ -284,6 +293,16 @@ def make_z_hist():
     fig.savefig(stacking_figures_dir + 'zphot_hist.pdf', \
         dpi=300, bbox_inches='tight')
 
+    # --------------------------------
+    # Decide redshift intervals
+    # This is done by trial and error.
+    # --------------------------------
+    print "Number of galaxies within each redshift interval."
+    print "0.0 <= z < 0.4", "    ", len(np.where((zp >= 0.0) & (zp < 0.4))[0])
+    print "0.4 <= z < 0.7", "    ", len(np.where((zp >= 0.4) & (zp < 0.7))[0])
+    print "0.7 <= z < 1.0", "    ", len(np.where((zp >= 0.7) & (zp < 1.0))[0])
+    print "1.0 <= z < 2.0", "    ", len(np.where((zp >= 1.0) & (zp < 2.0))[0])
+    print "2.0 <= z <= 6.0", "    ", len(np.where((zp >= 2.0) & (zp <= 6.0))[0])
 
     return None
 
