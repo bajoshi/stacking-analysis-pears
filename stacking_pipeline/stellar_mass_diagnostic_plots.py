@@ -12,8 +12,9 @@ home = os.getenv('HOME')
 figs_dir = home + '/Desktop/FIGS/'
 
 massive_figures_dir = figs_dir + 'massive-galaxies-figures/'
-full_pears_results_dir = massive_figures_dir + 'full_pears_results/'
+stacking_analysis_dir = figs_dir + 'stacking-analysis-pears/'
 stacking_figures_dir = figs_dir + 'stacking-analysis-figures/'
+full_pears_results_dir = massive_figures_dir + 'full_pears_results/'
 
 # Get correct directory for 3D-HST data
 if 'firstlight' in os.uname()[1]:
@@ -66,41 +67,46 @@ def make_stellar_mass_hist():
 
     return None
 
-def compare_with_threedhst():
+def compare_prep(selection):
 
-    # Define empty lists for id, field, ra, dec, 
-    # and stellar mass from my code and from 3dhst
-    pears_id = []
-    pears_field = []
-    pears_ra = []
-    pears_dec = []
-    pears_ms = []
+    if selection == 'all_salp':
+        selected_results_dir = full_pears_results_dir
+        final_file_name = stacking_analysis_dir + 'full_pears_results.txt'
+    elif selection == 'all_salp_no_irac_ch3_ch4':
+        selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_no_irac_ch3_ch4')
+        final_file_name = stacking_analysis_dir + 'full_pears_results_no_irac_ch3_ch4.txt'
+    elif selection == 'all_salp_no_irac':
+        selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_no_irac')
+        final_file_name = stacking_analysis_dir + 'full_pears_results_no_irac.txt'
+    elif selection == 'all_chab':
+        selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier')
+        final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier.txt'
+    elif selection == 'all_chab_no_irac_ch3_ch4':
+        selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier_no_irac_ch3_ch4')
+        final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier_no_irac_ch3_ch4.txt'
+    elif selection == 'all_chab_no_irac':
+        selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier_no_irac')
+        final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier_no_irac.txt'
 
-    # Loop over all results and store values from my pipeline
-    for fl in glob.glob(full_pears_results_dir + 'redshift_fitting_results_*.txt'):
+    cat = np.genfromtxt(final_file_name, dtype=None, names=['PearsID', 'Field', 'RA', 'DEC', 'zp_ms'], usecols=(0, 1, 2, 3, 36))
 
-        f = np.genfromtxt(fl, dtype=None, names=True, skip_header=1)
-
-        current_id = f['PearsID']
-        current_field = f['Field']
-        current_ra = f['RA']
-        current_dec = f['DEC']
-        current_ms = f['zp_ms']
-
-        pears_id.append(current_id)
-        pears_field.append(current_field)
-        pears_ra.append(current_ra)
-        pears_dec.append(current_dec)
-        pears_ms.append(current_ms)
-
-    # Convert to numpy arrays
-    pears_id = np.asarray(pears_id)
-    pears_field = np.asarray(pears_field)
-    pears_ra = np.asarray(pears_ra)
-    pears_dec = np.asarray(pears_dec)
-    pears_ms = np.asarray(pears_ms)
+    pears_id = cat['PearsID']
+    pears_field = cat['Field']
+    pears_ra = cat['RA']
+    pears_dec = cat['DEC']
+    pears_ms = cat['zp_ms']
 
     pears_ms = np.log10(pears_ms)  # convert to log of stellar mass
+
+    return pears_id, pears_field, pears_ra, pears_dec, pears_ms
+
+def get_threed_stuff():
+
+    selection = 'all_salp'
+    pears_id, pears_field, pears_ra, pears_dec, pears_ms = compare_prep(selection)
+    # While getting the 3D-HST stuff it doesn't matter what the selection
+    # here is because the basic info (which is what you need) will not
+    # change depending on the selection.
 
     # Now match with 3D-HST and get their stellar mass values
     # Read in 3D-HST stellar mass and photometry catalogs
@@ -132,6 +138,24 @@ def compare_with_threedhst():
     # Match astrometry and get stellar mass from 3D-HST 
     threed_ms = match_get_threed_ms(goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, \
         goodsn_ms_cat_3dhst, goodss_ms_cat_3dhst, pears_id, pears_field, pears_ra, pears_dec)
+
+    return threed_ms
+
+def compare_with_threedhst():
+
+    # Select the datasets to get and compare
+    selection = 'all_salp'
+    # This has the following 6 options:
+    # 1. 'all_salp': This will select the results which include all photometry and use the Salpeter IMF.
+    # 2. 'all_salp_no_irac_ch3_ch4': This will select the results which exclude IRAC CH3 and CH4 and use Salpeter IMF.
+    # 3. 'all_salp_no_irac': This will select the results which exclude all IRAC photometry and use Salpeter IMF.
+    # 4. 'all_chab': This will select the results which include all photometry and use the Chabrier IMF.
+    # 5. 'all_chab_no_irac_ch3_ch4': This will select the results which exclude IRAC CH3 and CH4 and use Chabrier IMF.
+    # 6. 'all_chab_no_irac': This will select the results which exclude all IRAC photometry and use Chabrier IMF.
+
+    pears_id, pears_field, pears_ra, pears_dec, pears_ms = compare_prep(selection)
+
+    threed_ms = get_threed_stuff()
 
     # Now plot both vs each other
     fig = plt.figure()
@@ -306,11 +330,57 @@ def make_z_hist():
 
     return None
 
+def compare_all_salp():
+
+    # 1st set
+    selection = 'all_salp'
+    pears_id, pears_field, pears_ra, pears_dec, pears_ms = compare_prep(selection)
+
+    # 2nd set
+    selection = 'all_salp_no_irac_ch3_ch4'
+    pears_id_no_irac34, pears_field_no_irac34, pears_ra_no_irac34, pears_dec_no_irac34, pears_ms_no_irac34 = compare_prep(selection)
+
+    # 3rd set
+    selection = 'all_salp_no_irac'
+    pears_id_no_irac, pears_field_no_irac, pears_ra_no_irac, pears_dec_no_irac, pears_ms_no_irac = compare_prep(selection)
+
+    # Get 3D-HST stellar mass
+    threed_ms = get_threed_stuff()
+
+    # Now plot 
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xlabel(r'$\rm log(M^{this\, work}_s)\ [M_\odot]$', fontsize=15)
+    ax.set_ylabel(r'$\rm log(M^{3D-HST}_s)\ [M_\odot]$', fontsize=15)
+
+    #ax.scatter(pears_ms, threed_ms, s=2.5, color='black', alpha=0.4)  # all_salp
+    #ax.scatter(pears_ms_no_irac34, threed_ms, s=2.0, color='pink', alpha=0.4)  # all_salp_no_irac_ch3_ch4
+    ax.scatter(pears_ms_no_irac, threed_ms, s=2.0, color='green', alpha=0.4)  # all_salp_no_irac
+    ax.plot(np.arange(4.0, 13.1, 0.1), np.arange(4.0, 13.1, 0.1), '--', color='r')
+
+    ax.set_xlim(4.0, 13.0)
+    ax.set_ylim(4.0, 13.0)
+
+    ax.minorticks_on()
+
+    plt.show()
+
+    return None
+
+def compare_santini():
+
+    return None
+
+
 def main():
 
     #make_stellar_mass_hist()
     #compare_with_threedhst()
-    make_z_hist()
+    #make_z_hist()
+    #compare_all_salp()
+
+    
 
     return None
 

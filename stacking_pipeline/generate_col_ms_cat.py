@@ -11,7 +11,28 @@ figs_dir = home + '/Desktop/FIGS/'
 
 stacking_analysis_dir = figs_dir + 'stacking-analysis-pears/'
 massive_figures_dir = figs_dir + 'massive-galaxies-figures/'
+
 full_pears_results_dir = massive_figures_dir + 'full_pears_results/'
+
+selection = 'all_salp_no_irac'
+if selection == 'all_salp':
+    selected_results_dir = full_pears_results_dir
+    final_file_name = stacking_analysis_dir + 'full_pears_results.txt'
+elif selection == 'all_salp_no_irac_ch3_ch4':
+    selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_no_irac_ch3_ch4')
+    final_file_name = stacking_analysis_dir + 'full_pears_results_no_irac_ch3_ch4.txt'
+elif selection == 'all_salp_no_irac':
+    selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_no_irac')
+    final_file_name = stacking_analysis_dir + 'full_pears_results_no_irac.txt'
+elif selection == 'all_chab':
+    selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier')
+    final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier.txt'
+elif selection == 'all_chab_no_irac_ch3_ch4':
+    selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier_no_irac_ch3_ch4')
+    final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier_no_irac_ch3_ch4.txt'
+elif selection == 'all_chab_no_irac':
+    selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier_no_irac')
+    final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier_no_irac.txt'
 
 def main():
 
@@ -57,7 +78,7 @@ def main():
     zp_vj = []
 
     # Loop over all results and store values
-    for fl in glob.glob(full_pears_results_dir + 'redshift_fitting_results_*.txt'):
+    for fl in glob.glob(selected_results_dir + 'redshift_fitting_results_*.txt'):
         f = np.genfromtxt(fl, dtype=None, names=True, skip_header=1)
 
         PearsID.append(f['PearsID'])
@@ -156,13 +177,13 @@ def main():
         ('zspz_age', float), ('zspz_tau', float), ('zspz_av', float), ('zg_age', float), ('zg_tau', float), ('zg_av', float), \
         ('zp_template_ms', float), ('zp_ms', float), ('zp_uv', float), ('zp_vj', float)])
 
-    hdr = "#  PearsID  Field  RA  DEC  zspec  zp_minchi2  zspz_minchi2  zg_minchi2" + \
+    hdr = "  PearsID  Field  RA  DEC  zspec  zp_minchi2  zspz_minchi2  zg_minchi2" + \
         "  zp  zspz  zg  zp_zerr_low  zp_zerr_up  zspz_zerr_low  zspz_zerr_up  zg_zerr_low  zg_zerr_up" + \
         "  zp_min_chi2  zspz_min_chi2  zg_min_chi2  zp_bestalpha  zspz_bestalpha  zg_bestalpha" + \
         "  zp_model_idx  zspz_model_idx  zg_model_idx  zp_age  zp_tau  zp_av" + \
         "  zspz_age  zspz_tau  zspz_av  zg_age  zg_tau  zg_av" + \
         "  zp_template_ms  zp_ms  zp_uv  zp_vj"
-    np.savetxt(stacking_analysis_dir + 'full_pears_results.txt', data, \
+    np.savetxt(final_file_name, data, \
         fmt=['%d', '%s', '%.7f', '%.6f', '%.4f', '%.2f', '%.2f', '%.2f', \
         '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', '%.2f', \
         '%.2f', '%.2f', '%.2f', '%.3e', '%.3e', '%.3e', \
