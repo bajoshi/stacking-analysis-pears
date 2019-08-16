@@ -102,7 +102,7 @@ def compare_prep(selection):
 
 def get_threed_stuff():
 
-    selection = 'all_salp'
+    selection = 'all_chab'
     pears_id, pears_field, pears_ra, pears_dec, pears_ms = compare_prep(selection)
     # While getting the 3D-HST stuff it doesn't matter what the selection
     # here is because the basic info (which is what you need) will not
@@ -144,7 +144,7 @@ def get_threed_stuff():
 def compare_with_threedhst():
 
     # Select the datasets to get and compare
-    selection = 'all_salp'
+    selection = 'all_chab'
     # This has the following 6 options:
     # 1. 'all_salp': This will select the results which include all photometry and use the Salpeter IMF.
     # 2. 'all_salp_no_irac_ch3_ch4': This will select the results which exclude IRAC CH3 and CH4 and use Salpeter IMF.
@@ -354,8 +354,8 @@ def compare_all_salp():
     ax.set_xlabel(r'$\rm log(M^{this\, work}_s)\ [M_\odot]$', fontsize=15)
     ax.set_ylabel(r'$\rm log(M^{3D-HST}_s)\ [M_\odot]$', fontsize=15)
 
-    #ax.scatter(pears_ms, threed_ms, s=2.5, color='black', alpha=0.4)  # all_salp
-    #ax.scatter(pears_ms_no_irac34, threed_ms, s=2.0, color='pink', alpha=0.4)  # all_salp_no_irac_ch3_ch4
+    ax.scatter(pears_ms, threed_ms, s=2.5, color='black', alpha=0.4)  # all_salp
+    ax.scatter(pears_ms_no_irac34, threed_ms, s=2.0, color='pink', alpha=0.4)  # all_salp_no_irac_ch3_ch4
     ax.scatter(pears_ms_no_irac, threed_ms, s=2.0, color='green', alpha=0.4)  # all_salp_no_irac
     ax.plot(np.arange(4.0, 13.1, 0.1), np.arange(4.0, 13.1, 0.1), '--', color='r')
 
@@ -376,10 +376,9 @@ def compare_santini():
 def main():
 
     #make_stellar_mass_hist()
-    #compare_with_threedhst()
+    compare_with_threedhst()
     #make_z_hist()
     #compare_all_salp()
-
     
 
     return None

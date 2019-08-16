@@ -14,7 +14,7 @@ massive_figures_dir = figs_dir + 'massive-galaxies-figures/'
 
 full_pears_results_dir = massive_figures_dir + 'full_pears_results/'
 
-selection = 'all_salp_no_irac'
+selection = 'all_chab'
 if selection == 'all_salp':
     selected_results_dir = full_pears_results_dir
     final_file_name = stacking_analysis_dir + 'full_pears_results.txt'
@@ -33,6 +33,18 @@ elif selection == 'all_chab_no_irac_ch3_ch4':
 elif selection == 'all_chab_no_irac':
     selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier_no_irac')
     final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier_no_irac.txt'
+
+def compute_u_mag():
+
+    return u_mag
+
+def compute_v_mag():
+
+    return v_mag
+
+def compute_j_mag():
+
+    return j_mag
 
 def main():
 
