@@ -1,6 +1,9 @@
 from __future__ import division
 
 import numpy as np
+from scipy.interpolate import griddata
+from scipy.integrate import simps
+import pysynphot
 
 import os
 import sys
@@ -14,6 +17,38 @@ figs_dir = home + '/Desktop/FIGS/'
 
 stacking_analysis_dir = figs_dir + 'stacking-analysis-pears/'
 stacking_figures_dir = figs_dir + 'stacking-analysis-figures/'
+
+def compute_flam(filtername, spec, spec_wav):
+
+    # Select filter curve based on filter name
+    # These are all from pysysnphot
+    # Wavelenght is in angstroms
+    # Throughput is an absolute fraction
+    if filtername == 'u':
+        band = pysynphot.ObsBandpass('sdss,u')
+    elif filtername == 'g':
+        band = pysynphot.ObsBandpass('sdss,g')
+    elif filtername == 'r':
+        band = pysynphot.ObsBandpass('sdss,r')
+    #elif filtername == 'j':
+
+    filt_wav = band.wave
+    filt_thru = band.throughput
+
+    # Now compute magnitudes
+    # First, interpolate the transmission curve to the model lam grid
+    filt_interp = griddata(points=filt_wav, values=filt_thru, xi=spec_wav, method='linear')
+
+    # Set nan values in interpolated filter to 0.0
+    filt_nan_idx = np.where(np.isnan(filt_interp))[0]
+    filt_interp[filt_nan_idx] = 0.0
+
+    # Second, compute f_lambda
+    den = simps(y=filt_interp, x=spec_wav)
+    num = simps(y=spec * filt_interp, x=spec_wav)
+    flam = num / den
+
+    return flam
 
 def uv_ms_plots():
 
@@ -31,8 +66,32 @@ def uv_ms_plots():
     # Look at the make_z_hist() function in there. 
     zp = cat['zp_minchi2'][ms_idx]
     ms = ms[ms_idx]
-    uv = cat['zp_uv'][ms_idx]
+    #uv = cat['zp_uv'][ms_idx]
+    ur = []
 
+    # now loop over all galaxies within mass cut sample 
+    # and get the u-r color for each galaxy
+
+    # Read model lambda grid # In agnstroms
+    model_lam_grid_withlines_mmap = np.load(figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
+    # Now read the model spectra # In erg s^-1 A^-1
+    model_comp_spec_llam_withlines_mmap = np.load(figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
+
+    for idx in ms_idx:
+        # First get teh full res model spectrum
+        best_model_idx = cat[idx]['zp_model_idx']
+        current_spec = model_comp_spec_llam_withlines_mmap[best_model_idx]
+        
+        # Now get the u and r magnitudes
+        uflam = compute_flam('u', current_spec, model_lam_grid_withlines_mmap)
+        rflam = compute_flam('r', current_spec, model_lam_grid_withlines_mmap)
+        current_ur = -2.5 * np.log10(uflam / rflam)  # Because this is a color the zeropoint doesn't matter
+        ur.append(current_ur)
+
+    # Convert to numpy array
+    ur = np.asarray(ur)
+
+    # Get z intervals and their indices
     z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
     z_interval2_idx = np.where((zp >= 0.4) & (zp < 0.7))[0]
     z_interval3_idx = np.where((zp >= 0.7) & (zp < 1.0))[0]
@@ -62,16 +121,16 @@ def uv_ms_plots():
 
     # Labels
     ax5.set_xlabel(r'$\rm log(M_s)\ [M_\odot]$', fontsize=15)
-    ax4.set_ylabel(r'$U - V$', fontsize=15)
+    ax4.set_ylabel(r'$(u - r)_\mathrm{restframe}$', fontsize=15)
     ax4.yaxis.set_label_coords(-0.12, 1.05)
 
     # Actual plotting
-    ax1.scatter(ms[z_interval1_idx], uv[z_interval1_idx], s=1.5, color='k')
-    ax2.scatter(ms[z_interval2_idx], uv[z_interval2_idx], s=1.5, color='k')
-    ax3.scatter(ms[z_interval3_idx], uv[z_interval3_idx], s=1.5, color='k')
-    ax4.scatter(ms[z_interval4_idx], uv[z_interval4_idx], s=1.5, color='k')
-    ax5.scatter(ms[z_interval5_idx], uv[z_interval5_idx], s=1.5, color='k')
-    ax6.scatter(ms, uv, s=1.5, color='k')
+    ax1.scatter(ms[z_interval1_idx], ur[z_interval1_idx], s=1.5, color='k')
+    ax2.scatter(ms[z_interval2_idx], ur[z_interval2_idx], s=1.5, color='k')
+    ax3.scatter(ms[z_interval3_idx], ur[z_interval3_idx], s=1.5, color='k')
+    ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=1.5, color='k')
+    ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=1.5, color='k')
+    ax6.scatter(ms, ur, s=1.5, color='k')
 
     # Add text 
     add_info_text_to_subplots(ax1, 0.0, 0.4, len(z_interval1_idx))
@@ -107,7 +166,7 @@ def uv_ms_plots():
     ax5.set_yticklabels([])
     ax6.set_yticklabels([])
 
-    fig.savefig(stacking_figures_dir + 'uv_ms_diagram.pdf', dpi=300, bbox_inches='tight')
+    fig.savefig(stacking_figures_dir + 'ur_ms_diagram.pdf', dpi=300, bbox_inches='tight')
 
     return None
 
@@ -279,7 +338,7 @@ def main():
 
     #check_salp_chab_z()
     uv_ms_plots()
-    uvj()
+    #uvj()
     
     return None
 

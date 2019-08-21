@@ -34,18 +34,6 @@ elif selection == 'all_chab_no_irac':
     selected_results_dir = full_pears_results_dir.replace('full_pears_results', 'full_pears_results_chabrier_no_irac')
     final_file_name = stacking_analysis_dir + 'full_pears_results_chabrier_no_irac.txt'
 
-def compute_u_mag():
-
-    return u_mag
-
-def compute_v_mag():
-
-    return v_mag
-
-def compute_j_mag():
-
-    return j_mag
-
 def main():
 
     # Define empty lists
