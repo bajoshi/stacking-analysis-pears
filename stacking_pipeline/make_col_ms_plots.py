@@ -18,6 +18,12 @@ figs_dir = home + '/Desktop/FIGS/'
 stacking_analysis_dir = figs_dir + 'stacking-analysis-pears/'
 stacking_figures_dir = figs_dir + 'stacking-analysis-figures/'
 
+# Get correct directory for 3D-HST data
+if 'firstlight' in os.uname()[1]:
+    threedhst_datadir = '/Users/baj/Desktop/3dhst_data/'
+else:
+    threedhst_datadir = '/Volumes/Bhavins_backup/3dhst_data/'
+
 def compute_flam(filtername, spec, spec_wav):
 
     # Select filter curve based on filter name
@@ -50,14 +56,66 @@ def compute_flam(filtername, spec, spec_wav):
 
     return flam
 
-def uv_ms_plots():
+def get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst):
+
+    # Now match
+    ra_lim = 0.3/3600  # arcseconds in degrees
+    dec_lim = 0.3/3600
+    threed_phot_idx = np.where((threed_ra >= current_ra - ra_lim) & (threed_ra <= current_ra + ra_lim) & \
+        (threed_dec >= current_dec - dec_lim) & (threed_dec <= current_dec + dec_lim))[0]
+
+    """
+    If there are multiple matches with the photometry catalog 
+    within 0.3 arseconds then choose the closest one.
+    """
+    if len(threed_phot_idx) > 1:
+        print "Multiple matches found in photmetry catalog. Choosing the closest one."
+
+        ra_two = current_ra
+        dec_two = current_dec
+
+        dist_list = []
+        for v in range(len(threed_phot_idx)):
+
+            ra_one = threed_ra[threed_phot_idx][v]
+            dec_one = threed_dec[threed_phot_idx][v]
+
+            dist = np.arccos(np.cos(dec_one*np.pi/180) * \
+                np.cos(dec_two*np.pi/180) * np.cos(ra_one*np.pi/180 - ra_two*np.pi/180) + \
+                np.sin(dec_one*np.pi/180) * np.sin(dec_two*np.pi/180))
+            dist_list.append(dist)
+
+        dist_list = np.asarray(dist_list)
+        dist_idx = np.argmin(dist_list)
+        threed_phot_idx = threed_phot_idx[dist_idx]
+
+    elif len(threed_phot_idx) == 0:  
+        # Raise IndexError if match not found.
+        # Because the code that generated the full pears sample
+        # already matched with 3dhst and required a match to
+        # be found to be included in the final full pears sample.
+        print "Match not found. This should not have happened. Exiting."
+        print "At ID and Field:", current_id, current_field
+        raise IndexError
+        sys.exit(1)
+
+    # Now get 3D-HST u-r color
+    threed_uflux = float(phot_cat_3dhst['f_U'][threed_phot_idx])
+    threed_rflux = float(phot_cat_3dhst['f_R'][threed_phot_idx])
+    threed_ur = -2.5 * np.log10(threed_uflux / threed_rflux)
+
+    #print "\n", threed_phot_idx, "{:.3e}".format(threed_uflux), "{:.3e}".format(threed_rflux), "{:.3f}".format(threed_ur)
+
+    return threed_ur
+
+def ur_ms_plots():
 
     # Read in results for all of PEARS
     cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True)
 
     # First get stellar mass and apply a cut to stellar mass
     ms = np.log10(cat['zp_ms'])
-    ms_idx = np.where((ms >= 9.0) & (ms <= 12.0))[0]
+    ms_idx = np.where((ms >= 8.0) & (ms <= 12.0))[0]
     print "Galaxies from stellar mass cut:", len(ms_idx)
 
     # Now get indices based on redshift intervals
@@ -68,6 +126,7 @@ def uv_ms_plots():
     ms = ms[ms_idx]
     #uv = cat['zp_uv'][ms_idx]
     ur = []
+    threed_ur = []
 
     # now loop over all galaxies within mass cut sample 
     # and get the u-r color for each galaxy
@@ -77,6 +136,23 @@ def uv_ms_plots():
     # Now read the model spectra # In erg s^-1 A^-1
     model_comp_spec_llam_withlines_mmap = np.load(figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
 
+    # ------------------------------- Read in photometry catalogs ------------------------------- #
+    # GOODS photometry catalogs from 3DHST
+    # The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
+    # The combined grism+photometry fits, redshifts, and derived parameters are given in v4.1.5 (Momcheva et al. 2016)
+    photometry_names = ['id', 'ra', 'dec', 'f_F160W', 'e_F160W', 'f_F435W', 'e_F435W', 'f_F606W', 'e_F606W', \
+    'f_R', 'e_R', 'f_F775W', 'e_F775W', 'f_F850LP', 'e_F850LP', 'f_F125W', 'e_F125W', 'f_F140W', 'e_F140W', \
+    'f_U', 'e_U', 'f_IRAC1', 'e_IRAC1', 'f_IRAC2', 'e_IRAC2', 'f_IRAC3', 'e_IRAC3', 'f_IRAC4', 'e_IRAC4', \
+    'IRAC1_contam', 'IRAC2_contam', 'IRAC3_contam', 'IRAC4_contam']
+    goodsn_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodsn_3dhst.v4.1.cat', \
+        dtype=None, names=photometry_names, \
+        usecols=(0,3,4, 9,10, 15,16, 27,28, 30,31, 39,40, 45,46, 48,49, 54,55, 12,13, 63,64, 66,67, 69,70, 72,73, 90,91,92,93), \
+        skip_header=3)
+    goodss_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodss_3dhst.v4.1.cat', \
+        dtype=None, names=photometry_names, \
+        usecols=(0,3,4, 9,10, 18,19, 30,31, 33,34, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
+        skip_header=3)
+
     for idx in ms_idx:
         # First get teh full res model spectrum
         best_model_idx = cat[idx]['zp_model_idx']
@@ -85,11 +161,31 @@ def uv_ms_plots():
         # Now get the u and r magnitudes
         uflam = compute_flam('u', current_spec, model_lam_grid_withlines_mmap)
         rflam = compute_flam('r', current_spec, model_lam_grid_withlines_mmap)
-        current_ur = -2.5 * np.log10(uflam / rflam)  # Because this is a color the zeropoint doesn't matter
+        current_ur = -2.5 * np.log10(uflam / rflam)  # Because this is a color the zeropoint doesn't matter?
         ur.append(current_ur)
+
+        # Check the 3DHST u-r color as well
+        current_ra = cat[idx]['RA']
+        current_dec = cat[idx]['DEC']
+        current_field = cat[idx]['Field']
+
+        # Assign catalogs 
+        if current_field == 'GOODS-N':
+            phot_cat_3dhst = goodsn_phot_cat_3dhst
+        elif current_field == 'GOODS-S':
+            phot_cat_3dhst = goodss_phot_cat_3dhst
+
+        threed_ra = phot_cat_3dhst['ra']
+        threed_dec = phot_cat_3dhst['dec']
+
+        current_threed_ur = get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst)
+        threed_ur.append(current_threed_ur)
+
+        #print best_model_idx, "{:.3e}".format(uflam), "{:.3e}".format(rflam), "{:.3f}".format(current_ur)
 
     # Convert to numpy array
     ur = np.asarray(ur)
+    threed_ur = np.asarray(threed_ur)
 
     # Get z intervals and their indices
     z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
@@ -125,12 +221,12 @@ def uv_ms_plots():
     ax4.yaxis.set_label_coords(-0.12, 1.05)
 
     # Actual plotting
-    ax1.scatter(ms[z_interval1_idx], ur[z_interval1_idx], s=1.5, color='k')
-    ax2.scatter(ms[z_interval2_idx], ur[z_interval2_idx], s=1.5, color='k')
-    ax3.scatter(ms[z_interval3_idx], ur[z_interval3_idx], s=1.5, color='k')
-    ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=1.5, color='k')
-    ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=1.5, color='k')
-    ax6.scatter(ms, ur, s=1.5, color='k')
+    ax1.scatter(ms[z_interval1_idx], threed_ur[z_interval1_idx], s=1.5, color='k')
+    ax2.scatter(ms[z_interval2_idx], threed_ur[z_interval2_idx], s=1.5, color='k')
+    ax3.scatter(ms[z_interval3_idx], threed_ur[z_interval3_idx], s=1.5, color='k')
+    ax4.scatter(ms[z_interval4_idx], threed_ur[z_interval4_idx], s=1.5, color='k')
+    ax5.scatter(ms[z_interval5_idx], threed_ur[z_interval5_idx], s=1.5, color='k')
+    ax6.scatter(ms, threed_ur, s=1.5, color='k')
 
     # Add text 
     add_info_text_to_subplots(ax1, 0.0, 0.4, len(z_interval1_idx))
@@ -148,12 +244,12 @@ def uv_ms_plots():
     ax5.set_xlim(7.0, 13.0)
     ax6.set_xlim(7.0, 13.0)
 
-    ax1.set_ylim(-1.0, 2.5)
-    ax2.set_ylim(-1.0, 2.5)
-    ax3.set_ylim(-1.0, 2.5)
-    ax4.set_ylim(-1.0, 2.5)
-    ax5.set_ylim(-1.0, 2.5)
-    ax6.set_ylim(-1.0, 2.5)
+    ax1.set_ylim(-1.0, 5.0)
+    ax2.set_ylim(-1.0, 5.0)
+    ax3.set_ylim(-1.0, 5.0)
+    ax4.set_ylim(-1.0, 5.0)
+    ax5.set_ylim(-1.0, 5.0)
+    ax6.set_ylim(-1.0, 5.0)
 
     # Don't show x tick labels on the upper row
     ax1.set_xticklabels([])
@@ -166,7 +262,7 @@ def uv_ms_plots():
     ax5.set_yticklabels([])
     ax6.set_yticklabels([])
 
-    fig.savefig(stacking_figures_dir + 'ur_ms_diagram.pdf', dpi=300, bbox_inches='tight')
+    fig.savefig(stacking_figures_dir + 'ur_ms_diagram_threedcol.pdf', dpi=300, bbox_inches='tight')
 
     return None
 
@@ -337,7 +433,7 @@ def check_salp_chab_z():
 def main():
 
     #check_salp_chab_z()
-    uv_ms_plots()
+    ur_ms_plots()
     #uvj()
     
     return None
