@@ -24,7 +24,7 @@ if 'firstlight' in os.uname()[1]:
 else:
     threedhst_datadir = '/Volumes/Bhavins_backup/3dhst_data/'
 
-def compute_flam(filtername, spec, spec_wav):
+def compute_fnu(filtername, spec_llam, spec_wav):
 
     # Select filter curve based on filter name
     # These are all from pysysnphot
@@ -41,20 +41,50 @@ def compute_flam(filtername, spec, spec_wav):
     filt_wav = band.wave
     filt_thru = band.throughput
 
+    # NOw convert to f_nu before you do anything
+    speed_of_light_ang = 2.99792458e18  # angstroms per second
+
+    filt_nu = speed_of_light_ang / filt_wav
+
+    spec_nu = speed_of_light_ang / spec_wav
+    spec_lnu = (spec_wav)**2 * spec_llam / speed_of_light_ang
+
+    # Reverse arrays to get frequency in ascending order
+    filt_nu = filt_nu[::-1]
+    filt_thru = filt_thru[::-1]
+
+    spec_nu = spec_nu[::-1]
+    spec_lnu = spec_lnu[::-1]
+
+    # Now convert to fluxes.
+    # i.e., put your model spectrum at a distance of 10 pc.
+    # While this doesn't affect the color computation
+    # this is to get some sensible number for the fnu
+    # and the magnitude computation.
+    # Therefore my magnitudes will now be absolute magnitudes.
+    # Keep in mind that the magnitude numbers are for a model
+    # spectrum which is normalized to 1 solar mass. 
+    # So expect numbers in the ballpark of what you'd get if you
+    # put the Sun 10 pc away.
+    dl_10pc_cm = 3.086e19  # 10 parsecs in cm
+    spec_fnu = spec_lnu / (4 * np.pi * dl_10pc_cm * dl_10pc_cm)
+
     # Now compute magnitudes
     # First, interpolate the transmission curve to the model lam grid
-    filt_interp = griddata(points=filt_wav, values=filt_thru, xi=spec_wav, method='linear')
+    filt_interp = griddata(points=filt_nu, values=filt_thru, xi=spec_nu, method='linear')
 
     # Set nan values in interpolated filter to 0.0
     filt_nan_idx = np.where(np.isnan(filt_interp))[0]
     filt_interp[filt_nan_idx] = 0.0
 
-    # Second, compute f_lambda
-    den = simps(y=filt_interp, x=spec_wav)
-    num = simps(y=spec * filt_interp, x=spec_wav)
-    flam = num / den
+    # Second, compute f_nu
+    den = simps(y=filt_interp / spec_nu, x=spec_nu)
+    num = simps(y=spec_fnu * filt_interp / spec_nu, x=spec_nu)
+    fnu = num / den
 
-    return flam
+    #print "{:.3e}".format(num), "{:.3e}".format(den), "{:.3e}".format(fnu)
+
+    return fnu
 
 def get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst):
 
@@ -104,7 +134,7 @@ def get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst
     threed_rflux = float(phot_cat_3dhst['f_R'][threed_phot_idx])
     threed_ur = -2.5 * np.log10(threed_uflux / threed_rflux)
 
-    #print "\n", threed_phot_idx, "{:.3e}".format(threed_uflux), "{:.3e}".format(threed_rflux), "{:.3f}".format(threed_ur)
+    #print threed_phot_idx, "{:.3e}".format(threed_uflux), "{:.3e}".format(threed_rflux), "{:.3f}".format(threed_ur)
 
     return threed_ur
 
@@ -159,12 +189,17 @@ def ur_ms_plots():
         current_spec = model_comp_spec_llam_withlines_mmap[best_model_idx]
         
         # Now get the u and r magnitudes
-        uflam = compute_flam('u', current_spec, model_lam_grid_withlines_mmap)
-        rflam = compute_flam('r', current_spec, model_lam_grid_withlines_mmap)
-        current_ur = -2.5 * np.log10(uflam / rflam)  # Because this is a color the zeropoint doesn't matter?
+        ufnu = compute_fnu('u', current_spec, model_lam_grid_withlines_mmap)
+        rfnu = compute_fnu('r', current_spec, model_lam_grid_withlines_mmap)
+        umag = -2.5 * np.log10(ufnu) - 48.60
+        rmag = -2.5 * np.log10(rfnu) - 48.60
+        current_ur = umag - rmag
+
         ur.append(current_ur)
 
+        """
         # Check the 3DHST u-r color as well
+        # They've used different filters so don't expect an exact match
         current_ra = cat[idx]['RA']
         current_dec = cat[idx]['DEC']
         current_field = cat[idx]['Field']
@@ -180,12 +215,16 @@ def ur_ms_plots():
 
         current_threed_ur = get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst)
         threed_ur.append(current_threed_ur)
+        """
 
-        #print best_model_idx, "{:.3e}".format(uflam), "{:.3e}".format(rflam), "{:.3f}".format(current_ur)
+        #print best_model_idx, "{:.3f}".format(umag), "{:.3f}".format(rmag), "{:.3f}".format(current_ur)
 
     # Convert to numpy array
     ur = np.asarray(ur)
-    threed_ur = np.asarray(threed_ur)
+    #threed_ur = np.asarray(threed_ur)
+
+    print "Minimum and maximum in computed u-r color array:"
+    print "Min:", min(ur), "             ", "Max:", max(ur)
 
     # Get z intervals and their indices
     z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
@@ -221,12 +260,12 @@ def ur_ms_plots():
     ax4.yaxis.set_label_coords(-0.12, 1.05)
 
     # Actual plotting
-    ax1.scatter(ms[z_interval1_idx], threed_ur[z_interval1_idx], s=1.5, color='k')
-    ax2.scatter(ms[z_interval2_idx], threed_ur[z_interval2_idx], s=1.5, color='k')
-    ax3.scatter(ms[z_interval3_idx], threed_ur[z_interval3_idx], s=1.5, color='k')
-    ax4.scatter(ms[z_interval4_idx], threed_ur[z_interval4_idx], s=1.5, color='k')
-    ax5.scatter(ms[z_interval5_idx], threed_ur[z_interval5_idx], s=1.5, color='k')
-    ax6.scatter(ms, threed_ur, s=1.5, color='k')
+    ax1.scatter(ms[z_interval1_idx], ur[z_interval1_idx], s=1.5, color='k')
+    ax2.scatter(ms[z_interval2_idx], ur[z_interval2_idx], s=1.5, color='k')
+    ax3.scatter(ms[z_interval3_idx], ur[z_interval3_idx], s=1.5, color='k')
+    ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=1.5, color='k')
+    ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=1.5, color='k')
+    ax6.scatter(ms, ur, s=1.5, color='k')
 
     # Add text 
     add_info_text_to_subplots(ax1, 0.0, 0.4, len(z_interval1_idx))
@@ -244,12 +283,12 @@ def ur_ms_plots():
     ax5.set_xlim(7.0, 13.0)
     ax6.set_xlim(7.0, 13.0)
 
-    ax1.set_ylim(-1.0, 5.0)
-    ax2.set_ylim(-1.0, 5.0)
-    ax3.set_ylim(-1.0, 5.0)
-    ax4.set_ylim(-1.0, 5.0)
-    ax5.set_ylim(-1.0, 5.0)
-    ax6.set_ylim(-1.0, 5.0)
+    ax1.set_ylim(-0.3, 3.3)
+    ax2.set_ylim(-0.3, 3.3)
+    ax3.set_ylim(-0.3, 3.3)
+    ax4.set_ylim(-0.3, 3.3)
+    ax5.set_ylim(-0.3, 3.3)
+    ax6.set_ylim(-0.3, 3.3)
 
     # Don't show x tick labels on the upper row
     ax1.set_xticklabels([])
@@ -262,7 +301,7 @@ def ur_ms_plots():
     ax5.set_yticklabels([])
     ax6.set_yticklabels([])
 
-    fig.savefig(stacking_figures_dir + 'ur_ms_diagram_threedcol.pdf', dpi=300, bbox_inches='tight')
+    fig.savefig(stacking_figures_dir + 'ur_ms_diagram.pdf', dpi=300, bbox_inches='tight')
 
     return None
 
