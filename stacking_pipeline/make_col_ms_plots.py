@@ -4,6 +4,7 @@ import numpy as np
 from scipy.interpolate import griddata
 from scipy.integrate import simps
 import pysynphot
+from scipy import stats
 
 import os
 import sys
@@ -148,9 +149,24 @@ def add_contours(x, y, ax):
     # plot contours for point density
     counts, xbins, ybins = np.histogram2d(x, y, bins=25, normed=False)
     levels_to_plot = [1.5, 3.5, 6.5]
-    c = ax.contour(counts.transpose(), levels=levels_to_plot, \
-        extent=[xbins.min(), xbins.max(), ybins.min(), ybins.max()], \
-        cmap=cm.viridis, linestyles='solid', zorder=10)
+
+    #c = ax.contour(counts.transpose(), levels=levels_to_plot, \
+    #    extent=[xbins.min(), xbins.max(), ybins.min(), ybins.max()], \
+    #    cmap=cm.viridis, linestyles='solid', zorder=10)
+
+    #Perform a kernel density estimate on the data:
+    xmin = 7.0  # x.min()
+    xmax = 13.0  # x.max()
+    ymin = -0.3  # y.min()
+    ymax = 3.3  # y.max()
+    
+    X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+    positions = np.vstack([X.ravel(), Y.ravel()])
+    values = np.vstack([x, y])
+    kernel = stats.gaussian_kde(values)
+    Z = np.reshape(kernel(positions).T, X.shape)
+
+    ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r, aspect='auto', extent=[xmin, xmax, ymin, ymax])
 
     return None
 
@@ -293,12 +309,12 @@ def ur_ms_plots():
     ax6.scatter(ms, ur, s=1.5, color='k')
 
     # Put contours on each plot
-    # add_contours(ms[z_interval1_idx], ur[z_interval1_idx], ax1)
-    # add_contours(ms[z_interval2_idx], ur[z_interval2_idx], ax2)
-    # add_contours(ms[z_interval3_idx], ur[z_interval3_idx], ax3)
-    # add_contours(ms[z_interval4_idx], ur[z_interval4_idx], ax4)
-    # add_contours(ms[z_interval5_idx], ur[z_interval5_idx], ax5)
-    # add_contours(ms, ur, ax6)
+    add_contours(ms[z_interval1_idx], ur[z_interval1_idx], ax1)
+    add_contours(ms[z_interval2_idx], ur[z_interval2_idx], ax2)
+    add_contours(ms[z_interval3_idx], ur[z_interval3_idx], ax3)
+    add_contours(ms[z_interval4_idx], ur[z_interval4_idx], ax4)
+    add_contours(ms[z_interval5_idx], ur[z_interval5_idx], ax5)
+    add_contours(ms, ur, ax6)
 
     # Add text 
     add_info_text_to_subplots(ax1, 0.0, 0.4, len(z_interval1_idx))
