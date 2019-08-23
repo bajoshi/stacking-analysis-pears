@@ -32,13 +32,16 @@ def compute_fnu(filtername, spec_llam, spec_wav):
     # These are all from pysysnphot
     # Wavelenght is in angstroms
     # Throughput is an absolute fraction
-    if filtername == 'u':
+    if filtername == 'u_sdss':
         band = pysynphot.ObsBandpass('sdss,u')
-    elif filtername == 'g':
-        band = pysynphot.ObsBandpass('sdss,g')
-    elif filtername == 'r':
+    elif filtername == 'u_wfc3':
+        band = pysynphot.ObsBandpass('wfc3,uvis1,f336w')
+    elif filtername == 'v':
+        band = pysynphot.ObsBandpass('acs,wfc1,f555w')
+    elif filtername == 'r_sdss':
         band = pysynphot.ObsBandpass('sdss,r')
-    #elif filtername == 'j':
+    elif filtername == 'j':
+        band = pysynphot.ObsBandpass('wfc3,ir,f125w')
 
     filt_wav = band.wave
     filt_thru = band.throughput
@@ -227,7 +230,7 @@ def ur_ms_plots():
             current_spec = model_comp_spec_llam_withlines_mmap[best_model_idx]
             
             # Now get the u and r magnitudes
-            ufnu = compute_fnu('u', current_spec, model_lam_grid_withlines_mmap)
+            ufnu = compute_fnu('u_sdss', current_spec, model_lam_grid_withlines_mmap)
             rfnu = compute_fnu('r', current_spec, model_lam_grid_withlines_mmap)
             umag = -2.5 * np.log10(ufnu) - 48.60
             rmag = -2.5 * np.log10(rfnu) - 48.60
@@ -366,7 +369,12 @@ def uvj():
 
     # First get stellar mass and apply a cut to stellar mass
     ms = np.log10(cat['zp_ms'])
-    ms_idx = np.where((ms >= 9.0) & (ms <= 12.0))[0]
+    low_mass_lim = 8.0
+    ms_idx = np.where((ms >= low_mass_lim) & (ms <= 12.0))[0]
+    if int(low_mass_lim) == 8:
+        mass_str = '8_logM_12'
+    elif int(low_mass_lim) == 9:
+        mass_str = '9_logM_12'
     print "Galaxies from stellar mass cut:", len(ms_idx)
 
     # Now get indices based on redshift intervals
@@ -375,9 +383,66 @@ def uvj():
     # Look at the make_z_hist() function in there. 
     zp = cat['zp_minchi2'][ms_idx]
     ms = ms[ms_idx]
-    uv = cat['zp_uv'][ms_idx]
-    vj = cat['zp_vj'][ms_idx]
 
+    # now loop over all galaxies within mass cut sample 
+    # and get the u-r color for each galaxy
+    if not os.path.isfile(stacking_analysis_dir + 'uv_arr_' + mass_str + '.npy'):
+
+        uv = []
+        vj = []
+
+        # Read model lambda grid # In agnstroms
+        model_lam_grid_withlines_mmap = np.load(figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
+        # Now read the model spectra # In erg s^-1 A^-1
+        model_comp_spec_llam_withlines_mmap = np.load(figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
+
+        # ------------------------------- Read in photometry catalogs ------------------------------- #
+        # GOODS photometry catalogs from 3DHST
+        # The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
+        # The combined grism+photometry fits, redshifts, and derived parameters are given in v4.1.5 (Momcheva et al. 2016)
+        photometry_names = ['id', 'ra', 'dec', 'f_F160W', 'e_F160W', 'f_F435W', 'e_F435W', 'f_F606W', 'e_F606W', \
+        'f_R', 'e_R', 'f_F775W', 'e_F775W', 'f_F850LP', 'e_F850LP', 'f_F125W', 'e_F125W', 'f_F140W', 'e_F140W', \
+        'f_U', 'e_U', 'f_IRAC1', 'e_IRAC1', 'f_IRAC2', 'e_IRAC2', 'f_IRAC3', 'e_IRAC3', 'f_IRAC4', 'e_IRAC4', \
+        'IRAC1_contam', 'IRAC2_contam', 'IRAC3_contam', 'IRAC4_contam']
+        goodsn_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodsn_3dhst.v4.1.cat', \
+            dtype=None, names=photometry_names, \
+            usecols=(0,3,4, 9,10, 15,16, 27,28, 30,31, 39,40, 45,46, 48,49, 54,55, 12,13, 63,64, 66,67, 69,70, 72,73, 90,91,92,93), \
+            skip_header=3)
+        goodss_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodss_3dhst.v4.1.cat', \
+            dtype=None, names=photometry_names, \
+            usecols=(0,3,4, 9,10, 18,19, 30,31, 33,34, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
+            skip_header=3)
+
+        for idx in ms_idx:
+            # First get teh full res model spectrum
+            best_model_idx = cat[idx]['zp_model_idx']
+            current_spec = model_comp_spec_llam_withlines_mmap[best_model_idx]
+            
+            # Now get the u and r magnitudes
+            ufnu = compute_fnu('u_wfc3', current_spec, model_lam_grid_withlines_mmap)
+            vfnu = compute_fnu('v', current_spec, model_lam_grid_withlines_mmap)
+            jfnu = compute_fnu('j', current_spec, model_lam_grid_withlines_mmap)
+            umag = -2.5 * np.log10(ufnu) - 48.60
+            vmag = -2.5 * np.log10(vfnu) - 48.60
+            jmag = -2.5 * np.log10(jfnu) - 48.60
+            current_uv = umag - vmag
+            current_vj = vmag - jmag
+
+            uv.append(current_uv)
+            vj.append(current_vj)
+
+            #print umag, vmag, jmag, current_uv, current_vj
+
+        uv = np.asarray(uv)
+        vj = np.asarray(vj)
+        np.save(stacking_analysis_dir + 'uv_arr_' + mass_str + '.npy', uv)
+        np.save(stacking_analysis_dir + 'vj_arr_' + mass_str + '.npy', vj)
+
+    else:
+        uv = np.load(stacking_analysis_dir + 'uv_arr_' + mass_str + '.npy')
+        vj = np.load(stacking_analysis_dir + 'vj_arr_' + mass_str + '.npy')
+
+    # Get z intervals and their indices
     z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
     z_interval2_idx = np.where((zp >= 0.4) & (zp < 0.7))[0]
     z_interval3_idx = np.where((zp >= 0.7) & (zp < 1.0))[0]
@@ -460,7 +525,7 @@ def uvj():
     ax5.set_yticklabels([])
     ax6.set_yticklabels([])
 
-    fig.savefig(stacking_figures_dir + 'uvj_diagram.pdf', dpi=300, bbox_inches='tight')
+    fig.savefig(stacking_figures_dir + 'uvj_diagram_' + mass_str + '.pdf', dpi=300, bbox_inches='tight')
 
     return None
 
