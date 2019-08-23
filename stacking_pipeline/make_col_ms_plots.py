@@ -11,6 +11,7 @@ import glob
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.cm as cm
 
 home = os.getenv('HOME')
 figs_dir = home + '/Desktop/FIGS/'
@@ -132,11 +133,26 @@ def get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst
     # Now get 3D-HST u-r color
     threed_uflux = float(phot_cat_3dhst['f_U'][threed_phot_idx])
     threed_rflux = float(phot_cat_3dhst['f_R'][threed_phot_idx])
-    threed_ur = -2.5 * np.log10(threed_uflux / threed_rflux)
+
+    threed_umag = 25.0 - 2.5 * np.log10(threed_uflux)
+    threed_rmag = 25.0 - 2.5 * np.log10(threed_rflux)
+
+    threed_ur = threed_umag - threed_rmag
 
     #print threed_phot_idx, "{:.3e}".format(threed_uflux), "{:.3e}".format(threed_rflux), "{:.3f}".format(threed_ur)
 
     return threed_ur
+
+def add_contours(x, y, ax):
+
+    # plot contours for point density
+    counts, xbins, ybins = np.histogram2d(x, y, bins=25, normed=False)
+    levels_to_plot = [1.5, 3.5, 6.5]
+    c = ax.contour(counts.transpose(), levels=levels_to_plot, \
+        extent=[xbins.min(), xbins.max(), ybins.min(), ybins.max()], \
+        cmap=cm.viridis, linestyles='solid', zorder=10)
+
+    return None
 
 def ur_ms_plots():
 
@@ -145,7 +161,7 @@ def ur_ms_plots():
 
     # First get stellar mass and apply a cut to stellar mass
     ms = np.log10(cat['zp_ms'])
-    ms_idx = np.where((ms >= 8.0) & (ms <= 12.0))[0]
+    ms_idx = np.where((ms >= 9.0) & (ms <= 12.0))[0]  # Change the npy arrays to save and load accordingly
     print "Galaxies from stellar mass cut:", len(ms_idx)
 
     # Now get indices based on redshift intervals
@@ -154,74 +170,83 @@ def ur_ms_plots():
     # Look at the make_z_hist() function in there. 
     zp = cat['zp_minchi2'][ms_idx]
     ms = ms[ms_idx]
-    #uv = cat['zp_uv'][ms_idx]
-    ur = []
-    threed_ur = []
 
     # now loop over all galaxies within mass cut sample 
     # and get the u-r color for each galaxy
+    if not os.path.isfile(stacking_analysis_dir + 'ur_arr_9_logM_12.npy'):
 
-    # Read model lambda grid # In agnstroms
-    model_lam_grid_withlines_mmap = np.load(figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
-    # Now read the model spectra # In erg s^-1 A^-1
-    model_comp_spec_llam_withlines_mmap = np.load(figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
+        ur = []
+        threed_ur = []
 
-    # ------------------------------- Read in photometry catalogs ------------------------------- #
-    # GOODS photometry catalogs from 3DHST
-    # The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
-    # The combined grism+photometry fits, redshifts, and derived parameters are given in v4.1.5 (Momcheva et al. 2016)
-    photometry_names = ['id', 'ra', 'dec', 'f_F160W', 'e_F160W', 'f_F435W', 'e_F435W', 'f_F606W', 'e_F606W', \
-    'f_R', 'e_R', 'f_F775W', 'e_F775W', 'f_F850LP', 'e_F850LP', 'f_F125W', 'e_F125W', 'f_F140W', 'e_F140W', \
-    'f_U', 'e_U', 'f_IRAC1', 'e_IRAC1', 'f_IRAC2', 'e_IRAC2', 'f_IRAC3', 'e_IRAC3', 'f_IRAC4', 'e_IRAC4', \
-    'IRAC1_contam', 'IRAC2_contam', 'IRAC3_contam', 'IRAC4_contam']
-    goodsn_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodsn_3dhst.v4.1.cat', \
-        dtype=None, names=photometry_names, \
-        usecols=(0,3,4, 9,10, 15,16, 27,28, 30,31, 39,40, 45,46, 48,49, 54,55, 12,13, 63,64, 66,67, 69,70, 72,73, 90,91,92,93), \
-        skip_header=3)
-    goodss_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodss_3dhst.v4.1.cat', \
-        dtype=None, names=photometry_names, \
-        usecols=(0,3,4, 9,10, 18,19, 30,31, 33,34, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
-        skip_header=3)
+        # Read model lambda grid # In agnstroms
+        model_lam_grid_withlines_mmap = np.load(figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
+        # Now read the model spectra # In erg s^-1 A^-1
+        model_comp_spec_llam_withlines_mmap = np.load(figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
 
-    for idx in ms_idx:
-        # First get teh full res model spectrum
-        best_model_idx = cat[idx]['zp_model_idx']
-        current_spec = model_comp_spec_llam_withlines_mmap[best_model_idx]
-        
-        # Now get the u and r magnitudes
-        ufnu = compute_fnu('u', current_spec, model_lam_grid_withlines_mmap)
-        rfnu = compute_fnu('r', current_spec, model_lam_grid_withlines_mmap)
-        umag = -2.5 * np.log10(ufnu) - 48.60
-        rmag = -2.5 * np.log10(rfnu) - 48.60
-        current_ur = umag - rmag
+        # ------------------------------- Read in photometry catalogs ------------------------------- #
+        # GOODS photometry catalogs from 3DHST
+        # The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
+        # The combined grism+photometry fits, redshifts, and derived parameters are given in v4.1.5 (Momcheva et al. 2016)
+        photometry_names = ['id', 'ra', 'dec', 'f_F160W', 'e_F160W', 'f_F435W', 'e_F435W', 'f_F606W', 'e_F606W', \
+        'f_R', 'e_R', 'f_F775W', 'e_F775W', 'f_F850LP', 'e_F850LP', 'f_F125W', 'e_F125W', 'f_F140W', 'e_F140W', \
+        'f_U', 'e_U', 'f_IRAC1', 'e_IRAC1', 'f_IRAC2', 'e_IRAC2', 'f_IRAC3', 'e_IRAC3', 'f_IRAC4', 'e_IRAC4', \
+        'IRAC1_contam', 'IRAC2_contam', 'IRAC3_contam', 'IRAC4_contam']
+        goodsn_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodsn_3dhst.v4.1.cat', \
+            dtype=None, names=photometry_names, \
+            usecols=(0,3,4, 9,10, 15,16, 27,28, 30,31, 39,40, 45,46, 48,49, 54,55, 12,13, 63,64, 66,67, 69,70, 72,73, 90,91,92,93), \
+            skip_header=3)
+        goodss_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodss_3dhst.v4.1.cat', \
+            dtype=None, names=photometry_names, \
+            usecols=(0,3,4, 9,10, 18,19, 30,31, 33,34, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
+            skip_header=3)
 
-        ur.append(current_ur)
+        for idx in ms_idx:
+            # First get teh full res model spectrum
+            best_model_idx = cat[idx]['zp_model_idx']
+            current_spec = model_comp_spec_llam_withlines_mmap[best_model_idx]
+            
+            # Now get the u and r magnitudes
+            ufnu = compute_fnu('u', current_spec, model_lam_grid_withlines_mmap)
+            rfnu = compute_fnu('r', current_spec, model_lam_grid_withlines_mmap)
+            umag = -2.5 * np.log10(ufnu) - 48.60
+            rmag = -2.5 * np.log10(rfnu) - 48.60
+            current_ur = umag - rmag
 
-        """
-        # Check the 3DHST u-r color as well
-        # They've used different filters so don't expect an exact match
-        current_ra = cat[idx]['RA']
-        current_dec = cat[idx]['DEC']
-        current_field = cat[idx]['Field']
+            ur.append(current_ur)
 
-        # Assign catalogs 
-        if current_field == 'GOODS-N':
-            phot_cat_3dhst = goodsn_phot_cat_3dhst
-        elif current_field == 'GOODS-S':
-            phot_cat_3dhst = goodss_phot_cat_3dhst
+            """
+            # Check the 3DHST u-r color as well
+            # They've used different filters so don't expect an exact match
+            current_ra = cat[idx]['RA']
+            current_dec = cat[idx]['DEC']
+            current_field = cat[idx]['Field']
 
-        threed_ra = phot_cat_3dhst['ra']
-        threed_dec = phot_cat_3dhst['dec']
+            # Assign catalogs 
+            if current_field == 'GOODS-N':
+                phot_cat_3dhst = goodsn_phot_cat_3dhst
+            elif current_field == 'GOODS-S':
+                phot_cat_3dhst = goodss_phot_cat_3dhst
 
-        current_threed_ur = get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst)
-        threed_ur.append(current_threed_ur)
-        """
+            threed_ra = phot_cat_3dhst['ra']
+            threed_dec = phot_cat_3dhst['dec']
 
-        #print best_model_idx, "{:.3f}".format(umag), "{:.3f}".format(rmag), "{:.3f}".format(current_ur)
+            current_threed_ur = get_threed_ur(current_ra, current_dec, threed_ra, threed_dec, phot_cat_3dhst)
+            threed_ur.append(current_threed_ur)
+            """
 
-    # Convert to numpy array
-    ur = np.asarray(ur)
-    #threed_ur = np.asarray(threed_ur)
+            #print best_model_idx, "{:.3f}".format(umag), "{:.3f}".format(rmag), "{:.3f}".format(current_ur)
+
+        # Convert to numpy array
+        ur = np.asarray(ur)
+        #threed_ur = np.asarray(threed_ur)
+    
+        #np.save(stacking_analysis_dir + 'ur_arr_8_logM_12.npy', ur)
+        np.save(stacking_analysis_dir + 'ur_arr_9_logM_12.npy', ur)
+
+    else:
+        #ur = np.load(stacking_analysis_dir + 'ur_arr_8_logM_12.npy')
+        ur = np.load(stacking_analysis_dir + 'ur_arr_9_logM_12.npy')
+
 
     print "Minimum and maximum in computed u-r color array:"
     print "Min:", min(ur), "             ", "Max:", max(ur)
@@ -244,7 +269,7 @@ def ur_ms_plots():
     # Define figure
     fig = plt.figure(figsize=(10, 5))
     gs = gridspec.GridSpec(10,12)
-    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.0, hspace=0.25)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.25, hspace=0.25)
 
     # Put axes on grid
     ax1 = fig.add_subplot(gs[:5, :4])
@@ -266,6 +291,14 @@ def ur_ms_plots():
     ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=1.5, color='k')
     ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=1.5, color='k')
     ax6.scatter(ms, ur, s=1.5, color='k')
+
+    # Put contours on each plot
+    # add_contours(ms[z_interval1_idx], ur[z_interval1_idx], ax1)
+    # add_contours(ms[z_interval2_idx], ur[z_interval2_idx], ax2)
+    # add_contours(ms[z_interval3_idx], ur[z_interval3_idx], ax3)
+    # add_contours(ms[z_interval4_idx], ur[z_interval4_idx], ax4)
+    # add_contours(ms[z_interval5_idx], ur[z_interval5_idx], ax5)
+    # add_contours(ms, ur, ax6)
 
     # Add text 
     add_info_text_to_subplots(ax1, 0.0, 0.4, len(z_interval1_idx))
@@ -425,7 +458,7 @@ def plot_uvj_selection(ax):
 def add_info_text_to_subplots(ax, zlow, zhigh, num):
 
     # add number of galaxies in plot
-    ax.text(0.04, 0.2, r'$\rm N\, =\, $' + str(num), \
+    ax.text(0.04, 0.94, r'$\rm N\, =\, $' + str(num), \
     verticalalignment='top', horizontalalignment='left', \
     transform=ax.transAxes, color='k', size=15)
 
@@ -435,7 +468,7 @@ def add_info_text_to_subplots(ax, zlow, zhigh, num):
     else:
         zstr = str(zlow) + r'$\, \leq z < \,$' + str(zhigh)
 
-    ax.text(0.04, 0.1, zstr, \
+    ax.text(0.04, 0.84, zstr, \
     verticalalignment='top', horizontalalignment='left', \
     transform=ax.transAxes, color='k', size=15)
 
