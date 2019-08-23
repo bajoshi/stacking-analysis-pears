@@ -156,7 +156,7 @@ def add_contours(x, y, ax):
 
     #Perform a kernel density estimate on the data:
     xmin = 7.0  # x.min()
-    xmax = 13.0  # x.max()
+    xmax = 12.0  # x.max()
     ymin = -0.3  # y.min()
     ymax = 3.3  # y.max()
     
@@ -166,7 +166,12 @@ def add_contours(x, y, ax):
     kernel = stats.gaussian_kde(values)
     Z = np.reshape(kernel(positions).T, X.shape)
 
-    ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r, aspect='auto', extent=[xmin, xmax, ymin, ymax])
+    ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r, aspect='auto', extent=[xmin, xmax, ymin, ymax], zorder=1, alpha=0.95)
+
+    # Plot grid 
+    # I want this to have the lowest zorder
+    grid_color = (0.9,0.9,0.9)
+    ax.grid(True, color=grid_color, zorder=2)
 
     return None
 
@@ -257,7 +262,7 @@ def ur_ms_plots():
         #threed_ur = np.asarray(threed_ur)
     
         #np.save(stacking_analysis_dir + 'ur_arr_8_logM_12.npy', ur)
-        np.save(stacking_analysis_dir + 'ur_arr_9_logM_12.npy', ur)
+        #np.save(stacking_analysis_dir + 'ur_arr_9_logM_12.npy', ur)
 
     else:
         #ur = np.load(stacking_analysis_dir + 'ur_arr_8_logM_12.npy')
@@ -301,12 +306,12 @@ def ur_ms_plots():
     ax4.yaxis.set_label_coords(-0.12, 1.05)
 
     # Actual plotting
-    ax1.scatter(ms[z_interval1_idx], ur[z_interval1_idx], s=1.5, color='k')
-    ax2.scatter(ms[z_interval2_idx], ur[z_interval2_idx], s=1.5, color='k')
-    ax3.scatter(ms[z_interval3_idx], ur[z_interval3_idx], s=1.5, color='k')
-    ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=1.5, color='k')
-    ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=1.5, color='k')
-    ax6.scatter(ms, ur, s=1.5, color='k')
+    ax1.scatter(ms[z_interval1_idx], ur[z_interval1_idx], s=1.5, color='k', zorder=3)
+    ax2.scatter(ms[z_interval2_idx], ur[z_interval2_idx], s=1.5, color='k', zorder=3)
+    ax3.scatter(ms[z_interval3_idx], ur[z_interval3_idx], s=1.5, color='k', zorder=3)
+    ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=1.5, color='k', zorder=3)
+    ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=1.5, color='k', zorder=3)
+    ax6.scatter(ms, ur, s=1.5, color='k', zorder=3)
 
     # Put contours on each plot
     add_contours(ms[z_interval1_idx], ur[z_interval1_idx], ax1)
@@ -325,12 +330,12 @@ def ur_ms_plots():
     add_info_text_to_subplots(ax6, 0.0, 6.0, len(zp))
 
     # Axes limits 
-    ax1.set_xlim(7.0, 13.0)
-    ax2.set_xlim(7.0, 13.0)
-    ax3.set_xlim(7.0, 13.0)
-    ax4.set_xlim(7.0, 13.0)
-    ax5.set_xlim(7.0, 13.0)
-    ax6.set_xlim(7.0, 13.0)
+    ax1.set_xlim(7.0, 12.0)
+    ax2.set_xlim(7.0, 12.0)
+    ax3.set_xlim(7.0, 12.0)
+    ax4.set_xlim(7.0, 12.0)
+    ax5.set_xlim(7.0, 12.0)
+    ax6.set_xlim(7.0, 12.0)
 
     ax1.set_ylim(-0.3, 3.3)
     ax2.set_ylim(-0.3, 3.3)
@@ -521,8 +526,8 @@ def check_salp_chab_z():
 def main():
 
     #check_salp_chab_z()
-    ur_ms_plots()
-    #uvj()
+    #ur_ms_plots()
+    uvj()
     
     return None
 
