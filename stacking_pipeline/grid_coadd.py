@@ -20,8 +20,8 @@ figures_dir = home + "/Desktop/FIGS/stacking-analysis-figures/"
 massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
 pears_data_path = home + "/Documents/PEARS/data_spectra_only/"
 
-sys.path.append(massive_galaxies_dir + 'codes/')
-# import combine_pas as cb
+sys.path.append(massive_galaxies_dir + 'cluster_codes/')
+import cluster_do_fitting as cf
 
 def get_net_sig(*args):
     """
@@ -153,34 +153,75 @@ def add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points,
 
     return old_flam, old_flamerr, num_points, num_galaxies
 
-def rescale(ids, zs):
-    medarr = np.zeros(len(ids))
+def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
+    """
+    This function will provide teh median of all median
+    f_lambda values (see below) at approx 4500 A. This 
+    is for the purposes of rescaling all spectra within
+    a cell to this median of medians.
+    """
+
+    # Define empty array to store the median 
+    # value of f_lambda between 4400 to 4600 A
+    # for each observed spectrum
+    medarr = np.zeros(len(id_arr_cell))
+
+    # Define redshift array used in lookup table
+    z_arr = np.arange(0.005, 6.005, 0.005)
     
-    for k in range(len(ids)):
+    for k in range(len(id_arr_cell)):
+
+        # Get current ID and Field
+        current_id = id_arr_cell[k]
+        current_field = field_arr_cell[k]
         
-        redshift = zs[k]
-        lam_em, flam_em, ferr, specname = fileprep(ids[k], redshift)
+        # Get observed data and deredshift the spectrum
+        grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code = \
+        cf.get_data(current_id, current_field)
+
+        # If the return code was 0, then exit,
+        # i.e., the observed spectrum is unuseable.
+        # This condition should never be triggered. 
+        if return_code == 0:
+            print current_id, current_field
+            print "Return code should not have been 0. Exiting."
+            sys.exit(0)
+
+        # Now deredshift the observed data
+        redshift = z_arr_cell[k]
+
+        zidx = np.argmin(abs(z_arr - redshift))
+        # Make sure that the z_arr here is the same array that was 
+        # used to generate the dl lookup table.
+        dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
+
+        lam_em = grism_lam_obs / (1 + redshift)
+        llam_em = grism_flam_obs * (1 + redshift) * (4 * np.pi * dl * dl)
         
         # Store median of values from 4400A-4600A for each spectrum
         arg4400 = np.argmin(abs(lam_em - 4400))
         arg4600 = np.argmin(abs(lam_em - 4600))
-        medarr[k] = np.median(flam_em[arg4400:arg4600+1])
+        medarr[k] = np.median(llam_em[arg4400:arg4600+1])
     
     medval = np.median(medarr)
     
-    # Return the maximum in array of median values
+    # Return the median in array of median values
     return medarr, medval, np.std(medarr)
 
-def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, z_indices, start):
+def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
     # Read in catalog of all PEARS fitting results and assign arrays
     # For now we need the id+field, spz, stellar mass, and u-r color
-    pears_id = cat['pearsid'][z_indices]
-    pears_field = cat['field'][z_indices]
-    stellar_mass = cat['mstar'][z_indices]
-    spz = cat['spz'][z_indices]
+    pears_id = cat['PearsID'][z_indices]
+    pears_field = cat['Field'][z_indices]
+    zp = cat['zp_minchi2'][z_indices]
 
+    stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below is expected log(stellar mass)
     ur_color = urcol[z_indices]
+
+    # Read in dl lookup table
+    # Required for deredshifting
+    dl_tbl = np.genfromtxt(massive_galaxies_dir + 'cluster_codes/dl_lookup_table.txt', dtype=None, names=True)
 
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
@@ -192,11 +233,11 @@ def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_lo
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range    
     col_low = 0.0
     col_high = 3.0
-    col_step = 0.3
+    col_step = 0.5
 
     mstar_low = 7.0
     mstar_high = 12.0
-    mstar_step = 0.5
+    mstar_step = 1.0
     
     # ----------------------------------------- Other preliminaries ----------------------------------------- #
 
@@ -213,16 +254,21 @@ def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_lo
             
             gal_current_cell = 0
             
-            print "\n", "Stacking in cell:"
+            print "\n", "For z range:", z_low, "<= z <", z_high
+            print "Stacking in cell:"
             print "Color range:", col, col+col_step
             print "Stellar mass range:", ms, ms+mstar_step
             
             # Find the indices (corresponding to catalog entries)
-            # that are within 
+            # that are within the current cell
             indices = np.where((ur_color >= col) & (ur_color < col + col_step) &\
                             (stellar_mass >= ms) & (stellar_mass < ms + mstar_step))[0]
 
-            print "Number of spectra to coadd in this grid cell -- .", len(pears_id[indices])
+            num_galaxies_cell = int(len(pears_id[indices]))
+            print "Number of spectra to coadd in this grid cell --", num_galaxies_cell
+
+            if num_galaxies_cell == 0:
+                continue
             
             old_flam = np.zeros(len(lam_grid))
             old_flamerr = np.zeros(len(lam_grid))
@@ -232,26 +278,19 @@ def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_lo
             old_flam = old_flam.tolist()
             old_flamerr = old_flamerr.tolist()
 
-            sys.exit(0)
-
             # this is to get the blue cloud sample
-            """
-            if (i == 0.6) and (j == 8.5):
-                print np.unique(pears_id[indices]), len(np.unique(pears_id[indices]))
-                sys.exit()
-            """
+            #if (i == 0.6) and (j == 8.5):
+            #    print np.unique(pears_id[indices]), len(np.unique(pears_id[indices]))
+            #    sys.exit()
 
             # rescale to 200A band centered on a wavelength of 4500A # 4400A-4600A
-            # This function returns the maximum of the median values (in the given band) from all given spectra
+            # This function returns the median of the median values (in the given band) from all given spectra
             # All spectra to be coadded in a given grid cell need to be divided by this value
-            if indices.size:
-                medarr, medval, stdval = rescale(pears_id[indices], photz[indices])
-                print "ONGRID", i, j, "with", medval, 
-                print "as the normalization value and a maximum possible spectra of", len(pears_id[indices]), "spectra."
-            else:
-                print "ONGRID", i, j, "has no spectra to coadd. Moving to next grid cell."
-                continue
+            medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
+            print "This cell has median value:", "{:.3e}".format(medval), " [erg s^-1 A^-1]"
+            print "as the normalization value and a maximum possible of", len(pears_id[indices]), "spectra."
     
+            """
             # Loop over all spectra in a grid cell and coadd them
             for u in range(len(pears_id[indices])):
                 
@@ -272,7 +311,7 @@ def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_lo
                 
                 # ----------------------------- Get data ----------------------------- #
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
-                = ngp.get_data(current_id, current_field)
+                = cf.get_data(current_id, current_field)
 
                 if return_code == 0:
                     print current_id, current_field
@@ -282,15 +321,12 @@ def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_lo
                 # Match with photometry catalog and get photometry data
 
 
-                
-                """
                 # Divide by the grism sensitivity curve
                 # Wouldn't aXe do this itself when it extracted the PEARS spectra??
                 # yes aXe has done it, if you use the spectrum in cgs units
                 # but if you use the spectrum in counts/s then you'll need to divide by the sensitivity curve
                 # Therefore, not needed right now
                 # flam_obs, ferr = divide_sensitivity(flam_obs, ferr, lam_obs)
-                """
                 
                 # Divide by median value at 4400A to 4600A to rescale. 
                 # Multiplying by median value of the flux medians to get it back to physical units
@@ -357,6 +393,7 @@ def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_lo
 
             print "ONGRID", i, j, "added", gal_current_cell, "spectra."
             print '\n'
+            """
 
     # Time taken
     print "Time taken for stacking --", "{:.2f}".format(time.time() - start), "seconds"
@@ -379,8 +416,9 @@ if __name__ == '__main__':
     # Read in results for all of PEARS
     cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True)
     # Read in U-R color
-    urcol = np.load(stacking_analysis_dir + 'ur_arr_8_logM_12.npy')
+    urcol = np.load(stacking_analysis_dir + 'ur_arr_all.npy')
 
+    """
     # ------------------------------- Read in photometry and grism+photometry catalogs ------------------------------- #
     # GOODS-N from 3DHST
     # The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
@@ -397,22 +435,27 @@ if __name__ == '__main__':
         dtype=None, names=photometry_names, \
         usecols=(0,3,4, 9,10, 18,19, 30,31, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
         skip_header=3)
+    """
 
     # ----------------------------------------- Now create stacks ----------------------------------------- #
     # Get z intervals and their indices
-    z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
-    z_interval2_idx = np.where((zp >= 0.4) & (zp < 0.7))[0]
-    z_interval3_idx = np.where((zp >= 0.7) & (zp < 1.0))[0]
-    z_interval4_idx = np.where((zp >= 1.0) & (zp < 2.0))[0]
-    z_interval5_idx = np.where((zp >= 2.0) & (zp <= 6.0))[0]
+    zp = cat['zp_minchi2']
 
-    all_z_indices = [z_interval1_idx, z_interval2_idx, z_interval3_idx, z_interval4_idx, z_interval5_idx]
+    all_z_low = np.array([0.0, 0.4, 0.7, 1.0])
+    all_z_high = np.array([0.4, 0.7, 1.0, 2.0])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
-    for i in range(5):
-        z_indices = all_z_indices[i]
-        create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, z_indices, start)
+    for i in range(1,4):
+        
+        # Get z range and indices
+        z_low = all_z_low[i]
+        z_high = all_z_high[i]
+        z_indices = np.where((zp >= z_low) & (zp < z_high))[0]
+        #goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst,
+        create_stacks(cat, urcol, z_low, z_high, z_indices, start)
+
+        sys.exit(0)
 
     # Total time taken
     print "Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes."
