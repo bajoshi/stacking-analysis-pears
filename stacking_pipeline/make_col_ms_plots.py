@@ -36,7 +36,10 @@ def compute_fnu(spec_llam, spec_wav, filt_wav, filt_thru):
     spec_nu = speed_of_light_ang / spec_wav
     spec_lnu = (spec_wav)**2 * spec_llam / speed_of_light_ang
 
-    # Reverse arrays to get frequency in ascending order
+    # Reverse arrays to get frequency in ascending order.
+    # The griddata function on the filter doesn't work
+    # if the frequencies are in decending order, which
+    # they will be when converted from wavelength.
     filt_nu = filt_nu[::-1]
     filt_thru = filt_thru[::-1]
 
@@ -57,7 +60,7 @@ def compute_fnu(spec_llam, spec_wav, filt_wav, filt_thru):
     spec_fnu = spec_lnu / (4 * np.pi * dl_10pc_cm * dl_10pc_cm)
 
     # Now compute magnitudes
-    # First, interpolate the transmission curve to the model lam grid
+    # First, interpolate the filter curve to the model lambda/nu grid
     filt_interp = griddata(points=filt_nu, values=filt_thru, xi=spec_nu, method='linear')
 
     # Set nan values in interpolated filter to 0.0
@@ -65,11 +68,9 @@ def compute_fnu(spec_llam, spec_wav, filt_wav, filt_thru):
     filt_interp[filt_nan_idx] = 0.0
 
     # Second, compute f_nu
-    den = simps(y=filt_interp / spec_nu, x=spec_nu)
     num = simps(y=spec_fnu * filt_interp / spec_nu, x=spec_nu)
+    den = simps(y=filt_interp / spec_nu, x=spec_nu)
 
-    #den = simps(y=filt_interp, x=spec_nu)
-    #num = simps(y=spec_fnu * filt_interp, x=spec_nu)
     fnu = num / den
 
     #print "{:.3e}".format(num), "{:.3e}".format(den), "{:.3e}".format(fnu)
@@ -187,6 +188,54 @@ def add_contours(x, y, ax):
 
     return None
 
+def generate_all_ur_color():
+
+    # Read in results for all of PEARS
+    cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True)
+
+    # Define empty array for ur_color
+    ur = np.zeros(len(cat))
+
+    # Read model lambda grid # In agnstroms
+    model_lam_grid_withlines_mmap = np.load(figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
+    # Now read the model spectra # In erg s^-1 A^-1
+    model_comp_spec_llam_withlines_mmap = np.load(figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
+
+    # ------------------------------- Get required filter curves ------------------------------- # 
+    uvj_filt_dir = stacking_analysis_dir + 'filter_curves/'
+
+    # Wavelenght is in angstroms
+    # Throughput is an absolute fraction
+    u = np.genfromtxt(uvj_filt_dir + 'bessel_u.dat', dtype=None, names=['wav', 'filter_trans'])
+    r = np.genfromtxt(uvj_filt_dir + 'bessel_r.dat', dtype=None, names=['wav', 'filter_trans'])
+
+    # The Bessel filters are given in angstroms and fractions
+    u_filt_wav = u['wav']
+    u_filt_thru = u['filter_trans']
+
+    r_filt_wav = r['wav']
+    r_filt_thru = r['filter_trans']
+
+    # ------------------------------- Now begin looping over all stellar mass selected galaxies ------------------------------- #
+    for i in range(len(cat)):
+        # First get teh full res model spectrum
+        best_model_idx = cat[i]['zp_model_idx']
+        current_spec = model_comp_spec_llam_withlines_mmap[best_model_idx]
+            
+        # Now get the u and r magnitudes
+        ufnu = compute_fnu(current_spec, model_lam_grid_withlines_mmap, u_filt_wav, u_filt_thru)
+        rfnu = compute_fnu(current_spec, model_lam_grid_withlines_mmap, r_filt_wav, r_filt_thru)
+        umag = -2.5 * np.log10(ufnu) - 48.60
+        rmag = -2.5 * np.log10(rfnu) - 48.60
+        current_ur = umag - rmag
+
+        ur[i] = current_ur
+
+    # Now save it as a numpy array
+    np.save(stacking_analysis_dir + 'ur_arr_all.npy', ur)
+
+    return None
+
 def ur_ms_plots():
 
     # Read in results for all of PEARS
@@ -241,10 +290,7 @@ def ur_ms_plots():
         u = np.genfromtxt(uvj_filt_dir + 'bessel_u.dat', dtype=None, names=['wav', 'filter_trans'])
         r = np.genfromtxt(uvj_filt_dir + 'bessel_r.dat', dtype=None, names=['wav', 'filter_trans'])
 
-        """
-        When making the UVJ plot -- 
-        """
-        # The Bessel U and V filters are given in angstroms and fractions
+        # The Bessel U and R filters are given in angstroms and fractions
         u_filt_wav = u['wav']
         u_filt_thru = u['filter_trans']
 
@@ -296,9 +342,8 @@ def ur_ms_plots():
         #np.save(stacking_analysis_dir + 'ur_arr_9_logM_12.npy', ur)
 
     else:
-        #ur = np.load(stacking_analysis_dir + 'ur_arr_8_logM_12.npy')
-        ur = np.load(stacking_analysis_dir + 'ur_arr_9_logM_12.npy')
-
+        ur = np.load(stacking_analysis_dir + 'ur_arr_8_logM_12.npy')
+        #ur = np.load(stacking_analysis_dir + 'ur_arr_9_logM_12.npy')
 
     print "Minimum and maximum in computed u-r color array:"
     print "Min:", min(ur), "             ", "Max:", max(ur)
@@ -700,7 +745,9 @@ def main():
 
     #check_salp_chab_z()
     #ur_ms_plots()
-    uvj()
+    #uvj()
+
+    generate_all_ur_color()
     
     return None
 

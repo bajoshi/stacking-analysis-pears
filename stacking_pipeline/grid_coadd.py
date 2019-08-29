@@ -171,15 +171,16 @@ def rescale(ids, zs):
     # Return the maximum in array of median values
     return medarr, medval, np.std(medarr)
 
-def create_stacks(cat, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, start):
+def create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, z_indices, start):
 
     # Read in catalog of all PEARS fitting results and assign arrays
     # For now we need the id+field, spz, stellar mass, and u-r color
-    pears_id = cat['pearsid']
-    pears_field = cat['field']
-    ur_color = cat['urcol']
-    stellar_mass = cat['mstar']
-    spz = cat['spz']
+    pears_id = cat['pearsid'][z_indices]
+    pears_field = cat['field'][z_indices]
+    stellar_mass = cat['mstar'][z_indices]
+    spz = cat['spz'][z_indices]
+
+    ur_color = urcol[z_indices]
 
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
@@ -375,8 +376,10 @@ if __name__ == '__main__':
     print dt.now()
     
     # ----------------------------------------- READ IN CATALOGS ----------------------------------------- #
-    # ---------- Once catalog for each redshift interval ---------- # 
-    cat = np.genfromtxt(stacking_analysis_dir + 'color_stellarmass.txt', dtype=None, names=True)
+    # Read in results for all of PEARS
+    cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True)
+    # Read in U-R color
+    urcol = np.load(stacking_analysis_dir + 'ur_arr_8_logM_12.npy')
 
     # ------------------------------- Read in photometry and grism+photometry catalogs ------------------------------- #
     # GOODS-N from 3DHST
@@ -396,9 +399,20 @@ if __name__ == '__main__':
         skip_header=3)
 
     # ----------------------------------------- Now create stacks ----------------------------------------- #
+    # Get z intervals and their indices
+    z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
+    z_interval2_idx = np.where((zp >= 0.4) & (zp < 0.7))[0]
+    z_interval3_idx = np.where((zp >= 0.7) & (zp < 1.0))[0]
+    z_interval4_idx = np.where((zp >= 1.0) & (zp < 2.0))[0]
+    z_interval5_idx = np.where((zp >= 2.0) & (zp <= 6.0))[0]
+
+    all_z_indices = [z_interval1_idx, z_interval2_idx, z_interval3_idx, z_interval4_idx, z_interval5_idx]
+
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
-    create_stacks(cat, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, start)
+    for i in range(5):
+        z_indices = all_z_indices[i]
+        create_stacks(cat, urcol, goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst, z_low, z_high, z_indices, start)
 
     # Total time taken
     print "Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes."
