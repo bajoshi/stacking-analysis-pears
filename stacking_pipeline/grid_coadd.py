@@ -23,103 +23,7 @@ pears_data_path = home + "/Documents/PEARS/data_spectra_only/"
 sys.path.append(massive_galaxies_dir + 'cluster_codes/')
 import cluster_do_fitting as cf
 
-def get_net_sig(*args):
-    """
-    This function simply needs either the fits extension that 
-    contains the spectrum for which netsig is to be computed
-    or 
-    the counts and the errors on the counts as separate arrays.
-
-    It should be able to figure out what you gave but if you
-    give it the separate arrays then make sure that the counts 
-    arrays comes before the counts error array.
-
-    DO NOT give it any additional arguments or it will fail.
-    """
-
-    if len(args) == 1:
-        fitsdata = args[0]
-        count_arr = fitsdata['COUNT']
-        error_arr = fitsdata['ERROR']
-    elif len(args) == 2:
-        count_arr = args[0]
-        error_arr = args[1]
-
-    # Make sure that the arrays are not empty to begin with
-    if not count_arr.size:
-        print "Returning -99.0 for NetSig due to empty signal",
-        print "and/or noise array for this object (or some PA for this object)."
-        return -99.0
-    if not error_arr.size:
-        print "Returning -99.0 for NetSig due to empty signal",
-        print "and/or noise array for this object (or some PA for this object)."
-        return -99.0
-
-    # Also check that the error array does not have ALL zeros
-    if np.all(error_arr == 0.0):
-        #print "Returning -99.0 for NetSig due to noise array",
-        #print "containing all 0 for this object (or some PA for this object)."
-        return -99.0
-
-    try:
-        signal_sum = 0
-        noise_sum = 0
-        totalsum = 0
-        cumsum = []
-        
-        sn = count_arr/error_arr
-        # mask NaNs in this array to deal with the division by errors than are 0
-        mask = ~np.isfinite(sn)
-        sn = ma.array(sn, mask=mask)
-        sn_sorted = np.sort(sn)
-        sn_sorted_reversed = sn_sorted[::-1]
-        reverse_mask = ma.getmask(sn_sorted_reversed)
-        # I need the reverse mask for checking since I'm reversing the sn sorted array
-        # and I need to only compute the netsig using unmasked elements.
-        # This is because I need to check that the reverse sorted array will not have 
-        # a blank element when I use the where function later causing the rest of the 
-        # code block to mess up. Therefore, the mask I'm checking i.e. the reverse_mask
-        # and the sn_sorted_reversed array need to have the same order.
-        sort_arg = np.argsort(sn)
-        sort_arg_rev = sort_arg[::-1]
-
-        i = 0
-        for _count_ in sort_arg_rev:
-            # if it a masked element then don't do anything
-            if reverse_mask[i]:
-                i += 1
-                continue
-            else:
-                signal_sum += count_arr[_count_]
-                noise_sum += error_arr[_count_]**2
-                totalsum = signal_sum/np.sqrt(noise_sum)
-                #print reverse_mask[i], sn_sorted_reversed[i], 
-                #print _count_, signal_sum, totalsum  
-                # Above print line useful for debugging. Do not remove. Just uncomment.
-                cumsum.append(totalsum)
-                i += 1
-
-        cumsum = np.asarray(cumsum)
-        if not cumsum.size:
-            print "Exiting due to empty cumsum array. More debugging needed."
-            print "Cumulative sum array:", cumsum
-            sys.exit(0)
-        netsig = np.nanmax(cumsum)
-        
-        return netsig
-            
-    except ZeroDivisionError:
-        logging.warning("Division by zero! The net sig here cannot be trusted. Setting Net Sig to -99.")
-        print "Exiting. This error should not have come up anymore."
-        sys.exit(0)
-        return -99.0
-
-def get_interp_spec(lam, flam, ferr):
-    interp_spec = np.interp(lam_grid, lam, flam, left=0, right=0)
-    interp_spec_err = np.interp(lam_grid, lam, ferr, left=0, right=0)
-    return interp_spec, interp_spec_err
-
-def add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points, num_galaxies, lam_grid, lam_step):
+def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galaxies, lam_grid, lam_step):
     
     for i in range(len(lam_grid)):
         
@@ -129,7 +33,7 @@ def add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points,
         if new_ind.size:
             
             # Only count a galaxy in a particular bin if for that bin at least one point is nonzero
-            if np.any(flam_em[new_ind] != 0):
+            if np.any(llam_em[new_ind] != 0):
                 num_galaxies[i] += 1
             
             # Reject points with excess contamination
@@ -137,13 +41,13 @@ def add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points,
             # Reject points that have negative signal
             # Looping over every point in a delta lambda bin
             for j in range(len(new_ind)):
-                sig = flam_em[new_ind][j]
-                noise = ferr[new_ind][j]
+                sig = llam_em[new_ind][j]
+                noise = lerr[new_ind][j]
                 
                 if sig > 0: # only append those points where the signal is positive
                     if noise/sig < 0.20: # only append those points that are less than 20% contaminated
-                        old_flam[i].append(sig)
-                        old_flamerr[i].append(noise**2) # adding errors in quadrature
+                        old_llam[i].append(sig)
+                        old_llamerr[i].append(noise**2) # adding errors in quadrature
                         num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
                 else:
                     continue
@@ -151,7 +55,7 @@ def add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, num_points,
         else:            
             continue
 
-    return old_flam, old_flamerr, num_points, num_galaxies
+    return old_llam, old_llamerr, num_points, num_galaxies
 
 def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
     """
@@ -210,6 +114,8 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
 
 def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
+    print "Working on redshift range:", z_low, "<= z <", z_high
+
     # Read in catalog of all PEARS fitting results and assign arrays
     # For now we need the id+field, spz, stellar mass, and u-r color
     pears_id = cat['PearsID'][z_indices]
@@ -222,11 +128,13 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     # Read in dl lookup table
     # Required for deredshifting
     dl_tbl = np.genfromtxt(massive_galaxies_dir + 'cluster_codes/dl_lookup_table.txt', dtype=None, names=True)
+    # Define redshift array used in lookup table
+    z_arr = np.arange(0.005, 6.005, 0.005)
 
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
-    lam_step = 100
+    lam_step = 50
     lam_grid = np.arange(2700, 6000, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
@@ -240,6 +148,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     mstar_step = 1.0
     
     # ----------------------------------------- Other preliminaries ----------------------------------------- #
+    # Create HDUList for writing final fits file with stacks
+    hdu = fits.PrimaryHDU()
+    hdr = fits.Header()
+    hdulist = fits.HDUList(hdu)
+    hdulist.append(fits.ImageHDU(lam_grid, header=hdr))
 
     # ----------------------------------------- Begin creating stacks ----------------------------------------- #
     added_gal = 0
@@ -252,10 +165,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     for col in np.arange(col_low, col_high, col_step):
         for ms in np.arange(mstar_low, mstar_high, mstar_step):
             
+            # Counter for galaxies in each cell
+            # Reset at the start of stacking within each cell
             gal_current_cell = 0
             
-            print "\n", "For z range:", z_low, "<= z <", z_high
-            print "Stacking in cell:"
+            print "\n", "Stacking in cell:"
             print "Color range:", col, col+col_step
             print "Stellar mass range:", ms, ms+mstar_step
             
@@ -270,18 +184,14 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             if num_galaxies_cell == 0:
                 continue
             
-            old_flam = np.zeros(len(lam_grid))
-            old_flamerr = np.zeros(len(lam_grid))
+            # Define empty arrays and lists for saving stacks
+            old_llam = np.zeros(len(lam_grid))
+            old_llamerr = np.zeros(len(lam_grid))
             num_points = np.zeros(len(lam_grid))
             num_galaxies = np.zeros(len(lam_grid))
             
-            old_flam = old_flam.tolist()
-            old_flamerr = old_flamerr.tolist()
-
-            # this is to get the blue cloud sample
-            #if (i == 0.6) and (j == 8.5):
-            #    print np.unique(pears_id[indices]), len(np.unique(pears_id[indices]))
-            #    sys.exit()
+            old_llam = old_llam.tolist()
+            old_llamerr = old_llamerr.tolist()
 
             # rescale to 200A band centered on a wavelength of 4500A # 4400A-4600A
             # This function returns the median of the median values (in the given band) from all given spectra
@@ -289,8 +199,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
             print "This cell has median value:", "{:.3e}".format(medval), " [erg s^-1 A^-1]"
             print "as the normalization value and a maximum possible of", len(pears_id[indices]), "spectra."
-    
-            """
+
             # Loop over all spectra in a grid cell and coadd them
             for u in range(len(pears_id[indices])):
                 
@@ -300,11 +209,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # This is done so that function add_spec() can now append to every element
                 if u == 0:
                     for x in range(len(lam_grid)):
-                        old_flam[x] = []
-                        old_flamerr[x] = []
+                        old_llam[x] = []
+                        old_llamerr[x] = []
             
                 # Get redshift from catalog
-                current_redshift = spz[indices][u]
+                current_redshift = zp[indices][u]
 
                 current_id = pears_id[indices][u]
                 current_field = pears_field[indices][u]
@@ -313,99 +222,84 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
                 = cf.get_data(current_id, current_field)
 
-                if return_code == 0:
-                    print current_id, current_field
-                    print "Return code should not have been 0. Skipping this galaxy."
-                    continue
- 
+                # Deredshift the observed data 
+                zidx = np.argmin(abs(z_arr - current_redshift))
+                # Make sure that the z_arr here is the same array that was 
+                # used to generate the dl lookup table.
+                dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
+
+                lam_em = grism_lam_obs / (1 + current_redshift)
+                llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+
                 # Match with photometry catalog and get photometry data
-
-
-                # Divide by the grism sensitivity curve
-                # Wouldn't aXe do this itself when it extracted the PEARS spectra??
-                # yes aXe has done it, if you use the spectrum in cgs units
-                # but if you use the spectrum in counts/s then you'll need to divide by the sensitivity curve
-                # Therefore, not needed right now
-                # flam_obs, ferr = divide_sensitivity(flam_obs, ferr, lam_obs)
                 
                 # Divide by median value at 4400A to 4600A to rescale. 
                 # Multiplying by median value of the flux medians to get it back to physical units
-                flam_em = (flam_em / medarr[u]) * medval
-                ferr = (ferr / medarr[u]) * medval
+                llam_em = (llam_em / medarr[u]) * medval
+                lerr = (lerr / medarr[u]) * medval
 
-                # These (skipspec) were looked at by eye and seemed crappy
-                # I'm also excluding spectra with emission lines.
-                if (specname in skipspec) or (specname in em_lines):
-                    print "Skipped", specname
-                    skipped_gal += 1
-                    continue
-
-                # Reject spectrum if overall contamination too high
-                if np.sum(abs(ferr)) > 0.3 * np.sum(abs(flam_em)):
-                    print "Skipped", specname
-                    skipped_gal += 1
-                    continue
-                else:
-                    # add the spectrum
-                    added_gal += 1
-                    gal_current_cell += 1
-                    old_flam, old_flamerr, num_points, num_galaxies = \
-                    add_spec(specname, lam_em, flam_em, ferr, old_flam, old_flamerr, \
-                        num_points, num_galaxies, lam_grid, lam_step)
-            
-                # Now intepolate the spectrum on to the lambda grid
-                #interp_spec, interp_spec_err = get_interp_spec(lam_em, flam_em, ferr)
-    
-                #counts += interp_spec
-                #countserr += interp_spec_err**2
+                # add the spectrum
+                added_gal += 1
+                gal_current_cell += 1
+                old_llam, old_llamerr, num_points, num_galaxies = \
+                add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, \
+                    num_points, num_galaxies, lam_grid, lam_step)
 
             # taking median
             # maybe I should also try doing a mean after 3sigma clipping and compare
             for y in range(len(lam_grid)):
-                if old_flam[y]:
-                    old_flamerr[y] = \
-                    np.sqrt((1.253 * np.std(old_flam[y]) / \
-                        np.sqrt(len(old_flam[y])))**2 + np.sum(old_flamerr[y]) / gal_current_cell)
-                    old_flam[y] = np.median(old_flam[y])
+                if old_llam[y]:
+                    old_llamerr[y] = \
+                    np.sqrt((1.253 * np.std(old_llam[y]) / \
+                        np.sqrt(len(old_llam[y])))**2 + np.sum(old_llamerr[y]) / gal_current_cell)
+                    old_llam[y] = np.median(old_llam[y])
                 else:
-                    old_flam[y] = 0.0
-                    old_flamerr[y] = 0.0
+                    old_llam[y] = 0.0
+                    old_llamerr[y] = 0.0
 
-            hdr = fits.Header()
+            # Separate header for each extension
+            exthdr = fits.Header()
             
-            #hdr["XTENSION"] = "IMAGE              / Image extension "
-            #hdr["BITPIX"]  = "                 -64 / array data type"
-            #hdr["NAXIS"]   = "                   2 / number of array dimensions"
-            #hdr["NAXIS1"]  = "                 161"
-            #hdr["NAXIS2"]  = "                   2"
-            #hdr["PCOUNT"]  = "                   0 / number of parameters"
-            #hdr["GCOUNT "] = "                   1 / number of groups"
-            hdr["ONGRID"]  = str(i) + "," + str(j)
-            hdr["NUMSPEC"] = str(int(gal_current_cell))
-            hdr["NORMVAL"] = str(medval)
+            #exthdr["XTENSION"] = "IMAGE              / Image extension "
+            #exthdr["BITPIX"]  = "                 -64 / array data type"
+            #exthdr["NAXIS"]   = "                   2 / number of array dimensions"
+            #exthdr["NAXIS1"]  = "                 161"
+            #exthdr["NAXIS2"]  = "                   2"
+            #exthdr["PCOUNT"]  = "                   0 / number of parameters"
+            #exthdr["GCOUNT "] = "                   1 / number of groups"
+            exthdr["CRANGE"]  = str(col) + " to " + str(col+col_step)
+            exthdr["MSRANGE"]  = str(ms) + " to " + str(ms+mstar_step)
+            exthdr["NUMSPEC"] = str(int(gal_current_cell))
+            exthdr["NORMVAL"] = str(medval)
                    
-            dat = np.array((old_flam, old_flamerr)).reshape(2, len(lam_grid))
-            hdulist.append(fits.ImageHDU(data = dat, header = hdr))
+            dat = np.array((old_llam, old_llamerr)).reshape(2, len(lam_grid))
+            hdulist.append(fits.ImageHDU(data = dat, header = exthdr))
 
-            row = int(i/col_step)
-            column = int((j - mstar_low)/mstar_step)
+            row = int(col/col_step)
+            column = int((ms - mstar_low)/mstar_step)
             gal_per_cell[row,column] = gal_current_cell
 
-            print "ONGRID", i, j, "added", gal_current_cell, "spectra."
+            print "Stacked", gal_current_cell, "spectra."
             print '\n'
-            """
+
+    # Write stacks to fits file
+    final_fits_filename = 'stacks_' + str(z_low).replace('.','p') + '_' + str(z_high).replace('.','p') + '.fits'
+    hdulist.writeto(stacking_analysis_dir + final_fits_filename, overwrite=True)
 
     # Time taken
     print "Time taken for stacking --", "{:.2f}".format(time.time() - start), "seconds"
     
-    print added_gal, skipped_gal
+    print "Total galaxies stacked in all stacks for this redshift range:", added_gal
+    print "Total galaxies skipped in all stacks for this redshift range:", skipped_gal
+    print "\n", "Cellwise distribution of galaxies:"
     print np.flipud(gal_per_cell)
     print np.sum(gal_per_cell, axis=None)
 
     return None
     
-if __name__ == '__main__':
-    
+def main():
+
     # Start time
     start = time.time()
     dt = datetime.datetime
@@ -446,7 +340,7 @@ if __name__ == '__main__':
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
-    for i in range(1,4):
+    for i in range(1,2):
         
         # Get z range and indices
         z_low = all_z_low[i]
@@ -460,4 +354,8 @@ if __name__ == '__main__':
     # Total time taken
     print "Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes."
 
+    return None
+
+if __name__ == '__main__':
+    main()
     sys.exit(0)
