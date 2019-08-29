@@ -283,6 +283,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             print "Stacked", gal_current_cell, "spectra."
             print '\n'
 
+    # Also write the galaxy distribution per cell
+    galdist_hdr = fits.Header()
+    galdist_hdr["NAME"] = "Galaxy distribution per cell"
+    hdulist.append(fits.ImageHDU(data=np.flipud(gal_per_cell), header=galdist_hdr))
+
     # Write stacks to fits file
     final_fits_filename = 'stacks_' + str(z_low).replace('.','p') + '_' + str(z_high).replace('.','p') + '.fits'
     hdulist.writeto(stacking_analysis_dir + final_fits_filename, overwrite=True)
@@ -340,7 +345,7 @@ def main():
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
-    for i in range(1,2):
+    for i in range(4):
         
         # Get z range and indices
         z_low = all_z_low[i]
@@ -348,8 +353,6 @@ def main():
         z_indices = np.where((zp >= z_low) & (zp < z_high))[0]
         #goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst,
         create_stacks(cat, urcol, z_low, z_high, z_indices, start)
-
-        sys.exit(0)
 
     # Total time taken
     print "Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes."
