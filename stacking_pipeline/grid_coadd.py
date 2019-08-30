@@ -2,10 +2,7 @@
 from __future__ import division
 
 import numpy as np
-import numpy.ma as ma
 from astropy.io import fits
-#from scipy.stats import gaussian_kde
-#from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
 
 import os
 import sys
@@ -13,6 +10,7 @@ import time
 import datetime
 
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
@@ -134,8 +132,14 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
-    lam_step = 50
-    lam_grid = np.arange(2700, 6000, lam_step)
+    lam_step = 50  # somewhat arbitrarily chosen # pretty much trial and error
+
+    # Set the ends of the lambda grid
+    # This is dependent on the redshift range being considered
+    lam_grid_low = 
+    lam_grid_high = 
+
+    lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range    
@@ -281,7 +285,6 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             gal_per_cell[row,column] = gal_current_cell
 
             print "Stacked", gal_current_cell, "spectra."
-            print '\n'
 
     # Also write the galaxy distribution per cell
     galdist_hdr = fits.Header()
@@ -303,6 +306,10 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
     return None
     
+def plot_stacks():
+
+    return None
+
 def main():
 
     # Start time
@@ -351,7 +358,6 @@ def main():
         z_low = all_z_low[i]
         z_high = all_z_high[i]
         z_indices = np.where((zp >= z_low) & (zp < z_high))[0]
-        #goodsn_phot_cat_3dhst, goodss_phot_cat_3dhst,
         create_stacks(cat, urcol, z_low, z_high, z_indices, start)
 
     # Total time taken
