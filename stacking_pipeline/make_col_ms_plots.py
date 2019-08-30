@@ -181,6 +181,9 @@ def add_contours(x, y, ax):
 
     ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r, aspect='auto', extent=[xmin, xmax, ymin, ymax], zorder=1, alpha=0.95)
 
+    # Add the ticks corresponding to the stacking grid
+    ax.set_yticks(np.arange(0.0,3.5,0.5))
+
     # Plot grid 
     # I want this to have the lowest zorder
     grid_color = (0.9,0.9,0.9)
@@ -243,7 +246,12 @@ def ur_ms_plots():
 
     # First get stellar mass and apply a cut to stellar mass
     ms = np.log10(cat['zp_ms'])
-    ms_idx = np.where((ms >= 8.0) & (ms <= 12.0))[0]  # Change the npy arrays to save and load accordingly
+    low_mass_lim = 9.0
+    ms_idx = np.where((ms >= low_mass_lim) & (ms <= 12.0))[0]  # Change the npy arrays to save and load accordingly
+    if int(low_mass_lim) == 8:
+        mass_str = '8_logM_12'
+    elif int(low_mass_lim) == 9:
+        mass_str = '9_logM_12'
     print "Galaxies from stellar mass cut:", len(ms_idx)
 
     # Now get indices based on redshift intervals
@@ -255,7 +263,7 @@ def ur_ms_plots():
 
     # now loop over all galaxies within mass cut sample 
     # and get the u-r color for each galaxy
-    if not os.path.isfile(stacking_analysis_dir + 'ur_arr_8_logM_12.npy'):
+    if not os.path.isfile(stacking_analysis_dir + 'ur_arr_' + mass_str + '.npy'):
 
         ur = []
         threed_ur = []
@@ -431,7 +439,7 @@ def ur_ms_plots():
     ax5.set_yticklabels([])
     ax6.set_yticklabels([])
 
-    fig.savefig(stacking_figures_dir + 'ur_ms_diagram.pdf', dpi=300, bbox_inches='tight')
+    fig.savefig(stacking_figures_dir + 'ur_ms_diagram_' + mass_str + '_KDE.pdf', dpi=300, bbox_inches='tight')
 
     return None
 
@@ -500,6 +508,11 @@ def uvj():
 
         """
         When making the UVJ plot -- 
+        it needs only the filter transmission without the 
+        detector response included. See Williams et al. 2009
+        prescription for making the UVJ plot. They use Bessel
+        U and V filters and a Mauna Kea J filter. This is 
+        also what I've done here.
         """
         # The Bessel U and V filters are given in angstroms and fractions
         u_filt_wav = u['wav']
@@ -744,9 +757,9 @@ def check_salp_chab_z():
 def main():
 
     #check_salp_chab_z()
-    #ur_ms_plots()
+    ur_ms_plots()
     #uvj()
-    generate_all_ur_color()
+    #generate_all_ur_color()
     
     return None
 

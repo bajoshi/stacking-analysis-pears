@@ -299,7 +299,7 @@ if __name__ == '__main__':
                 if (column < 3) and (row >= 2):
                     ax.axvline(x=4942, color='darkolivegreen', linestyle='--')
 
-                if (row == 4)and (column == 0):
+                if (row == 4) and (column == 0):
                     ax.get_xaxis().set_ticklabels(['0.3', '0.35', '0.4', '0.45', '0.5', '0.55'], fontsize=7, rotation=45)
                 
                 if (row == 4) and (column == 1):
