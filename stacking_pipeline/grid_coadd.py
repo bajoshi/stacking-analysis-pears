@@ -388,6 +388,20 @@ def plot_ur_ms_diagram(ax, ur_color, stellar_mass, z_low, z_high, z_indices):
 
     return None
 
+def remove_axes_spines_ticks(ax):
+
+    ax.spines['top'].set_color('none')
+    ax.spines['right'].set_color('none')
+    ax.spines['bottom'].set_color('none')
+    ax.spines['left'].set_color('none')
+    
+    ax.get_xaxis().set_ticklabels([])
+    ax.get_yaxis().set_ticklabels([])
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    return None
+
 def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
     print "Working on plotting stacks for redshift range:", z_low, "<= z <", z_high
@@ -412,6 +426,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
     # Get teh average color and mass arrays for plotting
     avgcolarr, avgmassarr = get_avg_col_mass_arrays(ur_color, stellar_mass, stack_hdu)
+    avgcolarr_to_print = avgcolarr[::-1]
 
     # Also replot the corresponding u-r vs color plot with the same grid overlaid
     # Define figure and grid
@@ -438,7 +453,34 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
     for i in np.arange(col_low, col_high, col_step):
         for j in np.arange(mstar_low, mstar_high, mstar_step):
-            
+
+            # Create subplots for different grid positions
+            # First get teh row and column
+            row = numcol - 1 - int((i - col_low)/col_step)
+            # The numcol - 1 - ... is to make sure that the plotting is being done 
+            # from the bottom left which is what the for loop is doing.
+            column = int((j - mstar_low)/mstar_step) + nummass + 1
+            # The columns have to be offset by nummass + 1 because 
+            # of the plot to its left. 
+            #print "\n", "i and j:", i, j 
+            #print "Color and M* (bottom left of cell):", i, j
+            #print "Row and column:", row, column
+            #print "GridSpec row range:", row, "to", row+1
+            #print "GridSpec column range:", column, "to", column+1
+            ax = fig.add_subplot(gs[row:row+1, column:column+1])
+
+            # Add the label for the avgmass and avgcolor
+            # This appears before gettting indices so that these labels arent skipped
+            if row == 0:
+                ax.text(0.25, 1.03, "{:.2f}".format(float(avgmassarr[column - nummass - 1])), \
+                verticalalignment='top', horizontalalignment='left', \
+                transform=ax.transAxes, color='k', size=15)
+
+            if column == (2 * nummass):
+                ax.text(0.5, 0.6, "{:.2f}".format(float(avgcolarr_to_print[row])), \
+                verticalalignment='top', horizontalalignment='left', \
+                transform=ax.transAxes, color='k', size=15)
+
             # Find the indices (corresponding to catalog entries)
             # that are within the current cell
             indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
@@ -449,6 +491,8 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 print "Number of spectra in this grid cell --", len(indices)
                 medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
             else:
+                # Delete axes spines and labels if skipping
+                remove_axes_spines_ticks(ax)
                 continue
 
             # Do not plot any cells with less than 5 spectra
@@ -456,27 +500,15 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 print "At u-r color and M* (bottom left of cell):", i, j
                 print "Too few spectra in stack (i.e., less than 5). Continuing to the next grid cell..."
                 cellcount += 1
+                # Delete axes spines and labels if skipping
+                remove_axes_spines_ticks(ax)
                 continue
-
-            # Create subplots for different grid positions
-            row = numcol - 1 - int((i - col_low)/col_step)
-            # The numcol - 1 - ... is to make sure that the plotting is being done 
-            # from the bottom left which is what the for loop is doing.
-            column = int((j - mstar_low)/mstar_step) + nummass + 1
-            # The columns have to be offset by nummass + 1 because 
-            # of the plot to its left. 
-            print "\n", "i and j:", i, j 
-            print "Color and M* (bottom left of cell):", i, j
-            print "Row and column:", row, column
-            print "GridSpec row range:", row, "to", row+1
-            print "GridSpec column range:", column, "to", column+1
-            ax = fig.add_subplot(gs[row:row+1, column:column+1])
 
             # Add labels
             if (row == 5) and (column == nummass + 1):
                 ax.set_xlabel('$\lambda\ [\mu m]$', fontsize=13)
             if (row == 3) and (column == nummass + 1):
-                ax.set_ylabel('$L_{\lambda}$', fontsize=13)
+                ax.set_ylabel('$L_{\lambda}\ [\mathrm{erg\, s^{-1}\, \AA^{-1}}]$', fontsize=13)
 
             # Loop over all spectra in a grid cell and plot them in a light grey color
             for u in range(len(pears_id[indices])):
@@ -507,7 +539,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 lerr = (lerr / medarr[u]) * medval
 
                 # Plotting
-                ax.plot(lam_em, llam_em, ls='-', color='lightgray')
+                ax.plot(lam_em, llam_em, ls='-', color='lightgray', linewidth=0.5)
                 ax.get_yaxis().set_ticklabels([])
                 ax.get_xaxis().set_ticklabels([])
                 ax.set_xlim(2000, 7000)
@@ -515,8 +547,12 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Plot stack in blue
             llam = stack_hdu[cellcount+2].data[0]
             llam_err = stack_hdu[cellcount+2].data[1]
-            ax.errorbar(lam, llam, yerr=llam_err, fmt='.-', color='b', linewidth=1,\
-                        ecolor='r', markeredgecolor='b', capsize=0, markersize=3)
+
+            # Force zeros to NaNs so that they're not plotted
+            llam_zero_idx = np.where(llam == 0.0)[0]
+            llam[llam_zero_idx] = np.nan
+            ax.errorbar(lam, llam, yerr=llam_err, fmt='.-', color='b', linewidth=0.5,\
+                        elinewidth=0.4, ecolor='r', markeredgecolor='b', capsize=0, markersize=0.5)
 
             # Add other info to plot
             numspec = int(stack_hdu[cellcount+2].header['NUMSPEC'])
