@@ -183,6 +183,7 @@ def add_contours(x, y, ax):
 
     # Add the ticks corresponding to the stacking grid
     ax.set_yticks(np.arange(0.0,3.5,0.5))
+    ax.set_xticks(np.arange(8.0,13.0,1.0))
 
     # Plot grid 
     # I want this to have the lowest zorder

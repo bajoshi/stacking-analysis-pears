@@ -96,9 +96,9 @@ if __name__ == '__main__':
         skipspec[i] = skipspec[i].replace('\'', '')
     for i in range(len(em_lines)):
         em_lines[i] = em_lines[i].replace('\'', '')
-                
+
     gs = gridspec.GridSpec(15,15)
-    gs.update(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.00, hspace=0.00)
+    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.95, wspace=0.00, hspace=0.00)
     
     # Find the averages of all grid cells in a particular row/column
     # While these are useful numbers to have, they are currently only used in the plotting routine.

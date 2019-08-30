@@ -14,12 +14,29 @@ import matplotlib.gridspec as gridspec
 
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
 stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
-figures_dir = home + "/Desktop/FIGS/stacking-analysis-figures/"
+stacking_figures_dir = home + "/Desktop/FIGS/stacking-analysis-figures/"
 massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
 pears_data_path = home + "/Documents/PEARS/data_spectra_only/"
 
+sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
 sys.path.append(massive_galaxies_dir + 'cluster_codes/')
+sys.path.append(stacking_analysis_dir + 'stacking_pipeline/')
 import cluster_do_fitting as cf
+import make_col_ms_plots
+import mocksim_results as mr
+
+# Define grid params
+# Outside of any functions to make sure these are the same everywhere
+col_low = 0.0
+col_high = 3.0
+col_step = 0.5
+
+mstar_low = 8.0
+mstar_high = 12.0
+mstar_step = 1.0
+
+numcol = int((col_high - col_low)/col_step)
+nummass = int((mstar_high - mstar_low)/mstar_step)
 
 def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galaxies, lam_grid, lam_step):
     
@@ -112,7 +129,7 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
 
 def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
-    print "Working on redshift range:", z_low, "<= z <", z_high
+    print "Working on stacks for redshift range:", z_low, "<= z <", z_high
 
     # Read in catalog of all PEARS fitting results and assign arrays
     # For now we need the id+field, spz, stellar mass, and u-r color
@@ -120,8 +137,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     pears_field = cat['Field'][z_indices]
     zp = cat['zp_minchi2'][z_indices]
 
-    stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below is expected log(stellar mass)
     ur_color = urcol[z_indices]
+    stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below is expected log(stellar mass)
 
     # Read in dl lookup table
     # Required for deredshifting
@@ -136,20 +153,13 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
-    lam_grid_low = 
-    lam_grid_high = 
+    lam_grid_low = 2700
+    lam_grid_high = 6000
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range    
-    col_low = 0.0
-    col_high = 3.0
-    col_step = 0.5
-
-    mstar_low = 7.0
-    mstar_high = 12.0
-    mstar_step = 1.0
     
     # ----------------------------------------- Other preliminaries ----------------------------------------- #
     # Create HDUList for writing final fits file with stacks
@@ -276,10 +286,19 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             exthdr["MSRANGE"]  = str(ms) + " to " + str(ms+mstar_step)
             exthdr["NUMSPEC"] = str(int(gal_current_cell))
             exthdr["NORMVAL"] = str(medval)
-                   
+
+            # Also add the average color and stellar mass for the cell to each 
+            avgcol = np.mean(ur_color[indices])
+            avgmass = np.mean(stellar_mass[indices])
+
+            exthdr["AVGCOL"] = str(avgcol)
+            exthdr["AVGMASS"] = str(avgmass)
+
+            # Now reshape the data and append
             dat = np.array((old_llam, old_llamerr)).reshape(2, len(lam_grid))
             hdulist.append(fits.ImageHDU(data = dat, header = exthdr))
 
+            # Update the array containing the cellwise distribution of galaxies
             row = int(col/col_step)
             column = int((ms - mstar_low)/mstar_step)
             gal_per_cell[row,column] = gal_current_cell
@@ -306,14 +325,215 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
     return None
     
+def get_avg_col_mass_arrays(ur_color, stellar_mass, stack_hdu):
+
+    # Find the averages of all grid cells in a particular row/column
+    # While these are useful numbers to have, they are currently only used in the plotting routine.
+    cellcount = 0
+
+    avgcolarr = np.zeros(numcol)
+    avgmassarr = np.zeros(nummass)
+        
+    avgmassarr = avgmassarr.tolist()
+    for k in range(len(avgmassarr)):
+        avgmassarr[k] = []
+
+    for i in np.arange(col_low, col_high, col_step):
+        colcount = 0
+        for j in np.arange(mstar_low, mstar_high, mstar_step):
+            
+            # Find the indices (corresponding to catalog entries)
+            # that are within the current cell
+            indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
+                       (stellar_mass >= j) & (stellar_mass < j + mstar_step))[0]
+
+            row = int((i - col_low)/col_step)
+            column = int((j - mstar_low)/mstar_step)
+
+            if indices.size:
+                avgcol = stack_hdu[cellcount+2].header['AVGCOL']
+                avgmass = stack_hdu[cellcount+2].header['AVGMASS']
+                avgcolarr[row] += float(avgcol)
+                avgmassarr[column].append(float(avgmass))
+
+                cellcount += 1
+                colcount += 1
+            else:
+                continue
+
+        avgcolarr[row] /= (colcount)
+
+    for x in range(len(avgmassarr)):
+        avgmassarr[x] = np.sum(avgmassarr[x]) / len(avgmassarr[x])
+
+    return avgcolarr, avgmassarr
+
+def plot_ur_ms_diagram(ax, ur_color, stellar_mass, z_low, z_high, z_indices):
+
+    # Because the axes object is already defined you can just start plotting
+    # Labels first
+    ax.set_xlabel(r'$\rm log(M_s)\ [M_\odot]$', fontsize=15)
+    ax.set_ylabel(r'$(u - r)_\mathrm{restframe}$', fontsize=15)
+
+    # Plot the points
+    ax.scatter(stellar_mass, ur_color, s=1.5, color='k', zorder=3)  # The arrays here already have the z_indices applied
+
+    # Use the utility functions from the make_col_ms_plots.py code
+    make_col_ms_plots.add_contours(stellar_mass, ur_color, ax)
+    make_col_ms_plots.add_info_text_to_subplots(ax, z_low, z_high, len(z_indices))
+
+    # Limits
+    ax.set_xlim(mstar_low, mstar_high)
+    ax.set_ylim(col_low, col_high)
+
+    return None
+
 def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
+
+    print "Working on plotting stacks for redshift range:", z_low, "<= z <", z_high
+
+    # Assign arrays
+    pears_id = cat['PearsID'][z_indices]
+    pears_field = cat['Field'][z_indices]
+    zp = cat['zp_minchi2'][z_indices]
+
+    ur_color = urcol[z_indices]
+    stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below is expected log(stellar mass)
+
+    # Read in dl lookup table
+    # Required for deredshifting
+    dl_tbl = np.genfromtxt(massive_galaxies_dir + 'cluster_codes/dl_lookup_table.txt', dtype=None, names=True)
+    # Define redshift array used in lookup table
+    z_arr = np.arange(0.005, 6.005, 0.005)
 
     # Read in fits file for stacks
     final_fits_filename = 'stacks_' + str(z_low).replace('.','p') + '_' + str(z_high).replace('.','p') + '.fits'
     stack_hdu = fits.open(stacking_analysis_dir + final_fits_filename)
 
+    # Get teh average color and mass arrays for plotting
+    avgcolarr, avgmassarr = get_avg_col_mass_arrays(ur_color, stellar_mass, stack_hdu)
+
     # Also replot the corresponding u-r vs color plot with the same grid overlaid
-    
+    # Define figure and grid
+    fig = plt.figure(figsize=(10, 5))
+    gs = gridspec.GridSpec(numcol, 2 * nummass + 1)
+    # For the grid definition:
+    # This gives rows equal to the number of color cells.
+    # It gives columns equal to two times (because there are two plots side-by-side)
+    # the number of stellar mass cells. The +1 is to have a gap between the two plots.
+    gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.00, hspace=0.00)
+
+    # Define axes
+    # Firstly, the axes object for plotting the u-r vs M* diagram
+    ax1 = fig.add_subplot(gs[:,:4])
+    plot_ur_ms_diagram(ax1, ur_color, stellar_mass, z_low, z_high, z_indices)
+
+    # Now all the other axes objects with each one corresponding 
+    # to a grid cell will be defined dynamically.
+    # Begin looping through cells to plot
+    cellcount = 0
+
+    # Get lambda grid
+    lam = stack_hdu[1].data
+
+    for i in np.arange(col_low, col_high, col_step):
+        for j in np.arange(mstar_low, mstar_high, mstar_step):
+            
+            # Find the indices (corresponding to catalog entries)
+            # that are within the current cell
+            indices = np.where((ur_color >= i) & (ur_color < i + col_step) &\
+                            (stellar_mass >= j) & (stellar_mass < j + mstar_step))[0]
+
+            # Check that the cell isn't empty and then proceed
+            if indices.size:
+                print "Number of spectra in this grid cell --", len(indices)
+                medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
+            else:
+                continue
+
+            # Do not plot any cells with less than 5 spectra
+            if (len(indices) < 5):
+                print "At u-r color and M* (bottom left of cell):", i, j
+                print "Too few spectra in stack (i.e., less than 5). Continuing to the next grid cell..."
+                cellcount += 1
+                continue
+
+            # Create subplots for different grid positions
+            row = numcol - 1 - int((i - col_low)/col_step)
+            # The numcol - 1 - ... is to make sure that the plotting is being done 
+            # from the bottom left which is what the for loop is doing.
+            column = int((j - mstar_low)/mstar_step) + nummass + 1
+            # The columns have to be offset by nummass + 1 because 
+            # of the plot to its left. 
+            print "\n", "i and j:", i, j 
+            print "Color and M* (bottom left of cell):", i, j
+            print "Row and column:", row, column
+            print "GridSpec row range:", row, "to", row+1
+            print "GridSpec column range:", column, "to", column+1
+            ax = fig.add_subplot(gs[row:row+1, column:column+1])
+
+            # Add labels
+            if (row == 5) and (column == nummass + 1):
+                ax.set_xlabel('$\lambda\ [\mu m]$', fontsize=13)
+            if (row == 3) and (column == nummass + 1):
+                ax.set_ylabel('$L_{\lambda}$', fontsize=13)
+
+            # Loop over all spectra in a grid cell and plot them in a light grey color
+            for u in range(len(pears_id[indices])):
+
+                # Get redshift from catalog
+                current_redshift = zp[indices][u]
+
+                current_id = pears_id[indices][u]
+                current_field = pears_field[indices][u]
+
+                # ----------------------------- Get data ----------------------------- #
+                grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
+                = cf.get_data(current_id, current_field)
+
+                # Deredshift the observed data 
+                zidx = np.argmin(abs(z_arr - current_redshift))
+                # Make sure that the z_arr here is the same array that was 
+                # used to generate the dl lookup table.
+                dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
+
+                lam_em = grism_lam_obs / (1 + current_redshift)
+                llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                
+                # Divide by median value at 4400A to 4600A to rescale. 
+                # Multiplying by median value of the flux medians to get it back to physical units
+                llam_em = (llam_em / medarr[u]) * medval
+                lerr = (lerr / medarr[u]) * medval
+
+                # Plotting
+                ax.plot(lam_em, llam_em, ls='-', color='lightgray')
+                ax.get_yaxis().set_ticklabels([])
+                ax.get_xaxis().set_ticklabels([])
+                ax.set_xlim(2000, 7000)
+
+            # Plot stack in blue
+            llam = stack_hdu[cellcount+2].data[0]
+            llam_err = stack_hdu[cellcount+2].data[1]
+            ax.errorbar(lam, llam, yerr=llam_err, fmt='.-', color='b', linewidth=1,\
+                        ecolor='r', markeredgecolor='b', capsize=0, markersize=3)
+
+            # Add other info to plot
+            numspec = int(stack_hdu[cellcount+2].header['NUMSPEC'])
+            normval = float(stack_hdu[cellcount+2].header['NORMVAL'])
+            normval = mr.convert_to_sci_not(normval)  # Returns a properly formatted string
+
+            # add number of galaxies in plot
+            ax.text(0.8, 0.2, numspec, verticalalignment='top', horizontalalignment='left', \
+            transform=ax.transAxes, color='k', size=10)
+
+            # Normalization value
+            ax.text(0.04, 0.94, normval, verticalalignment='top', horizontalalignment='left', \
+            transform=ax.transAxes, color='k', size=10)
+
+            cellcount += 1
+
+    fig.savefig(stacking_figures_dir + final_fits_filename.replace('.fits','.pdf'), dpi=300, bbox_inches='tight')
 
     # Close fits file and return
     stack_hdu.close()
@@ -362,14 +582,14 @@ def main():
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
-    for i in range(4):
+    for i in range(len(all_z_low)):
         
         # Get z range and indices
         z_low = all_z_low[i]
         z_high = all_z_high[i]
         z_indices = np.where((zp >= z_low) & (zp < z_high))[0]
 
-        create_stacks(cat, urcol, z_low, z_high, z_indices, start)
+        #create_stacks(cat, urcol, z_low, z_high, z_indices, start)
         plot_stacks(cat, urcol, z_low, z_high, z_indices, start)
 
     # Total time taken
