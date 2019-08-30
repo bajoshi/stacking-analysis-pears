@@ -474,12 +474,24 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             if row == 0:
                 ax.text(0.25, 1.03, "{:.2f}".format(float(avgmassarr[column - nummass - 1])), \
                 verticalalignment='top', horizontalalignment='left', \
-                transform=ax.transAxes, color='k', size=15)
+                transform=ax.transAxes, color='k', size=14)
 
             if column == (2 * nummass):
-                ax.text(0.5, 0.6, "{:.2f}".format(float(avgcolarr_to_print[row])), \
+                ax.text(0.8, 0.65, "{:.2f}".format(float(avgcolarr_to_print[row])), \
                 verticalalignment='top', horizontalalignment='left', \
-                transform=ax.transAxes, color='k', size=15)
+                transform=ax.transAxes, color='k', size=14, rotation=270)
+
+            if row == 0 and column == nummass + 1:
+                masslabel = r'$\left<\mathrm{log}\left(\frac{M_*}{M_\odot}\right)\right>$'
+                ax.text(-0.03, 0.75, masslabel, \
+                verticalalignment='top', horizontalalignment='left', \
+                transform=ax.transAxes, color='k', size=13, zorder=10)
+
+            if row == numcol - 2 and column == 2*nummass:
+                colorlabel = r'$\left<\mathrm{(U-R)_{rest}}\right>$'
+                ax.text(0.5, 1.0, colorlabel, \
+                verticalalignment='top', horizontalalignment='left', \
+                transform=ax.transAxes, color='k', size=13, rotation=270, zorder=10)
 
             # Find the indices (corresponding to catalog entries)
             # that are within the current cell
@@ -500,6 +512,9 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 print "At u-r color and M* (bottom left of cell):", i, j
                 print "Too few spectra in stack (i.e., less than 5). Continuing to the next grid cell..."
                 cellcount += 1
+                # The cellcount has to be increased here (and not in the case 
+                # of the continue statement right after this) is because
+                # this stack was actually created but we're just not plotting it.
                 # Delete axes spines and labels if skipping
                 remove_axes_spines_ticks(ax)
                 continue
@@ -552,7 +567,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             llam_zero_idx = np.where(llam == 0.0)[0]
             llam[llam_zero_idx] = np.nan
             ax.errorbar(lam, llam, yerr=llam_err, fmt='.-', color='b', linewidth=0.5,\
-                        elinewidth=0.4, ecolor='r', markeredgecolor='b', capsize=0, markersize=0.5)
+                        elinewidth=0.4, ecolor='r', markeredgecolor='b', capsize=0, markersize=0.5, zorder=5)
 
             # Add other info to plot
             numspec = int(stack_hdu[cellcount+2].header['NUMSPEC'])
