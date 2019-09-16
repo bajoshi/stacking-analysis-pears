@@ -3,6 +3,7 @@ from __future__ import division
 
 import numpy as np
 from astropy.io import fits
+from astropy.stats import sigma_clip
 
 import os
 import sys
@@ -149,12 +150,12 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
-    lam_step = 50  # somewhat arbitrarily chosen # pretty much trial and error
+    lam_step = 80  # somewhat arbitrarily chosen # pretty much trial and error
 
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
-    lam_grid_low = 2700
-    lam_grid_high = 6000
+    lam_grid_low = 2400
+    lam_grid_high = 7200
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
@@ -261,13 +262,26 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                     num_points, num_galaxies, lam_grid, lam_step)
 
             # taking median
-            # maybe I should also try doing a mean after 3sigma clipping and compare
             for y in range(len(lam_grid)):
                 if old_llam[y]:
+
+                    # Actual stack value after 3 sigma clipping
+                    # Only allowing 3 iterations right now
+                    masked_data = sigma_clip(data=old_llam[y], sigma=3, iters=3)
+                    old_llam[y] = np.median(masked_data)
+
+                    # Get mask from the masked_data array
+                    mask = np.ma.getmask(masked_data)
+
+                    # Apply mask to error array
+                    masked_dataerr = np.ma.array(old_llamerr[y], mask=mask)
+
+                    # Error on each point of the stack
+                    # This only uses the points that passed the 3 sigma clipping before
                     old_llamerr[y] = \
-                    np.sqrt((1.253 * np.std(old_llam[y]) / \
-                        np.sqrt(len(old_llam[y])))**2 + np.sum(old_llamerr[y]) / gal_current_cell)
-                    old_llam[y] = np.median(old_llam[y])
+                    np.sqrt((1.253 * np.std(masked_data) / \
+                        np.sqrt(len(masked_data)))**2 + np.sum(masked_dataerr) / gal_current_cell)
+
                 else:
                     old_llam[y] = 0.0
                     old_llamerr[y] = 0.0
@@ -283,7 +297,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             #exthdr["PCOUNT"]  = "                   0 / number of parameters"
             #exthdr["GCOUNT "] = "                   1 / number of groups"
             exthdr["CRANGE"]  = str(col) + " to " + str(col+col_step)
-            exthdr["MSRANGE"]  = str(ms) + " to " + str(ms+mstar_step)
+            exthdr["MSRANGE"] = str(ms) + " to " + str(ms+mstar_step)
             exthdr["NUMSPEC"] = str(int(gal_current_cell))
             exthdr["NORMVAL"] = str(medval)
 
@@ -296,7 +310,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
             # Now reshape the data and append
             dat = np.array((old_llam, old_llamerr)).reshape(2, len(lam_grid))
-            hdulist.append(fits.ImageHDU(data = dat, header = exthdr))
+            hdulist.append(fits.ImageHDU(data=dat, header=exthdr))
 
             # Update the array containing the cellwise distribution of galaxies
             row = int(col/col_step)
@@ -373,7 +387,7 @@ def plot_ur_ms_diagram(ax, ur_color, stellar_mass, z_low, z_high, z_indices):
     # Because the axes object is already defined you can just start plotting
     # Labels first
     ax.set_xlabel(r'$\rm log(M_s)\ [M_\odot]$', fontsize=15)
-    ax.set_ylabel(r'$(u - r)_\mathrm{restframe}$', fontsize=15)
+    ax.set_ylabel(r'$(u - r)_\mathrm{rest}$', fontsize=15)
 
     # Plot the points
     ax.scatter(stellar_mass, ur_color, s=1.5, color='k', zorder=3)  # The arrays here already have the z_indices applied
@@ -488,7 +502,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 transform=ax.transAxes, color='k', size=13, zorder=10)
 
             if row == numcol - 2 and column == 2*nummass:
-                colorlabel = r'$\left<\mathrm{(U-R)_{rest}}\right>$'
+                colorlabel = r'$\left<(u-r)_\mathrm{rest}\right>$'
                 ax.text(0.5, 1.0, colorlabel, \
                 verticalalignment='top', horizontalalignment='left', \
                 transform=ax.transAxes, color='k', size=13, rotation=270, zorder=10)
@@ -557,7 +571,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 ax.plot(lam_em, llam_em, ls='-', color='lightgray', linewidth=0.5)
                 ax.get_yaxis().set_ticklabels([])
                 ax.get_xaxis().set_ticklabels([])
-                ax.set_xlim(2000, 7000)
+                ax.set_xlim(2000, 8000)
 
             # Plot stack in blue
             llam = stack_hdu[cellcount+2].data[0]
@@ -567,7 +581,15 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             llam_zero_idx = np.where(llam == 0.0)[0]
             llam[llam_zero_idx] = np.nan
             ax.errorbar(lam, llam, yerr=llam_err, fmt='.-', color='b', linewidth=0.5,\
-                        elinewidth=0.4, ecolor='r', markeredgecolor='b', capsize=0, markersize=0.5, zorder=5)
+                        elinewidth=0.2, ecolor='r', markeredgecolor='b', capsize=0, markersize=0.5, zorder=5)
+
+            # Y Limits 
+            # Find min and max within the stack and add some padding
+            # Using the nan functions here because some stacks have nan values
+            stack_min = np.nanmin(llam)
+            stack_max = np.nanmax(llam)
+            stack_mederr = np.nanmedian(llam_err)  # median of all errors on hte stack
+            ax.set_ylim(stack_min - 3 * stack_mederr, stack_max + 3 * stack_mederr)
 
             # Add other info to plot
             numspec = int(stack_hdu[cellcount+2].header['NUMSPEC'])
@@ -640,7 +662,7 @@ def main():
         z_high = all_z_high[i]
         z_indices = np.where((zp >= z_low) & (zp < z_high))[0]
 
-        #create_stacks(cat, urcol, z_low, z_high, z_indices, start)
+        create_stacks(cat, urcol, z_low, z_high, z_indices, start)
         plot_stacks(cat, urcol, z_low, z_high, z_indices, start)
 
     # Total time taken
