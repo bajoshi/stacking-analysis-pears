@@ -177,7 +177,7 @@ def compare_with_threedhst():
     ax_ins = fig.add_axes([left, bottom, width, height])
 
     ax_ins.set_xlabel(r'$\rm log(M^{this\, work}_s)\ [M_\odot]$', fontsize=12)
-    ax_ins.set_ylabel(r'$\rm \# objects$', fontsize=12)
+    ax_ins.set_ylabel(r'$\rm \# objects$', fontsize=12, labelpad=-2)
 
     binsize = 0.5
     total_bins = int((13.0 - 4.0)/binsize)
@@ -375,7 +375,6 @@ def compare_santini():
 
 def main():
 
-    #make_stellar_mass_hist()
     compare_with_threedhst()
     #make_z_hist()
     #compare_all_salp()

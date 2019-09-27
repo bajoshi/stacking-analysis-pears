@@ -247,7 +247,7 @@ def ur_ms_plots():
 
     # First get stellar mass and apply a cut to stellar mass
     ms = np.log10(cat['zp_ms'])
-    low_mass_lim = 9.0
+    low_mass_lim = 8.0
     ms_idx = np.where((ms >= low_mass_lim) & (ms <= 12.0))[0]  # Change the npy arrays to save and load accordingly
     if int(low_mass_lim) == 8:
         mass_str = '8_logM_12'
@@ -347,12 +347,10 @@ def ur_ms_plots():
         ur = np.asarray(ur)
         #threed_ur = np.asarray(threed_ur)
     
-        #np.save(stacking_analysis_dir + 'ur_arr_8_logM_12.npy', ur)
-        #np.save(stacking_analysis_dir + 'ur_arr_9_logM_12.npy', ur)
+        np.save(stacking_analysis_dir + 'ur_arr_' + mass_str + '.npy', ur)
 
     else:
-        ur = np.load(stacking_analysis_dir + 'ur_arr_8_logM_12.npy')
-        #ur = np.load(stacking_analysis_dir + 'ur_arr_9_logM_12.npy')
+        ur = np.load(stacking_analysis_dir + 'ur_arr_' + mass_str + '.npy')
 
     print "Minimum and maximum in computed u-r color array:"
     print "Min:", min(ur), "             ", "Max:", max(ur)
@@ -391,12 +389,12 @@ def ur_ms_plots():
     ax4.yaxis.set_label_coords(-0.12, 1.05)
 
     # Actual plotting
-    ax1.scatter(ms[z_interval1_idx], ur[z_interval1_idx], s=1.5, color='k', zorder=3)
-    ax2.scatter(ms[z_interval2_idx], ur[z_interval2_idx], s=1.5, color='k', zorder=3)
-    ax3.scatter(ms[z_interval3_idx], ur[z_interval3_idx], s=1.5, color='k', zorder=3)
-    ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=1.5, color='k', zorder=3)
-    ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=1.5, color='k', zorder=3)
-    ax6.scatter(ms, ur, s=1.5, color='k', zorder=3)
+    ax1.scatter(ms[z_interval1_idx], ur[z_interval1_idx], s=0.7, color='k', zorder=3)
+    ax2.scatter(ms[z_interval2_idx], ur[z_interval2_idx], s=0.7, color='k', zorder=3)
+    ax3.scatter(ms[z_interval3_idx], ur[z_interval3_idx], s=0.7, color='k', zorder=3)
+    ax4.scatter(ms[z_interval4_idx], ur[z_interval4_idx], s=0.7, color='k', zorder=3)
+    ax5.scatter(ms[z_interval5_idx], ur[z_interval5_idx], s=0.7, color='k', zorder=3)
+    ax6.scatter(ms, ur, s=0.7, color='k', zorder=3)
 
     # Put contours on each plot
     add_contours(ms[z_interval1_idx], ur[z_interval1_idx], ax1)
@@ -628,12 +626,12 @@ def uvj():
     ax4.yaxis.set_label_coords(-0.12, 1.05)
 
     # Actual plotting 
-    ax1.scatter(vj_plt[z_interval1_idx], uv_plt[z_interval1_idx], s=1.5, color='k')
-    ax2.scatter(vj_plt[z_interval2_idx], uv_plt[z_interval2_idx], s=1.5, color='k')
-    ax3.scatter(vj_plt[z_interval3_idx], uv_plt[z_interval3_idx], s=1.5, color='k')
-    ax4.scatter(vj_plt[z_interval4_idx], uv_plt[z_interval4_idx], s=1.5, color='k')
-    ax5.scatter(vj_plt[z_interval5_idx], uv_plt[z_interval5_idx], s=1.5, color='k')
-    ax6.scatter(vj_plt, uv_plt, s=1.5, color='k')
+    ax1.scatter(vj_plt[z_interval1_idx], uv_plt[z_interval1_idx], s=0.7, color='k')
+    ax2.scatter(vj_plt[z_interval2_idx], uv_plt[z_interval2_idx], s=0.7, color='k')
+    ax3.scatter(vj_plt[z_interval3_idx], uv_plt[z_interval3_idx], s=0.7, color='k')
+    ax4.scatter(vj_plt[z_interval4_idx], uv_plt[z_interval4_idx], s=0.7, color='k')
+    ax5.scatter(vj_plt[z_interval5_idx], uv_plt[z_interval5_idx], s=0.7, color='k')
+    ax6.scatter(vj_plt, uv_plt, s=0.7, color='k')
 
     # Plot UVJ selection on each subplot
     plot_uvj_selection(ax1, 0.0, 0.4)
@@ -755,12 +753,96 @@ def check_salp_chab_z():
 
     return None
 
+def ssfr_ms_plots():
+
+    # Read in results for all of PEARS
+    cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True)
+
+    # First get stellar mass and apply a cut to stellar mass
+    ms = np.log10(cat['zp_ms'])
+    low_mass_lim = 8.0
+    ms_idx = np.where((ms >= low_mass_lim) & (ms <= 12.0))[0]
+    if int(low_mass_lim) == 8:
+        mass_str = '8_logM_12'
+    elif int(low_mass_lim) == 9:
+        mass_str = '9_logM_12'
+    print "Galaxies from stellar mass cut:", len(ms_idx)
+
+    # Now get indices based on redshift intervals
+    # decided from the stellar_mass_diagnostic_plot.py
+    # code. 
+    # Look at the make_z_hist() function in there. 
+    zp = cat['zp_minchi2'][ms_idx]
+    ms = ms[ms_idx]
+    sfr = cat['zp_sfr'][ms_idx]  # The SFR is also normalized to 1M_sol
+    sfr *= ms
+
+    # Some of the models have exactly 0 star-formation
+    # Make sure these show up too
+    #sfr_zero_idx = np.where(sfr == 0.0)[0]
+    #sfr[sfr_zero_idx] = 0.1
+
+    print sfr[:1000]
+    sys.exit(0)
+
+
+    # Make sure the units of SFR and SSFR are correct
+    template_ms = cat['zp_template_ms'][ms_idx]
+    ssfr = np.log10(sfr / ms)  # I think, this should be divided by the template mass to get it right
+
+    # Get z intervals and their indices
+    z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
+    z_interval2_idx = np.where((zp >= 0.4) & (zp < 0.7))[0]
+    z_interval3_idx = np.where((zp >= 0.7) & (zp < 1.0))[0]
+    z_interval4_idx = np.where((zp >= 1.0) & (zp < 2.0))[0]
+    z_interval5_idx = np.where((zp >= 2.0) & (zp <= 6.0))[0]
+
+    print "Number of galaxies within each redshift interval."
+    print "0.0 <= z < 0.4", "    ", len(z_interval1_idx)
+    print "0.4 <= z < 0.7", "    ", len(z_interval2_idx)
+    print "0.7 <= z < 1.0", "    ", len(z_interval3_idx)
+    print "1.0 <= z < 2.0", "    ", len(z_interval4_idx)
+    print "2.0 <= z <= 6.0", "    ", len(z_interval5_idx)
+
+    # Now make the plots
+    # Define figure
+    fig = plt.figure(figsize=(10, 5))
+    gs = gridspec.GridSpec(10,12)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.25, hspace=0.3)
+
+    # Put axes on grid
+    ax1 = fig.add_subplot(gs[:5, :4])
+    ax2 = fig.add_subplot(gs[:5, 4:8])
+    ax3 = fig.add_subplot(gs[:5, 8:])
+    ax4 = fig.add_subplot(gs[5:, :4])
+    ax5 = fig.add_subplot(gs[5:, 4:8])
+    ax6 = fig.add_subplot(gs[5:, 8:])
+
+    # Labels
+    ax5.set_xlabel(r'$\rm log(M_s)\ [M_\odot]$', fontsize=15)
+    ax4.set_ylabel(r'$\rm log(SSFR)\ [yr^{-1}]$', fontsize=15)
+    ax4.yaxis.set_label_coords(-0.12, 1.05)
+
+    # Actual plotting
+    ax1.scatter(ms[z_interval1_idx], ssfr[z_interval1_idx], s=0.7, color='k', zorder=3)
+    ax2.scatter(ms[z_interval2_idx], ssfr[z_interval2_idx], s=0.7, color='k', zorder=3)
+    ax3.scatter(ms[z_interval3_idx], ssfr[z_interval3_idx], s=0.7, color='k', zorder=3)
+    ax4.scatter(ms[z_interval4_idx], ssfr[z_interval4_idx], s=0.7, color='k', zorder=3)
+    ax5.scatter(ms[z_interval5_idx], ssfr[z_interval5_idx], s=0.7, color='k', zorder=3)
+    ax6.scatter(ms, ssfr, s=0.7, color='k', zorder=3)
+
+    plt.show()
+
+    return None
+
 def main():
 
     #check_salp_chab_z()
-    ur_ms_plots()
+    #ur_ms_plots()
     #uvj()
     #generate_all_ur_color()
+
+    ssfr_ms_plots()
     
     return None
 
