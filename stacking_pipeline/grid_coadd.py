@@ -24,7 +24,7 @@ sys.path.append(massive_galaxies_dir + 'cluster_codes/')
 sys.path.append(stacking_analysis_dir + 'stacking_pipeline/')
 import cluster_do_fitting as cf
 import make_col_ms_plots
-import mocksim_results as mr
+from mocksim_results import convert_to_sci_not
 
 # Define grid params
 # Outside of any functions to make sure these are the same everywhere
@@ -103,8 +103,8 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
         # i.e., the observed spectrum is unuseable.
         # This condition should never be triggered. 
         if return_code == 0:
-            print current_id, current_field
-            print "Return code should not have been 0. Exiting."
+            print(current_id, current_field)
+            print("Return code should not have been 0. Exiting.")
             sys.exit(0)
 
         # Now deredshift the observed data
@@ -130,7 +130,7 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
 
 def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
-    print "Working on stacks for redshift range:", z_low, "<= z <", z_high
+    print("Working on stacks for redshift range:", z_low, "<= z <", z_high)
 
     # Read in catalog of all PEARS fitting results and assign arrays
     # For now we need the id+field, spz, stellar mass, and u-r color
@@ -184,9 +184,9 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Reset at the start of stacking within each cell
             gal_current_cell = 0
             
-            print "\n", "Stacking in cell:"
-            print "Color range:", col, col+col_step
-            print "Stellar mass range:", ms, ms+mstar_step
+            print("\n", "Stacking in cell:")
+            print("Color range:", col, col+col_step)
+            print("Stellar mass range:", ms, ms+mstar_step)
             
             # Find the indices (corresponding to catalog entries)
             # that are within the current cell
@@ -194,7 +194,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                             (stellar_mass >= ms) & (stellar_mass < ms + mstar_step))[0]
 
             num_galaxies_cell = int(len(pears_id[indices]))
-            print "Number of spectra to coadd in this grid cell --", num_galaxies_cell
+            print("Number of spectra to coadd in this grid cell --", num_galaxies_cell)
 
             if num_galaxies_cell == 0:
                 continue
@@ -212,8 +212,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # This function returns the median of the median values (in the given band) from all given spectra
             # All spectra to be coadded in a given grid cell need to be divided by this value
             medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
-            print "This cell has median value:", "{:.3e}".format(medval), " [erg s^-1 A^-1]"
-            print "as the normalization value and a maximum possible of", len(pears_id[indices]), "spectra."
+            print("This cell has median value:", "{:.3e}".format(medval), " [erg s^-1 A^-1]")
+            print("as the normalization value and a maximum possible of", len(pears_id[indices]), "spectra.")
 
             # Loop over all spectra in a grid cell and coadd them
             for u in range(len(pears_id[indices])):
@@ -317,7 +317,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             column = int((ms - mstar_low)/mstar_step)
             gal_per_cell[row,column] = gal_current_cell
 
-            print "Stacked", gal_current_cell, "spectra."
+            print("Stacked", gal_current_cell, "spectra.")
 
     # Also write the galaxy distribution per cell
     galdist_hdr = fits.Header()
@@ -329,13 +329,13 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     hdulist.writeto(stacking_analysis_dir + final_fits_filename, overwrite=True)
 
     # Time taken
-    print "Time taken for stacking --", "{:.2f}".format(time.time() - start), "seconds"
+    print("Time taken for stacking --", "{:.2f}".format(time.time() - start), "seconds")
     
-    print "Total galaxies stacked in all stacks for this redshift range:", added_gal
-    print "Total galaxies skipped in all stacks for this redshift range:", skipped_gal
-    print "\n", "Cellwise distribution of galaxies:"
-    print np.flipud(gal_per_cell)
-    print np.sum(gal_per_cell, axis=None)
+    print("Total galaxies stacked in all stacks for this redshift range:", added_gal)
+    print("Total galaxies skipped in all stacks for this redshift range:", skipped_gal)
+    print("\n", "Cellwise distribution of galaxies:")
+    print(np.flipud(gal_per_cell))
+    print(np.sum(gal_per_cell, axis=None))
 
     return None
     
@@ -418,7 +418,7 @@ def remove_axes_spines_ticks(ax):
 
 def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
-    print "Working on plotting stacks for redshift range:", z_low, "<= z <", z_high
+    print("Working on plotting stacks for redshift range:", z_low, "<= z <", z_high)
 
     # Assign arrays
     pears_id = cat['PearsID'][z_indices]
@@ -514,7 +514,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
             # Check that the cell isn't empty and then proceed
             if indices.size:
-                print "Number of spectra in this grid cell --", len(indices)
+                print("Number of spectra in this grid cell --", len(indices))
                 medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
             else:
                 # Delete axes spines and labels if skipping
@@ -523,8 +523,8 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
             # Do not plot any cells with less than 5 spectra
             if (len(indices) < 5):
-                print "At u-r color and M* (bottom left of cell):", i, j
-                print "Too few spectra in stack (i.e., less than 5). Continuing to the next grid cell..."
+                print("At u-r color and M* (bottom left of cell):", i, j)
+                print("Too few spectra in stack (i.e., less than 5). Continuing to the next grid cell...")
                 cellcount += 1
                 # The cellcount has to be increased here (and not in the case 
                 # of the continue statement right after this) is because
@@ -594,7 +594,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Add other info to plot
             numspec = int(stack_hdu[cellcount+2].header['NUMSPEC'])
             normval = float(stack_hdu[cellcount+2].header['NORMVAL'])
-            normval = mr.convert_to_sci_not(normval)  # Returns a properly formatted string
+            normval = convert_to_sci_not(normval)  # Returns a properly formatted string
 
             # add number of galaxies in plot
             ax.text(0.8, 0.2, numspec, verticalalignment='top', horizontalalignment='left', \
@@ -618,8 +618,8 @@ def main():
     # Start time
     start = time.time()
     dt = datetime.datetime
-    print "Coaddition started at --",
-    print dt.now()
+    print("Coaddition started at --")
+    print(dt.now())
     
     # ----------------------------------------- READ IN CATALOGS ----------------------------------------- #
     # Read in results for all of PEARS
@@ -666,7 +666,7 @@ def main():
         plot_stacks(cat, urcol, z_low, z_high, z_indices, start)
 
     # Total time taken
-    print "Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes."
+    print("Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes.")
 
     return None
 

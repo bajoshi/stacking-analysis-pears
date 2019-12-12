@@ -90,7 +90,7 @@ def get_threed_match_idx(current_ra, current_dec, threed_ra, threed_dec):
     within 0.3 arseconds then choose the closest one.
     """
     if len(threed_phot_idx) > 1:
-        print "Multiple matches found in photmetry catalog. Choosing the closest one."
+        print("Multiple matches found in photmetry catalog. Choosing the closest one.")
 
         ra_two = current_ra
         dec_two = current_dec
@@ -115,8 +115,8 @@ def get_threed_match_idx(current_ra, current_dec, threed_ra, threed_dec):
         # Because the code that generated the full pears sample
         # already matched with 3dhst and required a match to
         # be found to be included in the final full pears sample.
-        print "Match not found. This should not have happened. Exiting."
-        print "At ID and Field:", current_id, current_field
+        print( "Match not found. This should not have happened. Exiting.")
+        print("At ID and Field:", current_id, current_field)
         raise IndexError
         sys.exit(1)
 
@@ -253,7 +253,7 @@ def ur_ms_plots():
         mass_str = '8_logM_12'
     elif int(low_mass_lim) == 9:
         mass_str = '9_logM_12'
-    print "Galaxies from stellar mass cut:", len(ms_idx)
+    print("Galaxies from stellar mass cut:", len(ms_idx))
 
     # Now get indices based on redshift intervals
     # decided from the stellar_mass_diagnostic_plot.py
@@ -352,8 +352,8 @@ def ur_ms_plots():
     else:
         ur = np.load(stacking_analysis_dir + 'ur_arr_' + mass_str + '.npy')
 
-    print "Minimum and maximum in computed u-r color array:"
-    print "Min:", min(ur), "             ", "Max:", max(ur)
+    print("Minimum and maximum in computed u-r color array:")
+    print("Min:", min(ur), "             ", "Max:", max(ur))
 
     # Get z intervals and their indices
     z_interval1_idx = np.where((zp >= 0.0) & (zp < 0.4))[0]
@@ -362,12 +362,12 @@ def ur_ms_plots():
     z_interval4_idx = np.where((zp >= 1.0) & (zp < 2.0))[0]
     z_interval5_idx = np.where((zp >= 2.0) & (zp <= 6.0))[0]
 
-    print "Number of galaxies within each redshift interval."
-    print "0.0 <= z < 0.4", "    ", len(z_interval1_idx)
-    print "0.4 <= z < 0.7", "    ", len(z_interval2_idx)
-    print "0.7 <= z < 1.0", "    ", len(z_interval3_idx)
-    print "1.0 <= z < 2.0", "    ", len(z_interval4_idx)
-    print "2.0 <= z <= 6.0", "    ", len(z_interval5_idx)
+    print("Number of galaxies within each redshift interval.")
+    print("0.0 <= z < 0.4", "    ", len(z_interval1_idx))
+    print("0.4 <= z < 0.7", "    ", len(z_interval2_idx))
+    print("0.7 <= z < 1.0", "    ", len(z_interval3_idx))
+    print("1.0 <= z < 2.0", "    ", len(z_interval4_idx))
+    print("2.0 <= z <= 6.0", "    ", len(z_interval5_idx))
 
     # Now make the plots
     # Define figure
@@ -455,7 +455,7 @@ def uvj():
         mass_str = '8_logM_12'
     elif int(low_mass_lim) == 9:
         mass_str = '9_logM_12'
-    print "Galaxies from stellar mass cut:", len(ms_idx)
+    print("Galaxies from stellar mass cut:", len(ms_idx))
 
     # Now get indices based on redshift intervals
     # decided from the stellar_mass_diagnostic_plot.py
@@ -599,12 +599,12 @@ def uvj():
     z_interval4_idx = np.where((zp >= 1.0) & (zp < 2.0))[0]
     z_interval5_idx = np.where((zp >= 2.0) & (zp <= 6.0))[0]
 
-    print "Number of galaxies within each redshift interval."
-    print "0.0 <= z < 0.4", "    ", len(z_interval1_idx)
-    print "0.4 <= z < 0.7", "    ", len(z_interval2_idx)
-    print "0.7 <= z < 1.0", "    ", len(z_interval3_idx)
-    print "1.0 <= z < 2.0", "    ", len(z_interval4_idx)
-    print "2.0 <= z <= 6.0", "    ", len(z_interval5_idx)
+    print("Number of galaxies within each redshift interval.")
+    print("0.0 <= z < 0.4", "    ", len(z_interval1_idx))
+    print("0.4 <= z < 0.7", "    ", len(z_interval2_idx))
+    print("0.7 <= z < 1.0", "    ", len(z_interval3_idx))
+    print("1.0 <= z < 2.0", "    ", len(z_interval4_idx))
+    print("2.0 <= z <= 6.0", "    ", len(z_interval5_idx))
 
     # Now make the plots
     # Define figure
@@ -766,7 +766,7 @@ def ssfr_ms_plots():
         mass_str = '8_logM_12'
     elif int(low_mass_lim) == 9:
         mass_str = '9_logM_12'
-    print "Galaxies from stellar mass cut:", len(ms_idx)
+    print("Galaxies from stellar mass cut:", len(ms_idx))
 
     # Now get indices based on redshift intervals
     # decided from the stellar_mass_diagnostic_plot.py
@@ -782,7 +782,7 @@ def ssfr_ms_plots():
     #sfr_zero_idx = np.where(sfr == 0.0)[0]
     #sfr[sfr_zero_idx] = 0.1
 
-    print sfr[:1000]
+    print(sfr[:1000])
     sys.exit(0)
 
 
@@ -797,12 +797,12 @@ def ssfr_ms_plots():
     z_interval4_idx = np.where((zp >= 1.0) & (zp < 2.0))[0]
     z_interval5_idx = np.where((zp >= 2.0) & (zp <= 6.0))[0]
 
-    print "Number of galaxies within each redshift interval."
-    print "0.0 <= z < 0.4", "    ", len(z_interval1_idx)
-    print "0.4 <= z < 0.7", "    ", len(z_interval2_idx)
-    print "0.7 <= z < 1.0", "    ", len(z_interval3_idx)
-    print "1.0 <= z < 2.0", "    ", len(z_interval4_idx)
-    print "2.0 <= z <= 6.0", "    ", len(z_interval5_idx)
+    print("Number of galaxies within each redshift interval.")
+    print("0.0 <= z < 0.4", "    ", len(z_interval1_idx))
+    print("0.4 <= z < 0.7", "    ", len(z_interval2_idx))
+    print("0.7 <= z < 1.0", "    ", len(z_interval3_idx))
+    print("1.0 <= z < 2.0", "    ", len(z_interval4_idx))
+    print("2.0 <= z <= 6.0", "    ", len(z_interval5_idx))
 
     # Now make the plots
     # Define figure
@@ -838,7 +838,7 @@ def ssfr_ms_plots():
 def main():
 
     #check_salp_chab_z()
-    #ur_ms_plots()
+    ur_ms_plots()
     #uvj()
     #generate_all_ur_color()
 
