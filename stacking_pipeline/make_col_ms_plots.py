@@ -842,7 +842,7 @@ def main():
     #uvj()
     #generate_all_ur_color()
 
-    ssfr_ms_plots()
+    #ssfr_ms_plots()
     
     return None
 
