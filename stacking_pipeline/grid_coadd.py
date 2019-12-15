@@ -485,12 +485,12 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Add the label for the avgmass and avgcolor
             # This appears before gettting indices so that these labels arent skipped
             if row == 0:
-                ax.text(0.25, 1.1, "{:.2f}".format(float(avgmassarr[column - nummass - 1])), \
+                ax.text(0.25, 1.2, "{:.2f}".format(float(avgmassarr[column - nummass - 1])), \
                 verticalalignment='top', horizontalalignment='left', \
                 transform=ax.transAxes, color='k', size=14)
 
             if column == (2 * nummass):
-                ax.text(0.85, 0.65, "{:.2f}".format(float(avgcolarr_to_print[row])), \
+                ax.text(0.93, 0.65, "{:.2f}".format(float(avgcolarr_to_print[row])), \
                 verticalalignment='top', horizontalalignment='left', \
                 transform=ax.transAxes, color='k', size=14, rotation=270)
 
