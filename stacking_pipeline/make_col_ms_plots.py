@@ -838,9 +838,9 @@ def ssfr_ms_plots():
 def main():
 
     #check_salp_chab_z()
-    ur_ms_plots()
+    #ur_ms_plots()
     #uvj()
-    #generate_all_ur_color()
+    generate_all_ur_color()
 
     #ssfr_ms_plots()
     

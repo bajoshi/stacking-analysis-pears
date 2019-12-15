@@ -24,7 +24,6 @@ sys.path.append(massive_galaxies_dir + 'cluster_codes/')
 sys.path.append(stacking_analysis_dir + 'stacking_pipeline/')
 import cluster_do_fitting as cf
 import make_col_ms_plots
-from mocksim_results import convert_to_sci_not
 
 # Define grid params
 # Outside of any functions to make sure these are the same everywhere
@@ -486,7 +485,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Add the label for the avgmass and avgcolor
             # This appears before gettting indices so that these labels arent skipped
             if row == 0:
-                ax.text(0.25, 1.03, "{:.2f}".format(float(avgmassarr[column - nummass - 1])), \
+                ax.text(0.25, 1.1, "{:.2f}".format(float(avgmassarr[column - nummass - 1])), \
                 verticalalignment='top', horizontalalignment='left', \
                 transform=ax.transAxes, color='k', size=14)
 
@@ -594,7 +593,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Add other info to plot
             numspec = int(stack_hdu[cellcount+2].header['NUMSPEC'])
             normval = float(stack_hdu[cellcount+2].header['NORMVAL'])
-            normval = convert_to_sci_not(normval)  # Returns a properly formatted string
+            normval = cf.convert_to_sci_not(normval)  # Returns a properly formatted string
 
             # add number of galaxies in plot
             ax.text(0.8, 0.2, numspec, verticalalignment='top', horizontalalignment='left', \
