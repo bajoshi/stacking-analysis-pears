@@ -7,9 +7,6 @@ import sys
 
 import matplotlib.pyplot as plt
 
-from matplotlib import rc
-rc("text", usetex=False)
-
 home = os.getenv('HOME')
 figs_dir = home + '/Desktop/FIGS/'
 
@@ -57,21 +54,22 @@ def main():
     fig = plt.figure(figsize=(8,6))
     ax = fig.add_subplot(111)
 
-    #ax.set_xlabel(r'$\mathrm{Redshift}$')
-    #ax.set_ylabel(r'$\mathrm{log(M_s/M_\odot)}$')
+    ax.set_xlabel(r'$\mathrm{Redshift}$', fontsize=14)
+    ax.set_ylabel(r'$\mathrm{log(M_s/M_\odot)}$', fontsize=14)
 
-    ax.set_xlabel('Redshift', fontsize=14)
-    ax.set_ylabel('log(Ms/Msolar)', fontsize=14)
-
-    ax.scatter(threed_z, threed_lmass, color='k', s=1.0, linewidth=0.5, edgecolor='k')
-    ax.scatter(zp, ms, color='green', s=5.0, linewidth=1.0, facecolors='None')
+    ax.scatter(threed_z, threed_lmass, color='k', s=1.0, linewidth=0.5, edgecolor='k', label='3D-HST')
+    ax.scatter(zp, ms, color='green', s=5.0, linewidth=1.0, facecolors='None', label='PEARS')
 
     ax.set_xlim(-0.2, 6.0)
     ax.set_ylim(-0.2, 12.0)
 
     ax.axhline(y=9.0, ls='--', color='red', lw=2.0)
     ax.axvline(x=3.0, ls='--', color='red', lw=2.0)
-    #ax.axvline(x=0.5, ls='--', color='red', lw=2.0)
+    ax.axvline(x=0.5, ls='--', color='red', lw=2.0)
+
+    ax.legend(loc=4, frameon=True, fontsize=14, markerscale=2.0, fancybox=True)
+
+    ax.minorticks_on()
 
     fig.savefig(stacking_figures_dir + 'stellar_mass_completeness.pdf', dpi=150, bbox_inches='tight')
     #plt.show()
