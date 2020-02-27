@@ -50,6 +50,13 @@ def main():
     # ------------------------------- Read in 3D-HST results ------------------------------- #
     threed_lmass, threed_z = get_threed_ms_z()
 
+    # ------------------------------- Find out how many galaxies are within 0.5 <= z <= 3.0 ------------------------------- #
+    zp_idx = np.where((zp >= 0.5) & (zp <= 3.0))[0]
+    # Now you need all galaxies within this redshift range
+    # that are also above 10^9 solar masses.
+    ms_idx = np.where(ms[zp_idx] >= 9.0)[0]
+    print("\n"+"Number of galaxies equal to or above 10^9 solar masses and within 0.5 <= z <= 3.0:", len(ms_idx))
+
     # ------------------------------- Plot ------------------------------- #
     fig = plt.figure(figsize=(8,6))
     ax = fig.add_subplot(111)
@@ -61,7 +68,7 @@ def main():
     ax.scatter(zp, ms, color='green', s=5.0, linewidth=1.0, facecolors='None', label='PEARS')
 
     ax.set_xlim(-0.2, 6.0)
-    ax.set_ylim(-0.2, 12.0)
+    ax.set_ylim(4.0, 12.0) 
 
     ax.axhline(y=9.0, ls='--', color='red', lw=2.0)
     ax.axvline(x=3.0, ls='--', color='red', lw=2.0)
