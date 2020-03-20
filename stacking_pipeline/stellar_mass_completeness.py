@@ -92,12 +92,13 @@ def main():
     threed_idx = np.where((threed_lmass >= 9.0) & (threed_z >= 0.5) & (threed_z <= 3.0))[0]
     print(threed_idx)
 
-    gen_hist(ms[pears_idx], 'green', 'PEARS_mstar_hist')
-    gen_hist(threed_lmass[threed_idx], 'k', '3D_mstar_hist')
+    #gen_hist(ms[pears_idx], 'green', 'PEARS_mstar_hist')
+    #gen_hist(threed_lmass[threed_idx], 'k', '3D_mstar_hist')
+    gen_hist(ms[pears_idx], threed_lmass[threed_idx], 'green', 'k', )
 
     return None
 
-def gen_hist(arr, c, t):
+def gen_hist(arr1, arr2, c1, c2):
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -105,11 +106,12 @@ def gen_hist(arr, c, t):
     ax.set_xlabel(r'$\mathrm{log(M_s/M_\odot)}$', fontsize=14)
     ax.set_ylabel(r'$\mathrm{\#\ objects}$', fontsize=14)
 
-    ax.hist(arr, 21, histtype='step', color=c, range=(9.0, 12.0), linewidth=2.0, density=True)
+    ax.hist(arr1, 21, histtype='step', color=c1, range=(9.0, 12.0), linewidth=2.0, density=True)
+    ax.hist(arr2, 21, histtype='step', color=c2, range=(9.0, 12.0), linewidth=2.0, density=True)
 
     ax.minorticks_on()
 
-    fig.savefig(stacking_figures_dir + t + '.pdf', dpi=150, bbox_inches='tight')
+    fig.savefig(stacking_figures_dir + 'mstar_hist.pdf', dpi=150, bbox_inches='tight')
 
     return None
 
