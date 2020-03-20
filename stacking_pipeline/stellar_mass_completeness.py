@@ -93,7 +93,7 @@ def main():
     print(threed_idx)
 
     gen_hist(ms[pears_idx], 'green', 'PEARS_mstar_hist')
-    gen_hist(threed_lmass[pears_idx], 'k', '3D_mstar_hist')
+    gen_hist(threed_lmass[threed_idx], 'k', '3D_mstar_hist')
 
     return None
 
