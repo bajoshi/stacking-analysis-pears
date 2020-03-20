@@ -105,7 +105,9 @@ def gen_hist(arr, c, t):
     ax.set_xlabel(r'$\mathrm{log(M_s/M_\odot)}$', fontsize=14)
     ax.set_ylabel(r'$\mathrm{\#\ objects}$', fontsize=14)
 
-    ax.hist(arr, 21, histtype='step', color=c, range=(9.0, 12.0))
+    ax.hist(arr, 21, histtype='step', color=c, range=(9.0, 12.0), linewidth=3.0)
+
+    ax.minorticks_on()
 
     fig.savefig(stacking_figures_dir + t + '.pdf', dpi=150, bbox_inches='tight')
 
