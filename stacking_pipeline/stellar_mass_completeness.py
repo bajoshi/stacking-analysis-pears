@@ -105,7 +105,7 @@ def gen_hist(arr, c, t):
     ax.set_xlabel(r'$\mathrm{log(M_s/M_\odot)}$', fontsize=14)
     ax.set_ylabel(r'$\mathrm{\#\ objects}$', fontsize=14)
 
-    ax.hist(arr, 18, histtype='step', color=c)
+    ax.hist(arr, 21, histtype='step', color=c, range=(9.0, 12.0))
 
     fig.savefig(stacking_figures_dir + t + '.pdf', dpi=150, bbox_inches='tight')
 
