@@ -81,6 +81,34 @@ def main():
     fig.savefig(stacking_figures_dir + 'stellar_mass_completeness.pdf', dpi=150, bbox_inches='tight')
     #plt.show()
 
+    plt.clf()
+    plt.cla()
+    plt.close()
+
+    # Also save histograms for the two dist within the red bounding box
+    pears_idx = np.where((ms >= 9.0) & (zp >= 0.5) & (zp <= 3.0))[0]
+    print(pears_idx)
+
+    threed_idx = np.where((threed_lmass >= 9.0) & (threed_z >= 0.5) & (threed_z <= 3.0))[0]
+    print(threed_idx)
+
+    gen_hist(ms[pears_idx], 'green', 'PEARS_mstar_hist')
+    gen_hist(threed_lmass[pears_idx], 'k', '3D_mstar_hist')
+
+    return None
+
+def gen_hist(arr, c, t):
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xlabel(r'$\mathrm{log(M_s/M_\odot)}$', fontsize=14)
+    ax.set_ylabel(r'$\mathrm{\#\ objects}$', fontsize=14)
+
+    ax.hist(arr, 18, histtype='step', color=c)
+
+    fig.savefig(stacking_figures_dir + t + '.pdf', dpi=150, bbox_inches='tight')
+
     return None
 
 if __name__ == '__main__':
