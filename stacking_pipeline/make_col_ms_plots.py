@@ -3,7 +3,6 @@ from __future__ import division
 import numpy as np
 from scipy.interpolate import griddata
 from scipy.integrate import simps
-import pysynphot
 from scipy import stats
 
 import os
