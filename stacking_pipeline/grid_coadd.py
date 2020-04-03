@@ -154,9 +154,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
     lam_grid_low = 2400
-    lam_grid_high = 7200
+    lam_grid_high = 8000
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
+    print(lam_grid)
+    sys.exit(0)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range    

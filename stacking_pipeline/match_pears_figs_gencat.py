@@ -164,7 +164,10 @@ def main():
 
                 # Append stuff to the file handle for the file sample
                 # This appends all matches regardless of whether they pass the mass or redshift cuts
-                fh.write(str(pearscat[i]) + "  ")
+                cat_str = str(pearscat[i])
+                cat_str = cat_str.lstrip('(')
+                cat_str = cat_str.rstrip(')')
+                fh.write(cat_str + "  ")
                 fh.write(str(gn1id) + "  ")
                 fh.write("GN1" + "  ")
                 fh.write("{:.7f}".format(gn1_ra) + "  ")
@@ -187,7 +190,10 @@ def main():
 
                 # Append stuff to the file handle for the file sample
                 # This appends all matches regardless of whether they pass the mass or redshift cuts
-                fh.write(str(pearscat[i]) + "  ")
+                cat_str = str(pearscat[i])
+                cat_str = cat_str.lstrip('(')
+                cat_str = cat_str.rstrip(')')
+                fh.write(cat_str + "  ")
                 fh.write(str(gn2id) + "  ")
                 fh.write("GN2" + "  ")
                 fh.write("{:.7f}".format(gn2_ra) + "  ")
@@ -224,7 +230,10 @@ def main():
 
                 # Append stuff to the file handle for the file sample
                 # This appends all matches regardless of whether they pass the mass or redshift cuts
-                fh.write(str(pearscat[i]) + "  ")
+                cat_str = str(pearscat[i])
+                cat_str = cat_str.lstrip('(')
+                cat_str = cat_str.rstrip(')')
+                fh.write(cat_str + "  ")
                 fh.write(str(gs1id) + "  ")
                 fh.write("GS1" + "  ")
                 fh.write("{:.7f}".format(gs1_ra) + "  ")
@@ -247,7 +256,10 @@ def main():
 
                 # Append stuff to the file handle for the file sample
                 # This appends all matches regardless of whether they pass the mass or redshift cuts
-                fh.write(str(pearscat[i]) + "  ")
+                cat_str = str(pearscat[i])
+                cat_str = cat_str.lstrip('(')
+                cat_str = cat_str.rstrip(')')
+                fh.write(cat_str + "  ")
                 fh.write(str(gs2id) + "  ")
                 fh.write("GS2" + "  ")
                 fh.write("{:.7f}".format(gs2_ra) + "  ")
