@@ -12,12 +12,13 @@ figs_dir = home + '/Desktop/FIGS/'
 
 stacking_analysis_dir = figs_dir + 'stacking-analysis-pears/'
 stacking_figures_dir = figs_dir + 'stacking-analysis-figures/'
+threedhst_datadir = home + '/Desktop/3dhst_data/'
 
 # Get correct directory for 3D-HST data
-if 'firstlight' in os.uname()[1]:
-    threedhst_datadir = '/Users/baj/Desktop/3dhst_data/'
-else:
-    threedhst_datadir = '/Volumes/Bhavins_backup/3dhst_data/'
+#if 'firstlight' in os.uname()[1]:
+#    threedhst_datadir = '/Users/baj/Desktop/3dhst_data/'
+#else:
+#    threedhst_datadir = '/Volumes/Bhavins_backup/3dhst_data/'
 
 def get_threed_ms_z():
 
@@ -42,7 +43,7 @@ def get_threed_ms_z():
 def main():
 
     # ------------------------------- Read in PEARS results ------------------------------- #
-    cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True)
+    cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True, encoding=None)
 
     ms = np.log10(cat['zp_ms'])
     zp = cat['zp_minchi2']
