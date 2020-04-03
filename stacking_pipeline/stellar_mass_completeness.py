@@ -14,12 +14,6 @@ stacking_analysis_dir = figs_dir + 'stacking-analysis-pears/'
 stacking_figures_dir = figs_dir + 'stacking-analysis-figures/'
 threedhst_datadir = home + '/Desktop/3dhst_data/'
 
-# Get correct directory for 3D-HST data
-#if 'firstlight' in os.uname()[1]:
-#    threedhst_datadir = '/Users/baj/Desktop/3dhst_data/'
-#else:
-#    threedhst_datadir = '/Volumes/Bhavins_backup/3dhst_data/'
-
 def get_threed_ms_z():
 
     # ------------------------------- Read in stellar mass catalogs ------------------------------- #
@@ -52,11 +46,11 @@ def main():
     threed_lmass, threed_z = get_threed_ms_z()
 
     # ------------------------------- Find out how many galaxies are within 0.5 <= z <= 3.0 ------------------------------- #
-    zp_idx = np.where((zp >= 0.5) & (zp <= 3.0))[0]
+    zp_idx = np.where((zp >= 0.5) & (zp <= 2.5))[0]
     # Now you need all galaxies within this redshift range
     # that are also above 10^9 solar masses.
-    ms_idx = np.where(ms[zp_idx] >= 9.0)[0]
-    print("\n"+"Number of galaxies equal to or above 10^9 solar masses and within 0.5 <= z <= 3.0:", len(ms_idx))
+    ms_idx = np.where(ms[zp_idx] >= 9.5)[0]
+    print("\n"+"Number of galaxies equal to or above 10^9.5 solar masses and within 0.5 <= z <= 2.5:", len(ms_idx))
 
     # ------------------------------- Plot ------------------------------- #
     fig = plt.figure(figsize=(8,6))
