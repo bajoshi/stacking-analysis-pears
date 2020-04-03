@@ -239,6 +239,37 @@ def generate_all_ur_color():
 
     return None
 
+def get_ur_color(spec_llam, model_lam_grid):
+    """
+    Will compute the u-r color of a model spectrum.
+    Expects a spectrum in L_lambda units along with
+    wavelength in angstroms.
+    """
+
+    # ------------------------------- Get required filter curves ------------------------------- # 
+    uvj_filt_dir = stacking_analysis_dir + 'filter_curves/'
+
+    # Wavelenght is in angstroms
+    # Throughput is an absolute fraction
+    u = np.genfromtxt(uvj_filt_dir + 'bessel_u.dat', dtype=None, names=['wav', 'filter_trans'])
+    r = np.genfromtxt(uvj_filt_dir + 'bessel_r.dat', dtype=None, names=['wav', 'filter_trans'])
+
+    # The Bessel filters are given in angstroms and fractions
+    u_filt_wav = u['wav']
+    u_filt_thru = u['filter_trans']
+
+    r_filt_wav = r['wav']
+    r_filt_thru = r['filter_trans']
+
+    # Now get the u and r magnitudes
+    ufnu = compute_fnu(spec_llam, model_lam_grid, u_filt_wav, u_filt_thru)
+    rfnu = compute_fnu(spec_llam, model_lam_grid, r_filt_wav, r_filt_thru)
+    umag = -2.5 * np.log10(ufnu) - 48.60
+    rmag = -2.5 * np.log10(rfnu) - 48.60
+    ur = umag - rmag
+
+    return ur
+
 def ur_ms_plots():
 
     # Read in results for all of PEARS
