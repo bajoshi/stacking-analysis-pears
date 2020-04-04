@@ -167,6 +167,8 @@ def main():
                 cat_str = str(pearscat[i])
                 cat_str = cat_str.lstrip('(')
                 cat_str = cat_str.rstrip(')')
+                cat_str = cat_str.replace(',', ' ')
+                cat_str = cat_str.replace('\'', '')
                 fh.write(cat_str + "  ")
                 fh.write(str(gn1id) + "  ")
                 fh.write("GN1" + "  ")
@@ -193,6 +195,8 @@ def main():
                 cat_str = str(pearscat[i])
                 cat_str = cat_str.lstrip('(')
                 cat_str = cat_str.rstrip(')')
+                cat_str = cat_str.replace(',', ' ')
+                cat_str = cat_str.replace('\'', '')
                 fh.write(cat_str + "  ")
                 fh.write(str(gn2id) + "  ")
                 fh.write("GN2" + "  ")
@@ -233,6 +237,8 @@ def main():
                 cat_str = str(pearscat[i])
                 cat_str = cat_str.lstrip('(')
                 cat_str = cat_str.rstrip(')')
+                cat_str = cat_str.replace(',', ' ')
+                cat_str = cat_str.replace('\'', '')
                 fh.write(cat_str + "  ")
                 fh.write(str(gs1id) + "  ")
                 fh.write("GS1" + "  ")
@@ -259,6 +265,8 @@ def main():
                 cat_str = str(pearscat[i])
                 cat_str = cat_str.lstrip('(')
                 cat_str = cat_str.rstrip(')')
+                cat_str = cat_str.replace(',', ' ')
+                cat_str = cat_str.replace('\'', '')
                 fh.write(cat_str + "  ")
                 fh.write(str(gs2id) + "  ")
                 fh.write("GS2" + "  ")
@@ -284,7 +292,60 @@ def main():
 
     return None
 
+def save_correct_figs_id_radec():
+
+    all_fields = ['GN1', 'GN2', 'GS1', 'GS2']
+
+    for field in all_fields:
+
+        # Read in the correct html file as text
+        if field == 'GN1':
+            figs_html = open(figs_dir + 'figs_GN1_2.003_radec.html', 'r')
+        elif field == 'GN2':
+            figs_html = open(figs_dir + 'figs_GN2_2.003_radec.html', 'r')
+        elif field == 'GS1':
+            figs_html = open(figs_dir + 'figs_GS1_2.003_radec.html', 'r')
+        elif field == 'GS2':
+            figs_html = open(figs_dir + 'figs_GS2_2.003_radec.html', 'r')
+
+        linecount = 0
+        figs_id = []
+        figs_ra = []
+        figs_dec = []
+        for line in figs_html.readlines():
+            if linecount > 9:
+                print(line)
+                linesplit = line.split('#link')
+
+                id1 = int(linesplit[1].split('">')[0])
+                id2 = int(linesplit[2].split('">')[0])
+
+                radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
+                radec_str2 = linesplit[2].split('">')[1].split("</A>")[0]
+
+                ra1 = radec_str1.split(' ')[0]
+                dec1 = radec_str1.split(' ')[1]
+                ra2 = radec_str2.split(' ')[0]
+                dec2 = radec_str2.split(' ')[1]
+
+                figs_id.append(id1)
+                figs_id.append(id2)
+                figs_ra.append(ra1)
+                figs_ra.append(ra2)
+                figs_dec.append(dec1)
+                figs_dec.append(dec2)
+
+                print("ID, RA, DEC:", id1, ra1, dec1)
+                print("ID, RA, DEC:", id2, ra2, dec2)
+
+                sys.exit(0)
+
+            linecount += 1
+
+    return None
+
 if __name__ == '__main__':
-    main()
+    #main()
+    save_correct_figs_id_radec()
     sys.exit(0)
 

@@ -14,9 +14,10 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
-stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
-stacking_figures_dir = home + "/Desktop/FIGS/stacking-analysis-figures/"
-massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
+figs_dir = home + "/Desktop/FIGS/"
+stacking_analysis_dir = figs_dir + "stacking-analysis-pears/"
+stacking_figures_dir = figs_dir + "stacking-analysis-figures/"
+massive_galaxies_dir = figs_dir + "massive-galaxies/"
 pears_data_path = home + "/Documents/PEARS/data_spectra_only/"
 
 sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
@@ -72,7 +73,36 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
 
     return old_llam, old_llamerr, num_points, num_galaxies
 
-def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
+def get_figs_data(figs_id, field):
+
+    # First read in the correct spectrum file
+    if field == 'GN1':
+        figs_spec = fits.open(figs_dir + 'GN1_G102_2.combSPC.fits')
+    elif field == 'GN2':
+        figs_spec = fits.open(figs_dir + 'GN2_G102_2.combSPC.fits')
+    elif field == 'GS1':
+        figs_spec = fits.open(figs_dir + 'GS1_G102_2.combSPC.fits')
+    elif field == 'GS2':
+        figs_spec = fits.open(figs_dir + 'GS2_G102_2.combSPC.fits')
+
+    # Now get the spectrum and return
+    extname = 'BEAM_' + str(figs_id) + 'A'
+    try:
+        print(figs_spec[extname].header)
+        lam_obs = figs_spec[extname].data["LAMBDA"] # Wavelength 
+        flam_obs = figs_spec[extname].data["FLUX"]   # Flux (erg/s/cm^2/A)
+        ferr_obs = figs_spec[extname].data["FERROR"]# Flux error (erg/s/cm^2/A)
+        contam = figs_spec[extname].data["CONTAM"] # Flux contamination (erg/s/cm^2/A)
+
+        return_code = 1
+
+    except KeyError:
+        return_code = 0
+        return None, None, None, return_code
+
+    return lam_obs, flam_obs, ferr_obs, return_code
+
+def rescale(pears_id_arr_cell, pears_field_arr_cell, z_arr_cell, dl_tbl):
     """
     This function will provide teh median of all median
     f_lambda values (see below) at approx 4500 A. This 
@@ -83,20 +113,21 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
     # Define empty array to store the median 
     # value of f_lambda between 4400 to 4600 A
     # for each observed spectrum
-    medarr = np.zeros(len(id_arr_cell))
+    medarr = np.zeros(len(pears_id_arr_cell))
 
     # Define redshift array used in lookup table
     z_arr = np.arange(0.005, 6.005, 0.005)
     
-    for k in range(len(id_arr_cell)):
+    for k in range(len(pears_id_arr_cell)):
 
         # Get current ID and Field
-        current_id = id_arr_cell[k]
-        current_field = field_arr_cell[k]
-        
+        current_pears_id = pears_id_arr_cell[k]
+        current_pears_field = pears_field_arr_cell[k]
+
         # Get observed data and deredshift the spectrum
+        # PEARS data 
         grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code = \
-        cf.get_data(current_id, current_field)
+        cf.get_data(current_pears_id, current_pears_field)
 
         # If the return code was 0, then exit,
         # i.e., the observed spectrum is unuseable.
@@ -137,6 +168,9 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     pears_field = cat['Field'][z_indices]
     zp = cat['zp_minchi2'][z_indices]
 
+    figs_id = cat['figs_id'][z_indices]
+    figs_field = cat['figs_field'][z_indices]
+
     ur_color = urcol[z_indices]
     stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below expects log(stellar mass)
 
@@ -157,8 +191,6 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     lam_grid_high = 8000
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
-    print(lam_grid)
-    sys.exit(0)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range    
@@ -231,12 +263,25 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # Get redshift from catalog
                 current_redshift = zp[indices][u]
 
-                current_id = pears_id[indices][u]
-                current_field = pears_field[indices][u]
-                
+                current_pears_id = pears_id[indices][u]
+                current_pears_field = pears_field[indices][u]
+
+                current_figs_id = figs_id[indices][u]
+                current_figs_field = figs_field[indices][u]
+
                 # ----------------------------- Get data ----------------------------- #
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
-                = cf.get_data(current_id, current_field)
+                = cf.get_data(current_pears_id, current_pears_field)
+
+                # FIGS data
+                print(current_figs_id, current_figs_field)
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs, figs_return_code \
+                = get_figs_data(current_figs_id, current_figs_field)
+
+                if not figs_return_code:
+                    continue
+
+                sys.exit(0)
 
                 # Deredshift the observed data 
                 zidx = np.argmin(abs(z_arr - current_redshift))
@@ -244,9 +289,23 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # used to generate the dl lookup table.
                 dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
 
-                lam_em = grism_lam_obs / (1 + current_redshift)
-                llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-                lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                pears_lam_em = grism_lam_obs / (1 + current_redshift)
+                pears_llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                pears_lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+
+                figs_lam_em = g102_lam_obs / (1 + current_redshift)
+                figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+
+                # Concatenate PEARS and FIGS spectra
+                lam_em = np.concatenate((pears_lam_em, figs_lam_em))
+                llam_em = np.concatenate((pears_llam_em, figs_llam_em))
+                lerr = np.concatenate((pears_lerr, figs_lerr))
+
+                print(lam_em)
+                print(llam_em)
+
+                sys.exit(0)
 
                 # Match with photometry catalog and get photometry data
                 
@@ -629,7 +688,7 @@ def main():
     #urcol = np.load(stacking_analysis_dir + 'ur_arr_all.npy')
 
     cat = np.genfromtxt(stacking_analysis_dir + 'pears_figs_combined_final_sample.txt', dtype=None, names=True, encoding='ascii')
-    urcol = cat['ur_color']
+    urcol = cat['ur_col']
 
     """
     # ------------------------------- Read in photometry and grism+photometry catalogs ------------------------------- #
