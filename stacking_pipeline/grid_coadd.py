@@ -73,6 +73,50 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
 
     return old_llam, old_llamerr, num_points, num_galaxies
 
+def add_spec2(pears_lam_em, pears_llam_em, pears_lerr, figs_lam_em, figs_llam_em, figs_lerr, 
+    pears_old_llam, pears_old_llamerr, figs_old_llam, figs_old_llamerr, 
+    pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+
+    for i in range(len(lam_grid)):
+        
+        # add fluxes
+        new_ind_pears = np.where((pears_lam_em >= lam_grid[i] - lam_step/2) & (pears_lam_em < lam_grid[i] + lam_step/2))[0]
+        new_ind_figs  = np.where((figs_lam_em >= lam_grid[i] - lam_step/2)  & (figs_lam_em < lam_grid[i] + lam_step/2))[0]
+
+        # Do the coadding for PEARS
+        if new_ind_pears.size:
+
+            # Only count a galaxy in a particular bin if for that bin at least one point is nonzero
+            if np.any(pears_llam_em[new_ind_pears] != 0):
+                pears_num_galaxies[i] += 1
+
+            # Reject points with excess contamination
+            # Rejecting points that are more than 33% contaminated
+            # Reject points that have negative signal
+            # Looping over every point in a delta lambda bin
+            for j in range(len(new_ind_pears)):
+                sig = pears_llam_em[new_ind_pears][j]
+                noise = pears_lerr[new_ind_pears][j]
+                
+                if sig > 0: # only append those points where the signal is positive
+                    if noise/sig < 0.33: # only append those points that are less than 20% contaminated
+                        pears_old_llam[i].append(sig)
+                        pears_old_llamerr[i].append(noise**2) # adding errors in quadrature
+                        pears_num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
+                else:
+                    continue
+
+        # Do the coadding for FIGS
+        if new_ind_figs.size:
+
+            # Only count a galaxy in a particular bin if for that bin at least one point is nonzero
+            if np.any(figs_llam_em[new_ind] != 0):
+                figs_num_galaxies[i] += 1
+
+
+    return pears_old_llam, pears_old_llamerr, figs_old_llam, figs_old_llamerr, 
+    pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies
+
 def get_figs_data(figs_id, field):
 
     # First read in the correct spectrum file
@@ -87,20 +131,13 @@ def get_figs_data(figs_id, field):
 
     # Now get the spectrum and return
     extname = 'BEAM_' + str(figs_id) + 'A'
-    try:
-        print(figs_spec[extname].header)
-        lam_obs = figs_spec[extname].data["LAMBDA"] # Wavelength 
-        flam_obs = figs_spec[extname].data["FLUX"]   # Flux (erg/s/cm^2/A)
-        ferr_obs = figs_spec[extname].data["FERROR"]# Flux error (erg/s/cm^2/A)
-        contam = figs_spec[extname].data["CONTAM"] # Flux contamination (erg/s/cm^2/A)
 
-        return_code = 1
+    lam_obs = figs_spec[extname].data["LAMBDA"] # Wavelength 
+    flam_obs = figs_spec[extname].data["AVG_WFLUX"]  # Flux (erg/s/cm^2/A)
+    ferr_obs = figs_spec[extname].data["STD_WFLUX"]  # Flux error (erg/s/cm^2/A)
+    #contam = figs_spec[extname].data["CONTAM"] # Flux contamination (erg/s/cm^2/A)
 
-    except KeyError:
-        return_code = 0
-        return None, None, None, return_code
-
-    return lam_obs, flam_obs, ferr_obs, return_code
+    return lam_obs, flam_obs, ferr_obs
 
 def rescale(pears_id_arr_cell, pears_field_arr_cell, z_arr_cell, dl_tbl):
     """
@@ -188,7 +225,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
     lam_grid_low = 2400
-    lam_grid_high = 8000
+    lam_grid_high = 9200
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
@@ -233,13 +270,21 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 continue
             
             # Define empty arrays and lists for saving stacks
-            old_llam = np.zeros(len(lam_grid))
-            old_llamerr = np.zeros(len(lam_grid))
-            num_points = np.zeros(len(lam_grid))
-            num_galaxies = np.zeros(len(lam_grid))
-            
-            old_llam = old_llam.tolist()
-            old_llamerr = old_llamerr.tolist()
+            pears_old_llam = np.zeros(len(lam_grid))
+            pears_old_llamerr = np.zeros(len(lam_grid))
+            pears_old_llam = pears_old_llam.tolist()
+            pears_old_llamerr = pears_old_llamerr.tolist()
+
+            figs_old_llam = np.zeros(len(lam_grid))
+            figs_old_llamerr = np.zeros(len(lam_grid))
+            figs_old_llam = figs_old_llam.tolist()
+            figs_old_llamerr = figs_old_llamerr.tolist()
+
+            pears_num_points = np.zeros(len(lam_grid))
+            pears_num_galaxies = np.zeros(len(lam_grid))
+
+            figs_num_points = np.zeros(len(lam_grid))
+            figs_num_galaxies = np.zeros(len(lam_grid))
 
             # rescale to 200A band centered on a wavelength of 4500A # 4400A-4600A
             # This function returns the median of the median values (in the given band) from all given spectra
@@ -257,9 +302,12 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # This is done so that function add_spec() can now append to every element
                 if u == 0:
                     for x in range(len(lam_grid)):
-                        old_llam[x] = []
-                        old_llamerr[x] = []
+                        pears_old_llam[x] = []
+                        pears_old_llamerr[x] = []
             
+                        figs_old_llam[x] = []
+                        figs_old_llamerr[x] = []
+
                 # Get redshift from catalog
                 current_redshift = zp[indices][u]
 
@@ -275,13 +323,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
                 # FIGS data
                 print(current_figs_id, current_figs_field)
-                g102_lam_obs, g102_flam_obs, g102_ferr_obs, figs_return_code \
-                = get_figs_data(current_figs_id, current_figs_field)
-
-                if not figs_return_code:
-                    continue
-
-                sys.exit(0)
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs = get_figs_data(current_figs_id, current_figs_field)
 
                 # Deredshift the observed data 
                 zidx = np.argmin(abs(z_arr - current_redshift))
@@ -297,29 +339,30 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
                 figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
 
-                # Concatenate PEARS and FIGS spectra
-                lam_em = np.concatenate((pears_lam_em, figs_lam_em))
-                llam_em = np.concatenate((pears_llam_em, figs_llam_em))
-                lerr = np.concatenate((pears_lerr, figs_lerr))
-
-                print(lam_em)
-                print(llam_em)
-
-                sys.exit(0)
-
                 # Match with photometry catalog and get photometry data
                 
                 # Divide by median value at 4400A to 4600A to rescale. 
                 # Multiplying by median value of the flux medians to get it back to physical units
-                llam_em = (llam_em / medarr[u]) * medval
-                lerr = (lerr / medarr[u]) * medval
+                pears_llam_em = (pears_llam_em / medarr[u]) * medval
+                pears_lerr = (pears_lerr / medarr[u]) * medval
+
+                figs_llam_em = (figs_llam_em / medarr[u]) * medval
+                figs_lerr = (figs_lerr / medarr[u]) * medval
 
                 # add the spectrum
                 added_gal += 1
                 gal_current_cell += 1
-                old_llam, old_llamerr, num_points, num_galaxies = \
-                add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, \
-                    num_points, num_galaxies, lam_grid, lam_step)
+                pears_old_llam, pears_old_llamerr, figs_old_llam, figs_old_llamerr, \
+                pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies = \
+                add_spec2(pears_lam_em, pears_llam_em, pears_lerr, figs_lam_em, figs_llam_em, figs_lerr, 
+                    pears_old_llam, pears_old_llamerr, figs_old_llam, figs_old_llamerr, 
+                    pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+
+                # Call to old function
+                # add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, \
+                #          num_points, num_galaxies, lam_grid, lam_step)
+
+                sys.exit(0)
 
             # taking median
             for y in range(len(lam_grid)):

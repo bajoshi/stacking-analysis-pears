@@ -29,7 +29,7 @@ model_lam_grid_withlines_mmap = np.load(figs_dir + 'model_lam_grid_withlines_cha
 # Now read the model spectra # In erg s^-1 A^-1
 model_comp_spec_llam_withlines_mmap = np.load(figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
 
-def get_figs_cats():
+def get_figs_cats_v12():
     """
     For all FIGS fields: GN1, GN2, GS1, GS2
     Will return FIGS ID, RA, DEC, 
@@ -38,7 +38,7 @@ def get_figs_cats():
     F160W flux and err.
     """
 
-    # Read in FIGS catalogs # latest version v1.2
+    # Read in FIGS catalogs v1.2
     # All fluxes and flux errors are in nJy
     gn1cat = np.genfromtxt(massive_galaxies_dir + 'GN1_prelim_science_v1.2.cat', dtype=None,\
                            names=['id','ra','dec','f105w_flux','f105w_ferr','f125w_flux','f125w_ferr','f160w_flux','f160w_ferr'], \
@@ -53,6 +53,15 @@ def get_figs_cats():
     gs2cat = np.genfromtxt(massive_galaxies_dir + 'GS2_prelim_science_v1.2.cat', dtype=None,\
                            names=['id','ra','dec','f105w_flux','f105w_ferr','f125w_flux','f125w_ferr','f160w_flux','f160w_ferr'], \
                            usecols=([2,3,4,13,14,15,16,17,18]), skip_header=19)  # GS2 has fewer photometric measurements
+
+    return gn1cat, gn2cat, gs1cat, gs2cat
+
+def get_figs_cats_v13():
+
+    gn1cat = np.genfromtxt(figs_dir + 'figs_catv1.3_GN1.txt', dtype=None, names=['id', 'ra', 'dec'])
+    gn2cat = np.genfromtxt(figs_dir + 'figs_catv1.3_GN2.txt', dtype=None, names=['id', 'ra', 'dec'])
+    gs1cat = np.genfromtxt(figs_dir + 'figs_catv1.3_GS1.txt', dtype=None, names=['id', 'ra', 'dec'])
+    gs2cat = np.genfromtxt(figs_dir + 'figs_catv1.3_GS2.txt', dtype=None, names=['id', 'ra', 'dec'])
 
     return gn1cat, gn2cat, gs1cat, gs2cat
 
@@ -102,7 +111,7 @@ def get_ur_color_wrapper(index, pearscat):
 def main():
 
     # Read in FIGS catalogs
-    gn1cat, gn2cat, gs1cat, gs2cat = get_figs_cats()
+    gn1cat, gn2cat, gs1cat, gs2cat = get_figs_cats_v13()
 
     # Read in PEARS results
     pearscat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True, encoding=None)
@@ -292,11 +301,41 @@ def main():
 
     return None
 
+def get_id_radec_from_linesplit(linesplit, numitems):
+
+    if numitems == 2:  # for typical case where two objects are on one line
+
+        id1 = int(linesplit[1].split('">')[0])
+        id2 = int(linesplit[2].split('">')[0])
+
+        radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
+        radec_str2 = linesplit[2].split('">')[1].split("</A>")[0]
+
+        ra1 = float(radec_str1.split(' ')[0])
+        dec1 = float(radec_str1.split(' ')[1])
+        ra2 = float(radec_str2.split(' ')[0])
+        dec2 = float(radec_str2.split(' ')[1])
+
+        return id1, ra1, dec1, id2, ra2, dec2
+
+    elif numitems == 1:  # for last line which has only one object on it
+
+        id1 = int(linesplit[1].split('">')[0])
+
+        radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
+
+        ra1 = float(radec_str1.split(' ')[0])
+        dec1 = float(radec_str1.split(' ')[1])
+
+        return id1, ra1, dec1
+
 def save_correct_figs_id_radec():
 
     all_fields = ['GN1', 'GN2', 'GS1', 'GS2']
 
     for field in all_fields:
+
+        print("Working on field %s." % field)
 
         # Read in the correct html file as text
         if field == 'GN1':
@@ -308,44 +347,44 @@ def save_correct_figs_id_radec():
         elif field == 'GS2':
             figs_html = open(figs_dir + 'figs_GS2_2.003_radec.html', 'r')
 
+        # Create empty file for writing contents
+        fh = open(figs_dir + 'figs_catv1.3_' + field + '.txt', 'w')
+        header = "#  FIGS_IDv1.3  RA  DEC"
+        fh.write(header + '\n')
+
         linecount = 0
-        figs_id = []
-        figs_ra = []
-        figs_dec = []
+        objectcount = 0
         for line in figs_html.readlines():
+
             if linecount > 9:
-                print(line)
                 linesplit = line.split('#link')
 
-                id1 = int(linesplit[1].split('">')[0])
-                id2 = int(linesplit[2].split('">')[0])
+                if len(linesplit) > 2:
+                    id1, ra1, dec1, id2, ra2, dec2 = get_id_radec_from_linesplit(linesplit, 2)
 
-                radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
-                radec_str2 = linesplit[2].split('">')[1].split("</A>")[0]
+                    fh.write(str(id1) + "  " + str(ra1) + "  " + str(dec1) + '\n')
+                    fh.write(str(id2) + "  " + str(ra2) + "  " + str(dec2) + '\n')
 
-                ra1 = radec_str1.split(' ')[0]
-                dec1 = radec_str1.split(' ')[1]
-                ra2 = radec_str2.split(' ')[0]
-                dec2 = radec_str2.split(' ')[1]
+                    objectcount += 2
 
-                figs_id.append(id1)
-                figs_id.append(id2)
-                figs_ra.append(ra1)
-                figs_ra.append(ra2)
-                figs_dec.append(dec1)
-                figs_dec.append(dec2)
+                elif len(linesplit) == 2:
+                    id1, ra1, dec1 = get_id_radec_from_linesplit(linesplit, 1)
 
-                print("ID, RA, DEC:", id1, ra1, dec1)
-                print("ID, RA, DEC:", id2, ra2, dec2)
+                    fh.write(str(id1) + "  " + str(ra1) + "  " + str(dec1) + '\n')
 
-                sys.exit(0)
+                    objectcount += 1
 
             linecount += 1
+
+        print("Total %d objects in field %s." % (objectcount, field))
+
+        fh.close()
+        print("Saved catalog for field %s." % field)
 
     return None
 
 if __name__ == '__main__':
-    #main()
-    save_correct_figs_id_radec()
+    # save_correct_figs_id_radec()  # only needs to run once
+    main()
     sys.exit(0)
 
