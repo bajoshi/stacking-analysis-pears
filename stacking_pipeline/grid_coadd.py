@@ -48,8 +48,8 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
 
         if new_ind.size:
             
-            # Only count a galaxy in a particular bin if for that bin at least one point is nonzero
-            if np.any(llam_em[new_ind] != 0):
+            # Only count a galaxy in a particular bin if for that bin at least one point is positive
+            if np.any(llam_em[new_ind] > 0):
                 num_galaxies[i] += 1
             
             # Reject points with excess contamination
@@ -61,7 +61,7 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
                 noise = lerr[new_ind][j]
                 
                 if sig > 0: # only append those points where the signal is positive
-                    if noise/sig < 0.20: # only append those points that are less than 20% contaminated
+                    if noise/sig < 0.33: # only append those points that are less than 33% contaminated
                         old_llam[i].append(sig)
                         old_llamerr[i].append(noise**2) # adding errors in quadrature
                         num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
@@ -75,7 +75,7 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
 
 def add_spec2(pears_lam_em, pears_llam_em, pears_lerr, figs_lam_em, figs_llam_em, figs_lerr, 
     pears_old_llam, pears_old_llamerr, figs_old_llam, figs_old_llamerr, 
-    pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+    pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies, lam_grid, lam_step):
 
     for i in range(len(lam_grid)):
         
@@ -86,8 +86,8 @@ def add_spec2(pears_lam_em, pears_llam_em, pears_lerr, figs_lam_em, figs_llam_em
         # Do the coadding for PEARS
         if new_ind_pears.size:
 
-            # Only count a galaxy in a particular bin if for that bin at least one point is nonzero
-            if np.any(pears_llam_em[new_ind_pears] != 0):
+            # Only count a galaxy in a particular bin if for that bin at least one point is positive
+            if np.any(pears_llam_em[new_ind_pears] > 0):
                 pears_num_galaxies[i] += 1
 
             # Reject points with excess contamination
@@ -95,13 +95,13 @@ def add_spec2(pears_lam_em, pears_llam_em, pears_lerr, figs_lam_em, figs_llam_em
             # Reject points that have negative signal
             # Looping over every point in a delta lambda bin
             for j in range(len(new_ind_pears)):
-                sig = pears_llam_em[new_ind_pears][j]
-                noise = pears_lerr[new_ind_pears][j]
+                pears_sig = pears_llam_em[new_ind_pears][j]
+                pears_noise = pears_lerr[new_ind_pears][j]
                 
-                if sig > 0: # only append those points where the signal is positive
-                    if noise/sig < 0.33: # only append those points that are less than 20% contaminated
-                        pears_old_llam[i].append(sig)
-                        pears_old_llamerr[i].append(noise**2) # adding errors in quadrature
+                if pears_sig > 0: # only append those points where the signal is positive
+                    if pears_noise/pears_sig < 0.33: # only append those points that are less than 33% contaminated
+                        pears_old_llam[i].append(pears_sig)
+                        pears_old_llamerr[i].append(pears_noise**2) # adding errors in quadrature
                         pears_num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
                 else:
                     continue
@@ -109,8 +109,8 @@ def add_spec2(pears_lam_em, pears_llam_em, pears_lerr, figs_lam_em, figs_llam_em
         # Do the coadding for FIGS
         if new_ind_figs.size:
 
-            # Only count a galaxy in a particular bin if for that bin at least one point is nonzero
-            if np.any(figs_llam_em[new_ind] != 0):
+            # Only count a galaxy in a particular bin if for that bin at least one point is positive
+            if np.any(figs_llam_em[new_ind] > 0):
                 figs_num_galaxies[i] += 1
 
 
@@ -132,14 +132,32 @@ def get_figs_data(figs_id, field):
     # Now get the spectrum and return
     extname = 'BEAM_' + str(figs_id) + 'A'
 
-    lam_obs = figs_spec[extname].data["LAMBDA"] # Wavelength 
-    flam_obs = figs_spec[extname].data["AVG_WFLUX"]  # Flux (erg/s/cm^2/A)
-    ferr_obs = figs_spec[extname].data["STD_WFLUX"]  # Flux error (erg/s/cm^2/A)
-    #contam = figs_spec[extname].data["CONTAM"] # Flux contamination (erg/s/cm^2/A)
+    try:
+        lam_obs = figs_spec[extname].data["LAMBDA"] # Wavelength 
+        flam_obs = figs_spec[extname].data["AVG_WFLUX"]  # Flux (erg/s/cm^2/A)
+        ferr_obs = figs_spec[extname].data["STD_WFLUX"]  # Flux error (erg/s/cm^2/A)
+        #contam = figs_spec[extname].data["CONTAM"] # Flux contamination (erg/s/cm^2/A)
 
-    return lam_obs, flam_obs, ferr_obs
+        # Now chop the spectrum to be in between 8700 to 11000
+        lam_idx = np.where((lam_obs >= 8700) & (lam_obs <= 11000))[0]
+        lam_obs = lam_obs[lam_idx]
+        flam_obs = flam_obs[lam_idx]
+        ferr_obs = ferr_obs[lam_idx]
 
-def rescale(pears_id_arr_cell, pears_field_arr_cell, z_arr_cell, dl_tbl):
+        return_code = 1
+
+        return lam_obs, flam_obs, ferr_obs, return_code
+
+    except KeyError:
+        print("FIGS spectrum for object", figs_id, field, "not found.")
+        return_code = 0
+        lam_obs = np.zeros(100)
+        flam_obs = np.zeros(100)
+        ferr_obs = np.zeros(100)
+
+        return lam_obs, flam_obs, ferr_obs, return_code
+
+def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
     """
     This function will provide teh median of all median
     f_lambda values (see below) at approx 4500 A. This 
@@ -150,21 +168,24 @@ def rescale(pears_id_arr_cell, pears_field_arr_cell, z_arr_cell, dl_tbl):
     # Define empty array to store the median 
     # value of f_lambda between 4400 to 4600 A
     # for each observed spectrum
-    medarr = np.zeros(len(pears_id_arr_cell))
+    medarr = np.zeros(len(id_arr_cell))
 
     # Define redshift array used in lookup table
     z_arr = np.arange(0.005, 6.005, 0.005)
     
-    for k in range(len(pears_id_arr_cell)):
+    for k in range(len(id_arr_cell)):
 
         # Get current ID and Field
-        current_pears_id = pears_id_arr_cell[k]
-        current_pears_field = pears_field_arr_cell[k]
+        current_id = id_arr_cell[k]
+        current_field = field_arr_cell[k]
 
         # Get observed data and deredshift the spectrum
         # PEARS data 
         grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code = \
-        cf.get_data(current_pears_id, current_pears_field)
+        cf.get_data(current_id, current_field)
+
+        # FIGS data
+        get_figs_data()
 
         # If the return code was 0, then exit,
         # i.e., the observed spectrum is unuseable.
@@ -194,6 +215,40 @@ def rescale(pears_id_arr_cell, pears_field_arr_cell, z_arr_cell, dl_tbl):
     
     # Return the median in array of median values
     return medarr, medval, np.std(medarr)
+
+def take_median(old_llam, old_llamerr, lam_grid):
+
+    # taking median
+    for y in range(len(lam_grid)):
+        if old_llam[y]:
+
+            # take the square root of all errors that were added in quadrature
+            # couldn't do this earlier because it is a list of lists which 
+            # has to be fully constructed before I can do this
+            old_llamerr[y] = np.sqrt(np.asarray(old_llamerr[y]))
+
+            # Actual stack value after 3 sigma clipping
+            # Only allowing 3 iterations right now
+            masked_data = sigma_clip(data=old_llam[y], sigma=3, iters=3)
+            old_llam[y] = np.median(masked_data)
+
+            # Get mask from the masked_data array
+            mask = np.ma.getmask(masked_data)
+
+            # Apply mask to error array
+            masked_dataerr = np.ma.array(old_llamerr[y], mask=mask)
+
+            # Error on each point of the stack
+            # This only uses the points that passed the 3 sigma clipping before
+            old_llamerr[y] = \
+            np.sqrt((1.253 * np.std(masked_data) / \
+                np.sqrt(len(masked_data)))**2 + np.sum(masked_dataerr) / len(masked_data))
+
+        else:
+            old_llam[y] = 0.0
+            old_llamerr[y] = 0.0
+
+    return old_llam, old_llamerr
 
 def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
@@ -266,6 +321,9 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             num_galaxies_cell = int(len(pears_id[indices]))
             print("Number of spectra to coadd in this grid cell --", num_galaxies_cell)
 
+            redshift_arr_cell = zp[indices]
+            print("Redshifts within this cell are --", redshift_arr_cell)
+
             if num_galaxies_cell == 0:
                 continue
             
@@ -289,9 +347,15 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # rescale to 200A band centered on a wavelength of 4500A # 4400A-4600A
             # This function returns the median of the median values (in the given band) from all given spectra
             # All spectra to be coadded in a given grid cell need to be divided by this value
-            medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
-            print("This cell has median value:", "{:.3e}".format(medval), " [erg s^-1 A^-1]")
-            print("as the normalization value and a maximum possible of", len(pears_id[indices]), "spectra.")
+            pears_medarr, pears_medval, pears_stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
+            figs_medarr, figs_medval, figs_stdval = rescale(figs_id[indices], figs_field[indices], zp[indices], dl_tbl)
+            print("This cell has a maximum possible of", len(pears_id[indices]), "spectra.")
+            print("The PEARS spectra in this cell have a median value of [in restframe 4400A--4600A]:", end='')
+            print("{:.3e}".format(pears_medval), " [erg s^-1 A^-1]")
+            print("The FIGS spectra in this cell have a median value of [in restframe 4400A--4600A]:", end='')
+            print("{:.3e}".format(figs_medval), " [erg s^-1 A^-1]")
+
+            sys.exit(0)
 
             # Loop over all spectra in a grid cell and coadd them
             for u in range(len(pears_id[indices])):
@@ -322,8 +386,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 = cf.get_data(current_pears_id, current_pears_field)
 
                 # FIGS data
-                print(current_figs_id, current_figs_field)
-                g102_lam_obs, g102_flam_obs, g102_ferr_obs = get_figs_data(current_figs_id, current_figs_field)
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
                 # Deredshift the observed data 
                 zidx = np.argmin(abs(z_arr - current_redshift))
@@ -352,42 +415,18 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # add the spectrum
                 added_gal += 1
                 gal_current_cell += 1
-                pears_old_llam, pears_old_llamerr, figs_old_llam, figs_old_llamerr, \
-                pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies = \
-                add_spec2(pears_lam_em, pears_llam_em, pears_lerr, figs_lam_em, figs_llam_em, figs_lerr, 
-                    pears_old_llam, pears_old_llamerr, figs_old_llam, figs_old_llamerr, 
-                    pears_num_points, pears_num_galaxies, figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+                pears_old_llam, pears_old_llamerr, pears_num_points, pears_num_galaxies = \
+                add_spec(pears_lam_em, pears_llam_em, pears_lerr, pears_old_llam, pears_old_llamerr, \
+                    pears_num_points, pears_num_galaxies, lam_grid, lam_step)
 
-                # Call to old function
-                # add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, \
-                #          num_points, num_galaxies, lam_grid, lam_step)
+                figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
+                add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
+                    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
 
-                sys.exit(0)
-
-            # taking median
-            for y in range(len(lam_grid)):
-                if old_llam[y]:
-
-                    # Actual stack value after 3 sigma clipping
-                    # Only allowing 3 iterations right now
-                    masked_data = sigma_clip(data=old_llam[y], sigma=3, iters=3)
-                    old_llam[y] = np.median(masked_data)
-
-                    # Get mask from the masked_data array
-                    mask = np.ma.getmask(masked_data)
-
-                    # Apply mask to error array
-                    masked_dataerr = np.ma.array(old_llamerr[y], mask=mask)
-
-                    # Error on each point of the stack
-                    # This only uses the points that passed the 3 sigma clipping before
-                    old_llamerr[y] = \
-                    np.sqrt((1.253 * np.std(masked_data) / \
-                        np.sqrt(len(masked_data)))**2 + np.sum(masked_dataerr) / gal_current_cell)
-
-                else:
-                    old_llam[y] = 0.0
-                    old_llamerr[y] = 0.0
+            # Now take the median of all flux points appended within the list of lists
+            # This function also does the 3-sigma clipping
+            pears_old_llam, pears_old_llamerr = take_median(pears_old_llam, pears_old_llamerr, lam_grid)
+            figs_old_llam, figs_old_llamerr = take_median(figs_old_llam, figs_old_llamerr, lam_grid)
 
             # Separate header for each extension
             exthdr = fits.Header()
@@ -412,8 +451,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             exthdr["AVGMASS"] = str(avgmass)
 
             # Now reshape the data and append
-            dat = np.array((old_llam, old_llamerr)).reshape(2, len(lam_grid))
-            hdulist.append(fits.ImageHDU(data=dat, header=exthdr))
+            pears_dat = np.array((pears_old_llam, pears_old_llamerr)).reshape(2, len(lam_grid))
+            hdulist.append(fits.ImageHDU(data=pears_dat, header=exthdr))
+
+            figs_dat = np.array((figs_old_llam, figs_old_llamerr)).reshape(2, len(lam_grid))
+            hdulist.append(fits.ImageHDU(data=figs_dat, header=exthdr))
 
             # Update the array containing the cellwise distribution of galaxies
             row = int(col/col_step)
@@ -528,8 +570,11 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
     pears_field = cat['Field'][z_indices]
     zp = cat['zp_minchi2'][z_indices]
 
+    figs_id = cat['figs_id'][z_indices]
+    figs_field = cat['figs_field'][z_indices]
+
     ur_color = urcol[z_indices]
-    stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below is expected log(stellar mass)
+    stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below expects log(stellar mass)
 
     # Read in dl lookup table
     # Required for deredshifting
@@ -648,12 +693,18 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # Get redshift from catalog
                 current_redshift = zp[indices][u]
 
-                current_id = pears_id[indices][u]
-                current_field = pears_field[indices][u]
+                current_pears_id = pears_id[indices][u]
+                current_pears_field = pears_field[indices][u]
+
+                current_figs_id = figs_id[indices][u]
+                current_figs_field = figs_field[indices][u]
 
                 # ----------------------------- Get data ----------------------------- #
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
-                = cf.get_data(current_id, current_field)
+                = cf.get_data(current_pears_id, current_pears_field)
+
+                # FIGS data
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs = get_figs_data(current_figs_id, current_figs_field)
 
                 # Deredshift the observed data 
                 zidx = np.argmin(abs(z_arr - current_redshift))
@@ -661,37 +712,53 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # used to generate the dl lookup table.
                 dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
 
-                lam_em = grism_lam_obs / (1 + current_redshift)
-                llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-                lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                pears_lam_em = grism_lam_obs / (1 + current_redshift)
+                pears_llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                pears_lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
                 
+                figs_lam_em = g102_lam_obs / (1 + current_redshift)
+                figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+
                 # Divide by median value at 4400A to 4600A to rescale. 
                 # Multiplying by median value of the flux medians to get it back to physical units
-                llam_em = (llam_em / medarr[u]) * medval
-                lerr = (lerr / medarr[u]) * medval
+                pears_llam_em = (pears_llam_em / medarr[u]) * medval
+                pears_lerr = (pears_lerr / medarr[u]) * medval
+
+                figs_llam_em = (figs_llam_em / medarr[u]) * medval
+                figs_lerr = (figs_lerr / medarr[u]) * medval
 
                 # Plotting
-                ax.plot(lam_em, llam_em, ls='-', color='lightgray', linewidth=0.5)
+                ax.plot(pears_lam_em, pears_llam_em, ls='-', color='azure', linewidth=0.5)
+                ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=0.5)
                 ax.get_yaxis().set_ticklabels([])
                 ax.get_xaxis().set_ticklabels([])
-                ax.set_xlim(2000, 8000)
+                ax.set_xlim(2000, 9000)
 
-            # Plot stack in blue
-            llam = stack_hdu[cellcount+2].data[0]
-            llam_err = stack_hdu[cellcount+2].data[1]
+            # Plot stack
+            pears_llam = stack_hdu[cellcount+2].data[0]
+            pears_llam_err = stack_hdu[cellcount+2].data[1]
+
+            figs_llam = stack_hdu[cellcount+3].data[0]
+            figs_llam_err = stack_hdu[cellcount+3].data[1]
 
             # Force zeros to NaNs so that they're not plotted
-            llam_zero_idx = np.where(llam == 0.0)[0]
-            llam[llam_zero_idx] = np.nan
-            ax.errorbar(lam, llam, yerr=llam_err, fmt='.-', color='b', linewidth=0.5,\
+            pears_llam_zero_idx = np.where(pears_llam == 0.0)[0]
+            pears_llam[pears_llam_zero_idx] = np.nan
+            ax.errorbar(lam, pears_llam, yerr=pears_llam_err, fmt='.-', color='royalblue', linewidth=0.5,\
+                        elinewidth=0.2, ecolor='r', markeredgecolor='b', capsize=0, markersize=0.5, zorder=5)
+
+            figs_llam_zero_idx = np.where(figs_llam == 0.0)[0]
+            figs_llam[figs_llam_zero_idx] = np.nan
+            ax.errorbar(lam, figs_llam, yerr=figs_llam_err, fmt='.-', color='darkorange', linewidth=0.5,\
                         elinewidth=0.2, ecolor='r', markeredgecolor='b', capsize=0, markersize=0.5, zorder=5)
 
             # Y Limits 
             # Find min and max within the stack and add some padding
             # Using the nan functions here because some stacks have nan values
-            stack_min = np.nanmin(llam)
-            stack_max = np.nanmax(llam)
-            stack_mederr = np.nanmedian(llam_err)  # median of all errors on hte stack
+            stack_min = np.min([np.nanmin(pears_llam), np.nanmin(figs_llam)])
+            stack_max = np.max([np.nanmax(pears_llam), np.nanmax(figs_llam)])
+            stack_mederr = np.median([np.nanmedian(pears_llam_err), np.nanmedian(figs_llam_err)])  # median of all errors on hte stack
             ax.set_ylim(stack_min - 3 * stack_mederr, stack_max + 3 * stack_mederr)
 
             # Add other info to plot

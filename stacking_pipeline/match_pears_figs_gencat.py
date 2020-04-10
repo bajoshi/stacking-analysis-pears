@@ -16,13 +16,14 @@ stacking_analysis_dir = figs_dir + "stacking-analysis-pears/"
 
 sys.path.append(stacking_analysis_dir + 'stacking_pipeline')
 from make_col_ms_plots import get_ur_color
+import grid_coadd as gd
 
 # We need the model info to compute the u-r colors for each matched galaxy.
 # This is done outside of any function so 
 # that I don't have to call it everytime
 # I call get_ur_color_wrapper.
 print("\n", end='')
-print("Imported/Called match_pears_figs_gencat. Be aware that this module reads model info outside of any function.")
+print("Imported/Called match_pears_figs_gencat. Be aware that this module reads BC03 model info outside of any function.")
 print("\n", end='')
 # Read model lambda grid # In agnstroms
 model_lam_grid_withlines_mmap = np.load(figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
@@ -167,6 +168,12 @@ def main():
                 elif len(gn1_idx) > 1:
                     print("PEARS RA DEC:", current_pears_ra, current_pears_dec, "Multiple matches GN1. Will pick the closest one.")
                     gn1_ra, gn1_dec, gn1id = pick_closest_match(current_pears_ra, current_pears_dec, gn1cat, gn1_idx)
+
+                # Check if FIGS data for this object exists otherwise skip
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = gd.get_figs_data(gn1id, 'GN1')
+                if return_code == 0:
+                    print("Skipping this FIGS object.")
+                    continue
                 
                 # Now get the u-r color for the match
                 ur_col = get_ur_color_wrapper(i, pearscat)
@@ -195,6 +202,12 @@ def main():
                 elif len(gn2_idx) > 1:
                     print("PEARS RA DEC:", current_pears_ra, current_pears_dec, "Multiple matches GN2. Will pick the closest one.")
                     gn2_ra, gn2_dec, gn2id = pick_closest_match(current_pears_ra, current_pears_dec, gn2cat, gn2_idx)
+
+                # Check if FIGS data for this object exists otherwise skip
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = gd.get_figs_data(gn2id, 'GN2')
+                if return_code == 0:
+                    print("Skipping this FIGS object.")
+                    continue
 
                 # Now get the u-r color for the match
                 ur_col = get_ur_color_wrapper(i, pearscat)
@@ -238,6 +251,12 @@ def main():
                     print("PEARS RA DEC:", current_pears_ra, current_pears_dec, "Multiple matches GS1. Will pick the closest one.")
                     gs1_ra, gs1_dec, gs1id = pick_closest_match(current_pears_ra, current_pears_dec, gs1cat, gs1_idx)
 
+                # Check if FIGS data for this object exists otherwise skip
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = gd.get_figs_data(gs1id, 'GS1')
+                if return_code == 0:
+                    print("Skipping this FIGS object.")
+                    continue
+
                 # Now get the u-r color for the match
                 ur_col = get_ur_color_wrapper(i, pearscat)
 
@@ -265,6 +284,12 @@ def main():
                 elif len(gs2_idx) > 1:
                     print("PEARS RA DEC:", current_pears_ra, current_pears_dec, "Multiple matches GS2. Will pick the closest one.")
                     gs2_ra, gs2_dec, gs2id = pick_closest_match(current_pears_ra, current_pears_dec, gs2cat, gs2_idx)
+
+                # Check if FIGS data for this object exists otherwise skip
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = gd.get_figs_data(gs2id, 'GS2')
+                if return_code == 0:
+                    print("Skipping this FIGS object.")
+                    continue
 
                 # Now get the u-r color for the match
                 ur_col = get_ur_color_wrapper(i, pearscat)
