@@ -109,6 +109,88 @@ def get_ur_color_wrapper(index, pearscat):
 
     return ur_col
 
+def get_id_radec_from_linesplit(linesplit, numitems):
+
+    if numitems == 2:  # for typical case where two objects are on one line
+
+        id1 = int(linesplit[1].split('">')[0])
+        id2 = int(linesplit[2].split('">')[0])
+
+        radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
+        radec_str2 = linesplit[2].split('">')[1].split("</A>")[0]
+
+        ra1 = float(radec_str1.split(' ')[0])
+        dec1 = float(radec_str1.split(' ')[1])
+        ra2 = float(radec_str2.split(' ')[0])
+        dec2 = float(radec_str2.split(' ')[1])
+
+        return id1, ra1, dec1, id2, ra2, dec2
+
+    elif numitems == 1:  # for last line which has only one object on it
+
+        id1 = int(linesplit[1].split('">')[0])
+
+        radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
+
+        ra1 = float(radec_str1.split(' ')[0])
+        dec1 = float(radec_str1.split(' ')[1])
+
+        return id1, ra1, dec1
+
+def save_correct_figs_id_radec():
+
+    all_fields = ['GN1', 'GN2', 'GS1', 'GS2']
+
+    for field in all_fields:
+
+        print("Working on field %s." % field)
+
+        # Read in the correct html file as text
+        if field == 'GN1':
+            figs_html = open(figs_dir + 'figs_GN1_2.003_radec.html', 'r')
+        elif field == 'GN2':
+            figs_html = open(figs_dir + 'figs_GN2_2.003_radec.html', 'r')
+        elif field == 'GS1':
+            figs_html = open(figs_dir + 'figs_GS1_2.003_radec.html', 'r')
+        elif field == 'GS2':
+            figs_html = open(figs_dir + 'figs_GS2_2.003_radec.html', 'r')
+
+        # Create empty file for writing contents
+        fh = open(figs_dir + 'figs_catv1.3_' + field + '.txt', 'w')
+        header = "#  FIGS_IDv1.3  RA  DEC"
+        fh.write(header + '\n')
+
+        linecount = 0
+        objectcount = 0
+        for line in figs_html.readlines():
+
+            if linecount > 9:
+                linesplit = line.split('#link')
+
+                if len(linesplit) > 2:
+                    id1, ra1, dec1, id2, ra2, dec2 = get_id_radec_from_linesplit(linesplit, 2)
+
+                    fh.write(str(id1) + "  " + str(ra1) + "  " + str(dec1) + '\n')
+                    fh.write(str(id2) + "  " + str(ra2) + "  " + str(dec2) + '\n')
+
+                    objectcount += 2
+
+                elif len(linesplit) == 2:
+                    id1, ra1, dec1 = get_id_radec_from_linesplit(linesplit, 1)
+
+                    fh.write(str(id1) + "  " + str(ra1) + "  " + str(dec1) + '\n')
+
+                    objectcount += 1
+
+            linecount += 1
+
+        print("Total %d objects in field %s." % (objectcount, field))
+
+        fh.close()
+        print("Saved catalog for field %s." % field)
+
+    return None
+
 def main():
 
     # Read in FIGS catalogs
@@ -323,88 +405,6 @@ def main():
     fh.close()
     print("Total galaxies with PEARS+FIGS data that are >= 10^%.1f solar masses within %.1f <= z <= %.1f: %d" \
         % (mass_lim, zp_low_lim, zp_high_lim, matches))
-
-    return None
-
-def get_id_radec_from_linesplit(linesplit, numitems):
-
-    if numitems == 2:  # for typical case where two objects are on one line
-
-        id1 = int(linesplit[1].split('">')[0])
-        id2 = int(linesplit[2].split('">')[0])
-
-        radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
-        radec_str2 = linesplit[2].split('">')[1].split("</A>")[0]
-
-        ra1 = float(radec_str1.split(' ')[0])
-        dec1 = float(radec_str1.split(' ')[1])
-        ra2 = float(radec_str2.split(' ')[0])
-        dec2 = float(radec_str2.split(' ')[1])
-
-        return id1, ra1, dec1, id2, ra2, dec2
-
-    elif numitems == 1:  # for last line which has only one object on it
-
-        id1 = int(linesplit[1].split('">')[0])
-
-        radec_str1 = linesplit[1].split('">')[1].split("</A>")[0]
-
-        ra1 = float(radec_str1.split(' ')[0])
-        dec1 = float(radec_str1.split(' ')[1])
-
-        return id1, ra1, dec1
-
-def save_correct_figs_id_radec():
-
-    all_fields = ['GN1', 'GN2', 'GS1', 'GS2']
-
-    for field in all_fields:
-
-        print("Working on field %s." % field)
-
-        # Read in the correct html file as text
-        if field == 'GN1':
-            figs_html = open(figs_dir + 'figs_GN1_2.003_radec.html', 'r')
-        elif field == 'GN2':
-            figs_html = open(figs_dir + 'figs_GN2_2.003_radec.html', 'r')
-        elif field == 'GS1':
-            figs_html = open(figs_dir + 'figs_GS1_2.003_radec.html', 'r')
-        elif field == 'GS2':
-            figs_html = open(figs_dir + 'figs_GS2_2.003_radec.html', 'r')
-
-        # Create empty file for writing contents
-        fh = open(figs_dir + 'figs_catv1.3_' + field + '.txt', 'w')
-        header = "#  FIGS_IDv1.3  RA  DEC"
-        fh.write(header + '\n')
-
-        linecount = 0
-        objectcount = 0
-        for line in figs_html.readlines():
-
-            if linecount > 9:
-                linesplit = line.split('#link')
-
-                if len(linesplit) > 2:
-                    id1, ra1, dec1, id2, ra2, dec2 = get_id_radec_from_linesplit(linesplit, 2)
-
-                    fh.write(str(id1) + "  " + str(ra1) + "  " + str(dec1) + '\n')
-                    fh.write(str(id2) + "  " + str(ra2) + "  " + str(dec2) + '\n')
-
-                    objectcount += 2
-
-                elif len(linesplit) == 2:
-                    id1, ra1, dec1 = get_id_radec_from_linesplit(linesplit, 1)
-
-                    fh.write(str(id1) + "  " + str(ra1) + "  " + str(dec1) + '\n')
-
-                    objectcount += 1
-
-            linecount += 1
-
-        print("Total %d objects in field %s." % (objectcount, field))
-
-        fh.close()
-        print("Saved catalog for field %s." % field)
 
     return None
 
