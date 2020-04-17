@@ -229,6 +229,15 @@ def main():
     matches = 0  # This is just to print out how many galaxies are >= the mass limit solar masses within our z range
     for i in range(len(pearscat)):
 
+        # Check the quality of the PA combined PEARS spectrum first
+        current_pears_id = pearscat['PearsID'][i]
+        current_pears_field = pearscat['Field'][i]
+        grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = gd.get_pears_data(current_pears_id, current_pears_field)
+
+        if return_code == 0:
+            print("PEARS data not of good quality. Skipping:", current_pears_id, current_pears_field)
+            continue
+
         # find PEARS ra, dec
         # need stellar mass and zp just to check total galaxies in final sample
         current_pears_ra = float(pearscat['RA'][i])

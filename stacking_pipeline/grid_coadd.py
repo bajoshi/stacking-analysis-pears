@@ -61,18 +61,24 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
                 for ind in new_ind:
                     sig = llam_em[ind]
                     noise = lerr[ind]
+
+                    if np.isfinite(sig):
+                        # Because I put in NaN values where there wasn't anything to add while combining PAs
                     
-                    if sig > 0: # only append those points where the signal is positive
-                        if sig/noise > 2.0:  # signal to noise cut
-                            old_llam[i].append(sig)
-                            old_llamerr[i].append(noise**2) # adding errors in quadrature
-                            num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
-                    else:
-                        errmsg = "This error occurs when the code encounters a negative or zero signal." + "\n" + \
-                        "This error should not have been triggered if you're using PA combined PEARS spectra. " + \
-                        "These flux points should've been taken out by the code that combines spectra" + \
-                        "for each galaxy at different PAs. Check/Run the PA combining code for this galaxy."
-                        raise ValueError(errmsg)
+                        if sig > 0: # only append those points where the signal is positive
+                            if sig/noise > 2.0:  # signal to noise cut
+                                old_llam[i].append(sig)
+                                old_llamerr[i].append(noise**2) # adding errors in quadrature
+                                num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
+                        else:
+                            print("Signal read in:", sig, end="\n")
+                            errmsg = "This error occurs when the code encounters a negative or zero signal." + "\n" + \
+                            "This error should not have been triggered if you're using PA combined PEARS spectra or . " + \
+                            "the FIGS spectra read in with the get_figs_data(...) function in grid_coadd.py. "
+                            "These flux points should've been taken out by the code that combines spectra " + \
+                            "for each galaxy at different PAs and the function that returns FIGS data." + "\n" + \
+                            "Check/Run the PA combining code for this galaxy."
+                            raise ValueError(errmsg)
 
         else:            
             continue
@@ -105,6 +111,11 @@ def get_figs_data(figs_id, field):
         lam_obs = lam_obs[lam_idx]
         flam_obs = flam_obs[lam_idx]
         ferr_obs = ferr_obs[lam_idx]
+
+        # Convert the negative and zero values to NaN
+        invalid_idx = np.where(flam_obs <= 0.0)[0]
+        flam_obs[invalid_idx] = np.nan
+        ferr_obs[invalid_idx] = np.nan
 
         return_code = 1
 
@@ -224,9 +235,9 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
         lam_begin_idx = lam_cen_idx - 5
         lam_end_idx = lam_cen_idx + 5
 
-        medarr[k] = np.median(llam_em[lam_begin_idx:lam_end_idx+1])
+        medarr[k] = np.nanmedian(llam_em[lam_begin_idx:lam_end_idx+1])
     
-    medval = np.median(medarr)
+    medval = np.nanmedian(medarr)
     
     # Return the median in array of median values
     return medarr, medval, np.std(medarr)
@@ -393,7 +404,7 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
                 # ----------------------------- Get data ----------------------------- #
                 # PEARS PA combined data
-                grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_id, current_field)
+                grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
                 # FIGS data # This is PA combined already, from Nor
                 g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
@@ -803,7 +814,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
                 # ----------------------------- Get data ----------------------------- #
                 # PEARS PA combined data
-                grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_id, current_field)
+                grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
                 # FIGS data
                 g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
@@ -910,7 +921,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
-    lam_step = 40  # somewhat arbitrarily chosen # pretty much trial and error
+    lam_step = 50  # somewhat arbitrarily chosen # pretty much trial and error
 
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
@@ -923,7 +934,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range
 
     # Find the indices (corresponding to massive galaxies)
-    indices = np.where((ur_color >= 2.0) & (ur_color < 3.0) &\
+    indices = np.where((ur_color >= 1.5) & (ur_color < 3.0) &\
                     (stellar_mass >= 10.5) & (stellar_mass < 12.0))[0]
 
     num_massive = int(len(pears_id[indices]))
@@ -983,7 +994,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         # ----------------------------- Get data ----------------------------- #
         # PEARS PA combined data
-        grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_id, current_field)
+        grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
         # FIGS data
         g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
