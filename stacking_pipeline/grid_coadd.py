@@ -19,13 +19,13 @@ figs_dir = home + "/Desktop/FIGS/"
 stacking_analysis_dir = figs_dir + "stacking-analysis-pears/"
 stacking_figures_dir = figs_dir + "stacking-analysis-figures/"
 massive_galaxies_dir = figs_dir + "massive-galaxies/"
-pears_data_path = home + "/Documents/PEARS/data_spectra_only/"
+pears_spectra_dir = home + "/Documents/PEARS/data_spectra_only/"
 
-sys.path.append(massive_galaxies_dir + 'grismz_pipeline/')
-sys.path.append(massive_galaxies_dir + 'cluster_codes/')
+stacking_utils_dir = stacking_analysis_dir + "util_codes"
+sys.path.append(stacking_utils_dir)
 sys.path.append(stacking_analysis_dir + 'stacking_pipeline/')
-import cluster_do_fitting as cf
 import make_col_ms_plots
+from convert_to_sci_not import convert_to_sci_not
 
 # Define grid params
 # Outside of any functions to make sure these are the same everywhere
@@ -108,6 +108,8 @@ def get_figs_data(figs_id, field):
 
         return_code = 1
 
+        figs_spec.close()
+
         return lam_obs, flam_obs, ferr_obs, return_code
 
     except KeyError:
@@ -117,7 +119,40 @@ def get_figs_data(figs_id, field):
         flam_obs = np.zeros(100)
         ferr_obs = np.zeros(100)
 
+        figs_spec.close()
+
         return lam_obs, flam_obs, ferr_obs, return_code
+
+def get_pears_data(pears_id, field):
+
+    filename = pears_spectra_dir + field + '_' + str(pears_id) + '_PAcomb.fits'
+    spec_hdu = fits.open(filename)
+
+    # Get data
+    lam_obs = spec_hdu[1].data
+    flam_obs = spec_hdu[2].data[0]
+    ferr_obs = spec_hdu[2].data[1]
+
+    # Only proceed if there are at least 20 valid points in the PA combined spectrum
+    if len(np.where(np.isfinite(flam_obs))[0]) >= 20:
+
+        # Chop wavelength grid to 6000A -- 9500A
+        arg_low = np.argmin(abs(lam_obs - 6000))
+        arg_high = np.argmin(abs(lam_obs - 9500))
+
+        lam_obs  = lam_obs[arg_low:arg_high+1]
+        flam_obs = flam_obs[arg_low:arg_high+1]
+        ferr_obs = ferr_obs[arg_low:arg_high+1]
+
+        return_code = 1
+
+    else:
+        return_code = 0
+        lam_obs = np.zeros(100)
+        flam_obs = np.zeros(100)
+        ferr_obs = np.zeros(100)
+
+    return lam_obs, flam_obs, ferr_obs, return_code
 
 def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
     """
@@ -148,10 +183,6 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
         current_figs_field = field_arr_cell[k]
 
         # Get observed data and deredshift the spectrum
-        # PEARS data 
-        #grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code = \
-        #cf.get_data(current_id, current_field)
-
         # FIGS data
         g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
@@ -361,10 +392,9 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 current_figs_field = figs_field[indices][u]
 
                 # ----------------------------- Get data ----------------------------- #
-                grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
-                = cf.get_data(current_pears_id, current_pears_field)
-
-                # FIGS data
+                # PEARS PA combined data
+                grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_id, current_field)
+                # FIGS data # This is PA combined already, from Nor
                 g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
                 # Deredshift the observed data 
@@ -428,6 +458,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # ----------------------------- Get data ----------------------------- #
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
                 = cf.get_data(current_pears_id, current_pears_field)
+
+
 
                 # FIGS data
                 g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
@@ -770,9 +802,8 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 current_figs_field = figs_field[indices][u]
 
                 # ----------------------------- Get data ----------------------------- #
-                grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
-                = cf.get_data(current_pears_id, current_pears_field)
-
+                # PEARS PA combined data
+                grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_id, current_field)
                 # FIGS data
                 g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
@@ -836,7 +867,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Add other info to plot
             numspec = int(stack_hdu[cellcount+2].header['NUMSPEC'])
             normval = float(stack_hdu[cellcount+2].header['NORMVAL'])
-            normval = cf.convert_to_sci_not(normval)  # Returns a properly formatted string
+            normval = convert_to_sci_not(normval)  # Returns a properly formatted string
 
             # add number of galaxies in plot
             ax.text(0.8, 0.2, numspec, verticalalignment='top', horizontalalignment='left', \
@@ -951,9 +982,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         current_figs_field = figs_field[indices][u]
 
         # ----------------------------- Get data ----------------------------- #
-        grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
-        = cf.get_data(current_pears_id, current_pears_field)
-
+        # PEARS PA combined data
+        grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_id, current_field)
         # FIGS data
         g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
