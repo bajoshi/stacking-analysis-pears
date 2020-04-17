@@ -53,23 +53,26 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
             if np.any(llam_em[new_ind] > 0):
                 num_galaxies[i] += 1
             
-            # Reject points with excess contamination
-            # Rejecting points that are more than 20% contaminated
-            # Reject points that have negative signal
             # Looping over every point in a delta lambda bin
             # Don't include a datapoint if it is the only one in a stack bin
+            # Reject points based on a signal-to-noise cut
+            # Reject points that have negative signal
             if len(new_ind) > 1:
-                for j in range(len(new_ind)):
-                    sig = llam_em[new_ind][j]
-                    noise = lerr[new_ind][j]
+                for ind in new_ind:
+                    sig = llam_em[ind]
+                    noise = lerr[ind]
                     
                     if sig > 0: # only append those points where the signal is positive
-                        if noise/sig < 0.33: # only append those points that are less than 33% contaminated
+                        if sig/noise > 2.0:  # signal to noise cut
                             old_llam[i].append(sig)
                             old_llamerr[i].append(noise**2) # adding errors in quadrature
                             num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
                     else:
-                        continue
+                        errmsg = "This error occurs when the code encounters a negative or zero signal." + "\n" + \
+                        "This error should not have been triggered if you're using PA combined PEARS spectra. " + \
+                        "These flux points should've been taken out by the code that combines spectra" + \
+                        "for each galaxy at different PAs. Check/Run the PA combining code for this galaxy."
+                        raise ValueError(errmsg)
 
         else:            
             continue

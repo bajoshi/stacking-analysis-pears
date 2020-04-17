@@ -11,32 +11,57 @@ import sys
 import matplotlib.pyplot as plt
 
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
-stacking_analysis_dir = home + "/Desktop/FIGS/stacking-analysis-pears/"
+figs_dir = home + "/Desktop/FIGS/"
+
 pears_spectra_dir = home + "/Documents/PEARS/data_spectra_only/"
-figures_dir = stacking_analysis_dir + "figures/"
-massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
+stacking_analysis_dir = figs_dir + "stacking-analysis-pears/"
+stacking_figures_dir = figs_dir + "stacking-analysis-figures/"
 
-sys.path.append(stacking_analysis_dir + 'codes/')
-import grid_coadd as gd
-import fast_chi2_jackknife as fcj
+stacking_utils_dir = stacking_analysis_dir + "util_codes"
+sys.path.append(stacking_utils_dir)
+from get_total_extensions import get_total_extensions
 
-def add_position_angle(lam, flux, fluxerr, old_flux, old_fluxerr, lam_grid):
-    
+def add_position_angle(lam, flux, contam, fluxerr, old_flux, old_fluxerr, lam_grid, lam_step):
+
     for i in range(len(lam)):
 
-        new_ind = np.where(lam == lam_grid[i])[0]
+        # find wavelength indices within lam grid bin
+        new_ind = np.where((lam >= lam_grid[i] - lam_step/2) & (lam < lam_grid[i] + lam_step/2))[0]
 
         if new_ind.size:
 
-            sig = flux[new_ind]
-            noise = fluxerr[new_ind]
+            for ind in new_ind:
+
+                signal = flux[ind]
+                noise = fluxerr[ind]
+                contamination = contam[ind]
+
+                """
+                Subtract the contamination for each PA. 
+                Must be done before stacking spectra for different galaxies.
+
+                This has to be done at this stage because the contamination 
+                estimate is different for each PA, and each wavelength point 
+                within each PA as well. Therefore, you can't combine spectra 
+                at different PAs and then subtract "some" contamination level,
+                which would correspond to some specific PA, unless you somehow 
+                averaged the contaminations as well. This would not be advisable 
+                because you'd be introducing additional (unrequired) assumptions 
+                and pathologies into the process by combining contaminations. 
+                For example, say you have two PAs, one contaminated and the other 
+                pristine; by combining the contaminations, you'll have made a 
+                mess of both of them. Much easier to just subtract contamination
+                from each individual PA.
+                """
         
-            if sig > 0: # only append those points where the signal is positive
-                if noise/sig < 0.20: # only append those points that are less than 20% contaminated
-                    old_flux[i].append(sig)
-                    old_fluxerr[i].append(noise**2) # adding errors in quadrature
-            else:
-                continue
+                if signal > 0: # only append those points where the signal is positive
+                    if (contamination < 0.33 * signal):  # contamination cut
+                        signal -= contamination
+                        
+                        old_flux[i].append(signal)
+                        old_fluxerr[i].append(noise**2) # adding errors in quadrature
+                else:
+                    continue
         else:
             continue
 
@@ -44,47 +69,24 @@ def add_position_angle(lam, flux, fluxerr, old_flux, old_fluxerr, lam_grid):
 
 def combine_all_position_angles_pears(pears_index, field):
 
-    # PEARS data path
-    data_path = home + "/Documents/PEARS/data_spectra_only/"
-
     # Get the correct filename and the number of extensions
     if field == 'GOODS-N':
-        filename = data_path + 'h_pears_n_id' + str(pears_index) + '.fits'
+        filename = pears_spectra_dir + 'h_pears_n_id' + str(pears_index) + '.fits'
     elif field == 'GOODS-S':
-        filename = data_path + 'h_pears_s_id' + str(pears_index) + '.fits'
+        filename = pears_spectra_dir + 'h_pears_s_id' + str(pears_index) + '.fits'
 
     spec_hdu = fits.open(filename, memmap=False)
-    spec_extens = fcj.get_total_extensions(spec_hdu)
-    specname = os.path.basename(filename)
+    spec_extens = get_total_extensions(spec_hdu)
 
-    print "Working on PEARS ID ", pears_index, "with ", spec_extens, " extensions."
+    print("Working on PEARS object:", pears_index, field, end='. ')
+    print("Has", spec_extens, "extensions.")
 
-    # Loop over all extensions and combine them
-    # First find where the largest lam array is and also create the arrays for storing medians
-    lam_obs_arr = []
-    for j in range(spec_extens):
-
-        lam_obs = spec_hdu[j + 1].data['LAMBDA']
-        lam_obs_arr.append(len(lam_obs))
-
-    lam_obs_arr = np.asarray(lam_obs_arr)
-
-    max_lam_ind = np.argmax(lam_obs_arr)
-    lam_grid = spec_hdu[max_lam_ind + 1].data['LAMBDA']
-
+    # Loop over all extensions and combine them.
     old_flam = np.zeros(len(lam_grid))
     old_flamerr = np.zeros(len(lam_grid))
     
     old_flam = old_flam.tolist()
     old_flamerr = old_flamerr.tolist()
-
-    # loop over the position angles (that are in separate extensions in the fits files)
-    # and combine them
-    # these empty lists here are to keep track of which position angles were rejected and combined
-    # this is useful later when the average LSF is contructed based on the position angles that
-    # were used in the combination
-    rejected_pa = []
-    combined_pa = []
 
     for count in range(spec_extens):
         
@@ -99,37 +101,28 @@ def combine_all_position_angles_pears(pears_index, field):
                 old_flam[x] = []
                 old_flamerr[x] = []
 
-        # Subtract Contamination
-        flam = flam - contam
+        # Now add the spectra from this PA to a "running list"
+        old_flam, old_flamerr = add_position_angle(lam_obs, flam, contam, ferr, old_flam, old_flamerr, lam_grid, lam_step)
 
-        # Reject spectrum if it is more than 30% contaminated
-        if np.sum(abs(ferr)) > 0.3 * np.sum(abs(flam)):
-            print "Skipped extension #", count + 1, "in", specname , "because of excess contamination."
-            rejected_pa.append(exten_pa) 
-            continue
-        else:
-            old_flam, old_flamerr = add_position_angle(lam_obs, flam, ferr, old_flam, old_flamerr, lam_grid)
-            combined_pa.append(exten_pa)
-    
     for y in range(len(lam_grid)):
         if old_flam[y]:
             # you could do a 100 bootstrap samples
-            old_flamerr[y] = np.sqrt(np.sum(old_flamerr[y]))  # old formula for error on median -- 1.253 * np.std(old_flam[y]) / np.sqrt(len(old_flam[y]))
+            old_flamerr[y] = np.sqrt(np.sum(old_flamerr[y]))
+            # old formula for error on median -- 1.253 * np.std(old_flam[y]) / np.sqrt(len(old_flam[y]))
             old_flam[y] = np.mean(old_flam[y])
         else:
             # this shoudl not be set to 0
             # you DID NOT measure an exactly zero signal
-            old_flam[y] = 0.0
-            old_flamerr[y] = 0.0
+            old_flam[y] = np.nan
+            old_flamerr[y] = np.nan
 
     comb_flam = np.asarray(old_flam)
     comb_flamerr = np.asarray(old_flamerr)
 
     # close opened fits file
     spec_hdu.close()
-    del spec_hdu
 
-    return lam_grid, comb_flam, comb_flamerr, rejected_pa, combined_pa
+    return lam_grid, comb_flam, comb_flamerr
 
 def plot_all_pa_and_combinedspec(allpearsids, allpearsfields):
     """
@@ -154,94 +147,83 @@ def plot_all_pa_and_combinedspec(allpearsids, allpearsfields):
     
         # Get the correct filename and the number of extensions
         if field == 'GOODS-N':
-            filename = data_path + 'h_pears_n_id' + str(pears_index) + '.fits'
+            filename = pears_spectra_dir + 'h_pears_n_id' + str(pears_index) + '.fits'
         elif field == 'GOODS-S':
-            filename = data_path + 'h_pears_s_id' + str(pears_index) + '.fits'
+            filename = pears_spectra_dir + 'h_pears_s_id' + str(pears_index) + '.fits'
     
         fitsfile = fits.open(filename)
-        fits_extens = fcj.get_total_extensions(fitsfile)
+        fits_extens = get_total_extensions(fitsfile)
 
         for j in range(fits_extens):
-            ax.plot(fitsfile[j+1].data['LAMBDA'], fitsfile[j+1].data['FLUX'], 'b')
+            ax.plot(fitsfile[j+1].data['LAMBDA'], fitsfile[j+1].data['FLUX'])
 
         lam_obs, combined_spec, combined_spec_err = combine_all_position_angles_pears(pears_index, field)
-        ax.plot(lam_obs, combined_spec, 'k')
+        ax.plot(lam_obs, combined_spec, color='k', linewidth=2)
         ax.fill_between(lam_obs, combined_spec + combined_spec_err, combined_spec - combined_spec_err, color='lightgray')
+
+        ax.axhline(y=0.0, lw=1.5, ls='--', color='r')
 
         ax.minorticks_on()
         ax.tick_params('both', width=1, length=3, which='minor')
         ax.tick_params('both', width=1, length=4.7, which='major')
 
+        #print("\n")
+        #for k in range(len(lam_obs)):
+        #    print(lam_obs[k], combined_spec[k], combined_spec_err[k])
+
         plt.show()
-        del fig, ax
+        plt.clf()
+        plt.cla()
+        plt.close()
 
     return None
 
 if __name__ == '__main__':
 
-    # PEARS data path
-    data_path = home + "/Documents/PEARS/data_spectra_only/"
+    # ------------------------------- Read in PEARS catalogs ------------------------------- #
+    pears_ncat = np.genfromtxt(home + '/Documents/PEARS/master_catalogs/h_pears_north_master.cat', dtype=None,\
+                               names=['pearsid', 'ra', 'dec', 'imag'], usecols=(0,1,2,3))
+    pears_scat = np.genfromtxt(home + '/Documents/PEARS/master_catalogs/h_pears_south_master.cat', dtype=None,\
+                               names=['pearsid', 'ra', 'dec', 'imag'], usecols=(0,1,2,3))
 
-    # Read pears 
+    dec_offset_goodsn_v19 = 0.32/3600 # from GOODS ACS v2.0 readme
+    pears_ncat['dec'] = pears_ncat['dec'] - dec_offset_goodsn_v19
 
-    allcats = [cat_n, cat_s]
+    allcats = [pears_ncat, pears_scat]
+
+    # First set up a wavelength grid.
+    # This grid is extended on both ends on purpose to
+    # account for data at the ends of the grism coverage.
+    # The ends will of course be chopped later before
+    # doing any analysis but I don't want to do it here.
+    lam_step = 40
+    lam_grid = np.arange(5500, 10540, lam_step)
 
     catcount = 0
     for cat in allcats:
 
         if catcount == 0:
             fieldname = 'GOODS-N'
-            print 'Starting with', len(cat), 'matched objects in', fieldname
         elif catcount == 1:
             fieldname = 'GOODS-S'
-            print 'Starting with', len(cat), 'matched objects in', fieldname
-
-        redshift_indices = np.where((cat['zphot'] >= 0.6) & (cat['zphot'] <= 1.235))[0]
-
-        pears_id = cat['pearsid'][redshift_indices]
-        photz = cat['zphot'][redshift_indices]
-
-        print len(np.unique(pears_id)), "unique objects in", fieldname, "in redshift range"
-
-        # create arrays for writing
-        pears_id_write = []
-        pearsfield = []
-        lam_grid_to_write = []
-        comb_flam_to_write = []
-        comb_ferr_to_write = []
-        rejected_pa_to_write = []
-        combined_pa_to_write = []
 
         # Loop over all spectra 
-        pears_unique_ids, pears_unique_ids_indices = np.unique(pears_id, return_index=True)
-        i = 0
-        for current_pears_index, count in zip(pears_unique_ids, pears_unique_ids_indices):
+        for i in range(len(cat)):
 
-            lam_grid, comb_flam, comb_flamerr, rejected_pa, combined_pa = \
-            combine_all_position_angles_pears(current_pears_index, fieldname)
+            current_pears_index = cat['pearsid'][i]
 
-            pears_id_write.append(current_pears_index)
-            pearsfield.append(fieldname)
-            lam_grid_to_write.append(lam_grid)
-            comb_flam_to_write.append(comb_flam)
-            comb_ferr_to_write.append(comb_flamerr)
-            rejected_pa_to_write.append(rejected_pa)
-            combined_pa_to_write.append(combined_pa)
+            lam_grid, comb_flam, comb_flamerr = combine_all_position_angles_pears(current_pears_index, fieldname)
+            #plot_all_pa_and_combinedspec([current_pears_index], [fieldname])
 
-        pears_id_write = np.asarray(pears_id_write)
-        pearsfield = np.asarray(pearsfield)
-        rejected_pa_to_write = np.asarray(rejected_pa_to_write)
-        combined_pa_to_write = np.asarray(combined_pa_to_write)
-        lam_grid_to_write = np.asarray(lam_grid_to_write)
-        comb_flam_to_write = np.asarray(comb_flam_to_write)
-        comb_ferr_to_write = np.asarray(comb_ferr_to_write)
-        
-        recarray = np.core.records.fromarrays([pears_id_write, pearsfield, lam_grid_to_write, \
-            comb_flam_to_write, comb_ferr_to_write, rejected_pa_to_write, combined_pa_to_write],\
-         names='pearsid,field,lam_grid,combined_flam,combined_ferr,rejected_pa,combined_pa')
-        np.save(massive_galaxies_dir + 'pears_pa_combination_info_' + fieldname, recarray)
-        # this will save the record array as a numpy binary file which can be read by just doing
-        # recarray = np.load('/path/to/filename.npy')
+            # Write the combined PA spectrum to a fits file
+            hdu = fits.PrimaryHDU()
+            hdr = fits.Header()
+            hdulist = fits.HDUList(hdu)
+            hdulist.append(fits.ImageHDU(lam_grid, header=hdr))
+
+            # Add info to header
+            hdulist.append()
+
 
         catcount += 1
 
