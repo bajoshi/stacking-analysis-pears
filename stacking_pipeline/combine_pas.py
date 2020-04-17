@@ -79,7 +79,7 @@ def combine_all_position_angles_pears(pears_index, field):
     spec_extens = get_total_extensions(spec_hdu)
 
     print("Working on PEARS object:", pears_index, field, end='. ')
-    print("Has", spec_extens, "extensions.")
+    print("Has", spec_extens, "PA(s).")
 
     # Loop over all extensions and combine them.
     old_flam = np.zeros(len(lam_grid))
@@ -219,11 +219,23 @@ if __name__ == '__main__':
             hdu = fits.PrimaryHDU()
             hdr = fits.Header()
             hdulist = fits.HDUList(hdu)
+            hdr['EXTNAME'] = 'LAM_GRID'
             hdulist.append(fits.ImageHDU(lam_grid, header=hdr))
 
             # Add info to header
-            hdulist.append()
+            hdr['EXTNAME'] = 'COMB_SPEC'
+            hdr['PEARSID'] = current_pears_index
+            hdr['FIELD'] = fieldname
+            hdr['RA'] = cat['ra'][i]
+            hdr['DEC'] = cat['dec'][i]
 
+            # Add data
+            dat = np.array((comb_flam, comb_flamerr)).reshape(2, len(lam_grid))
+            hdulist.append(fits.ImageHDU(dat, header=hdr))
+
+            # Write file
+            final_fits_filename = pears_spectra_dir + fieldname + '_' + str(current_pears_index) + '_PAcomb.fits'
+            hdulist.writeto(final_fits_filename, overwrite=True)
 
         catcount += 1
 
