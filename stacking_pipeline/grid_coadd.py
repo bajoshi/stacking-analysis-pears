@@ -921,7 +921,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
-    lam_step = 50  # somewhat arbitrarily chosen # pretty much trial and error
+    lam_step = 80  # somewhat arbitrarily chosen # pretty much trial and error
 
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
@@ -1056,7 +1056,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     ax.errorbar(lam_grid, figs_old_llam, yerr=figs_old_llamerr, fmt='.-', color='darkorange', linewidth=2.5,\
                 elinewidth=1.0, ecolor='r', markeredgecolor='darkorange', capsize=0, markersize=4.0, zorder=5)
 
-    ax.set_xlim(3000, 7000)
+    ax.set_xlim(1850, 7300)
     ax.set_ylim(-5e39, 3.5e40)
     ax.axhline(y=0.0, ls='--', color='k')
     ax.minorticks_on()
@@ -1135,8 +1135,8 @@ def main():
     # Get z intervals and their indices
     zp = cat['zp_minchi2']
 
-    all_z_low = np.array([0.5, 1.5])
-    all_z_high = np.array([1.5, 2.5])
+    all_z_low = np.array([0.2, 0.8])
+    all_z_high = np.array([0.8, 1.1])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
