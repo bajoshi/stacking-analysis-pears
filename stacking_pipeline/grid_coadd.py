@@ -255,7 +255,7 @@ def take_median(old_llam, old_llamerr, lam_grid):
 
             # Actual stack value after 3 sigma clipping
             # Only allowing 3 iterations right now
-            masked_data = sigma_clip(data=old_llam[y], sigma=3, iters=3)
+            masked_data = sigma_clip(data=old_llam[y], sigma=3, maxiters=3)
             old_llam[y] = np.median(masked_data)
 
             # Get mask from the masked_data array
@@ -469,8 +469,6 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # ----------------------------- Get data ----------------------------- #
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
                 = cf.get_data(current_pears_id, current_pears_field)
-
-
 
                 # FIGS data
                 g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
@@ -965,8 +963,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     figs_num_galaxies = np.zeros(len(lam_grid))
 
     # Create figure
-    fig = plt.figure(figsize=(10,6))
-    ax = fig.add_subplot(111)
+    #fig = plt.figure(figsize=(10,6))
+    #ax = fig.add_subplot(111)
 
     # Loop over all spectra in a grid cell and coadd them
     for u in range(len(pears_id[indices])):
@@ -1012,26 +1010,70 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
         figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
                 
-        # Divide by median value at 4400A to 4600A to rescale. 
-        # Multiplying by median value of the flux medians to get it back to physical units
-        pears_llam_em = (pears_llam_em / medarr[u]) * medval
-        pears_lerr = (pears_lerr / medarr[u]) * medval
+        # Subtract continuum by fitting a third degree polynomial
+        # Continuum fitted with potential emission line areas masked
+        # print chi2 value on plot?
+        p_init = models.Polynomial1D(degree=3)
+        fit_p = fitting.LinearLSQFitter()
 
-        figs_llam_em = (figs_llam_em / medarr[u]) * medval
-        figs_lerr = (figs_lerr / medarr[u]) * medval
+        # mask emission lines 
+        pears_llam_em = 
+        figs_llam_em = 
 
-        # add the spectrum
-        pears_old_llam, pears_old_llamerr, pears_num_points, pears_num_galaxies = \
-        add_spec(pears_lam_em, pears_llam_em, pears_lerr, pears_old_llam, pears_old_llamerr, \
-            pears_num_points, pears_num_galaxies, lam_grid, lam_step)
+        p_pears = fit_p(p_init, pears_lam_em, pears_llam_em)
+        p_figs  = fit_p(p_init, figs_lam_em, figs_llam_em)
 
-        figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
-        add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
-            figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+        # plot data and fit
+        print("PEARS object:", current_pears_id, current_pears_field)
 
-        # Plotting
-        ax.plot(pears_lam_em, pears_llam_em, ls='-', color='paleturquoise', linewidth=1.5)
-        ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.5)
+        fig1 = plt.figure(figsize=(9,6))
+        gs = gridspec.GridSpec(6,2)
+        gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.00, hspace=0.1)
+
+        ax1 = fig1.add_subplot(gs[:4,:])
+        ax2 = fig1.add_subplot(gs[4:,:])
+
+        ax1.plot(pears_lam_em, pears_llam_em, color='paleturquoise', linewidth=1.5)
+        ax1.plot(figs_lam_em, figs_llam_em, color='bisque', linewidth=1.5)
+
+        ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal')
+        ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown')
+
+        # Compute a chi2
+        pears_chi2 = compute_chi2(pears_lam_em, pears_llam_em, pears_lerr, p_pears)
+        figs_chi2 = compute_chi2(figs_lam_em, figs_llam_em, figs_lerr, p_figs)
+
+        ax1.text(x=0.05, y=0.9, s=r"$\chi^2_{PEARS} = $" + "{:.2e}".format(pears_chi2), \
+            verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
+        ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
+            verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
+
+        # Now subtract continuum
+        pears_llam_em = pears_llam_em - p_pears(pears_lam_em)
+        figs_llam_em = figs_llam_em - p_figs(figs_lam_em)
+
+        # Plot "pure emission/absorption" spectrum
+        ax2.plot(pears_lam_em, pears_llam_em, color='paleturquoise', linewidth=1.5)
+        ax2.plot(figs_lam_em, figs_llam_em, color='bisque', linewidth=1.5)
+
+        plt.show()
+        plt.cla()
+        plt.clf()
+        plt.close()
+
+        # add the continuum subtracted spectrum
+        #pears_old_llam, pears_old_llamerr, pears_num_points, pears_num_galaxies = \
+        #add_spec(pears_lam_em, pears_llam_em, pears_lerr, pears_old_llam, pears_old_llamerr, \
+        #    pears_num_points, pears_num_galaxies, lam_grid, lam_step)
+
+        #figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
+        #add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
+        #    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+
+        #ax.plot(pears_lam_em, pears_llam_em, ls='-', color='paleturquoise', linewidth=1.5)
+        #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.5)
+
+    sys.exit(0)
 
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
@@ -1135,8 +1177,8 @@ def main():
     # Get z intervals and their indices
     zp = cat['zp_minchi2']
 
-    all_z_low = np.array([0.2, 0.8])
-    all_z_high = np.array([0.8, 1.1])
+    all_z_low = np.array([0.4, 1.0])
+    all_z_high = np.array([1.0, 2.0])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
