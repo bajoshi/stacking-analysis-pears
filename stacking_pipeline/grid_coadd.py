@@ -1003,6 +1003,14 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_num_points = np.zeros(len(lam_grid))
     #figs_num_galaxies = np.zeros(len(lam_grid))
 
+    # Rejected galaxies list
+    #galaxies_to_reject = [(95761, 'GOODS-N'), (70857, 'GOODS-N'), (114677, 'GOODS-S'), \
+    #(63307, 'GOODS-S'), (77558, 'GOODS-S'), (123736, 'GOODS-N'), (43381, 'GOODS-S'), \
+    #(111206, 'GOODS-S'), (123255, 'GOODS-N'), (70407, 'GOODS-S'), (90998, 'GOODS-S'), \
+    #(24439, 'GOODS-N'), (119621, 'GOODS-N'), (89237, 'GOODS-N'), (18862, 'GOODS-S'), \
+    #(106130, 'GOODS-S'), (16496, 'GOODS-S')]
+    #num_massive = num_massive - len(galaxies_to_reject)
+
     # Create figure
     fig = plt.figure(figsize=(10,6))
     ax = fig.add_subplot(111)
@@ -1027,6 +1035,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         current_pears_id = pears_id[indices][u]
         current_pears_field = pears_field[indices][u]
+
+        #if (current_pears_id, current_pears_field) in galaxies_to_reject:
+        #    print("Skipping:", current_pears_id, current_pears_field)
+        #    continue
 
         #current_figs_id = figs_id[indices][u]
         #current_figs_field = figs_field[indices][u]
@@ -1075,7 +1087,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         ax1 = fig1.add_subplot(gs[:4,:])
         ax2 = fig1.add_subplot(gs[4:,:])
 
-        ax1.plot(pears_lam_em, pears_llam_em, color='turquoise', linewidth=1.5)
+        ax1.plot(pears_lam_em, pears_llam_em, 'o-', markersize=3.0, color='turquoise', linewidth=1.5)
         #ax1.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5)
 
         ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal')
@@ -1086,15 +1098,17 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         for l in range(len(all_lines)):
 
             current_line_wav = all_lines[l]
-            if current_line_wav < pears_lam_em[-1]:
-                current_line_idx = np.argmin(abs(pears_lam_em - current_line_wav))
-                lam_em_formaskplot = pears_lam_em
-            elif current_line_wav > figs_lam_em[0]:
-                current_line_idx = np.argmin(abs(figs_lam_em - current_line_wav))
-                lam_em_formaskplot = figs_lam_em
+            current_line_idx = np.argmin(abs(pears_lam_em - current_line_wav))
+            lam_em_formaskplot = pears_lam_em
+            # if current_line_wav < pears_lam_em[-1]:
+            #     current_line_idx = np.argmin(abs(pears_lam_em - current_line_wav))
+            #     lam_em_formaskplot = pears_lam_em
+            # elif current_line_wav > figs_lam_em[0]:
+            #     current_line_idx = np.argmin(abs(figs_lam_em - current_line_wav))
+            #     lam_em_formaskplot = figs_lam_em
 
-            ls_idx = current_line_idx-1
-            le_idx = current_line_idx+1
+            ls_idx = current_line_idx-3
+            le_idx = current_line_idx+3
             if ls_idx < 0:
                 ls_idx = 0
             if le_idx >= len(lam_em_formaskplot):
@@ -1118,7 +1132,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
         #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         """
-
         # Now subtract continuum
         pears_llam_em = pears_llam_em - p_pears(pears_lam_em)
         #figs_llam_em = figs_llam_em - p_figs(figs_lam_em)
@@ -1165,6 +1178,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_old_llam = np.asarray(figs_old_llam)
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
+    mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
+    print("[Mg/Fe] measured to be:", mg2fe)
+
     # Plot stacks
     pears_llam_zero_idx = np.where(pears_old_llam == 0.0)[0]
     pears_old_llam[pears_llam_zero_idx] = np.nan
@@ -1199,9 +1215,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
             transform=ax.transAxes, color='k', size=16)
 
     # Number of galaxies and redshift range on plot
-    ax.text(0.81, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), verticalalignment='top', horizontalalignment='left', \
+    ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=16)
-    ax.text(0.81, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
+    ax.text(0.66, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=16)
 
@@ -1256,7 +1272,8 @@ def mask_em_lines(lam_em, llam_em):
     mask_indices = np.zeros(len(lam_em))
 
     # Now loop over all lines and mask each
-    # For now just masking one point on either side of central wavelength
+    # For now just masking two points on either side of central wavelength
+    # For [NII] we do one additional point on each side
     for i in range(len(all_lines)):
 
         current_line_wav = all_lines[i]
@@ -1264,14 +1281,24 @@ def mask_em_lines(lam_em, llam_em):
         current_line_idx = np.argmin(abs(lam_em - current_line_wav))
 
         if '[NII]' in current_line_label:
-            mask_indices[current_line_idx-2:current_line_idx+3] = 1
+            mask_indices[current_line_idx-4:current_line_idx+5] = 1
         else:
-            mask_indices[current_line_idx-1:current_line_idx+2] = 1
+            mask_indices[current_line_idx-3:current_line_idx+4] = 1
+
+    # also mask additional points on either end
+    mask_indices[:4] = 1
+    mask_indices[-4:] = 1
 
     # Now create the masked array
     masked_llam_arr = ma.masked_array(llam_em, mask=mask_indices)
 
     return masked_llam_arr, mask_indices
+
+def fit_gauss_mgfe(stack_lam, stack_llam):
+
+    
+
+    return mg2fe
 
 def main():
 
