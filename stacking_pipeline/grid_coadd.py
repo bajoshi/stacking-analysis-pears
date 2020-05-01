@@ -270,17 +270,19 @@ def take_median(old_llam, old_llamerr, lam_grid):
 
     # taking median
     for y in range(len(lam_grid)):
-        if old_llam[y]:
 
-            # take the square root of all errors that were added in quadrature
-            # couldn't do this earlier because it is a list of lists which 
-            # has to be fully constructed before I can do this
-            old_llamerr[y] = np.sqrt(np.asarray(old_llamerr[y]))
+        if old_llam[y]:
 
             # Actual stack value after 3 sigma clipping
             # Only allowing 3 iterations right now
+            #print("\n")
+            #print(old_llam[y])
             masked_data = sigma_clip(data=old_llam[y], sigma=3, maxiters=3)
             old_llam[y] = np.median(masked_data)
+
+            #print(masked_data)
+            #print(old_llam[y])
+            #print(old_llamerr[y])
 
             # Get mask from the masked_data array
             mask = np.ma.getmask(masked_data)
@@ -288,15 +290,26 @@ def take_median(old_llam, old_llamerr, lam_grid):
             # Apply mask to error array
             masked_dataerr = np.ma.array(old_llamerr[y], mask=mask)
 
+            # take the square root of all errors that were added in quadrature
+            # couldn't do this earlier because it is a list of lists which 
+            # has to be fully constructed before I can do this
+            old_llamerr[y] = np.sqrt(np.sum(masked_dataerr)) / len(masked_dataerr)
+
+            #print(old_llamerr[y])
+            #print("{:.2f}".format(old_llam[y]/old_llamerr[y]))
+            #if y > 24 : sys.exit(0)
+
             # Error on each point of the stack
             # This only uses the points that passed the 3 sigma clipping before
-            old_llamerr[y] = \
-            np.sqrt((1.253 * np.std(masked_data) / \
-                np.sqrt(len(masked_data)))**2 + np.sum(masked_dataerr) / len(masked_data))
+            #old_llamerr[y] = \
+            #np.sqrt((1.253 * np.std(masked_data) / \
+            #    np.sqrt(len(masked_data)))**2 + np.sum(masked_dataerr) / len(masked_data))
 
         else:
             old_llam[y] = np.nan
             old_llamerr[y] = np.nan
+
+        #print("%d %.2e %.2e %.2f" % (lam_grid[y], old_llam[y], old_llamerr[y], (old_llam[y]/old_llamerr[y])))
 
     return old_llam, old_llamerr
 
@@ -947,11 +960,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
-    lam_step = 20  # somewhat arbitrarily chosen # pretty much trial and error
+    lam_step = 25  # somewhat arbitrarily chosen # pretty much trial and error
 
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
-    lam_grid_low = 2500
+    lam_grid_low = 3400
     lam_grid_high = 8200
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
@@ -1156,8 +1169,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     pears_llam_zero_idx = np.where(pears_old_llam == 0.0)[0]
     pears_old_llam[pears_llam_zero_idx] = np.nan
     pears_old_llamerr[pears_llam_zero_idx] = np.nan
-    ax.errorbar(lam_grid, pears_old_llam, yerr=pears_old_llamerr, fmt='.-', color='royalblue', linewidth=1.5,\
-        elinewidth=0.7, ecolor='r', markeredgecolor='royalblue', capsize=0, markersize=1.0, zorder=5)
+    ax.plot(lam_grid, pears_old_llam, '.-', color='royalblue', linewidth=1.5, \
+        markeredgecolor='royalblue', markersize=1.0, zorder=5)
+    ax.fill_between(lam_grid, pears_old_llam - pears_old_llamerr, pears_old_llam + pears_old_llamerr, color='gray', alpha=0.5)
 
     #figs_llam_zero_idx = np.where(figs_old_llam == 0.0)[0]
     #figs_old_llam[figs_llam_zero_idx] = np.nan
@@ -1167,11 +1181,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     ax.set_xlim(lam_grid_low, lam_grid_high)
     ax.set_ylim(-1.8e39, 1.8e39)
+    # ax.set_ylim(0.93, 1.07)  # if dividing by the continuum instead of subtracting
     ax.axhline(y=0.0, ls='--', color='k')
     ax.minorticks_on()
-
-    plt.show()
-    sys.exit(0)
 
     # Mark some important features
     # Mgb
@@ -1186,20 +1198,27 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     ax.text(0.6, 0.5, r'$\mathrm{Fe}\lambda 5335$', verticalalignment='top', horizontalalignment='left', \
             transform=ax.transAxes, color='k', size=16)
 
+    # Number of galaxies and redshift range on plot
+    ax.text(0.81, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=16)
+    ax.text(0.81, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=16)
+
     # Labels
-    ax.set_xlabel(r'$\lambda\ [\mu m]$', fontsize=15)
+    ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
     ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{continuum\ subtracted}]$', fontsize=15)
 
-    ax.text(0.67, 0.26, 'PEARS ACS/G800L', verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transAxes, color='royalblue', size=20)
-    ax.text(0.67, 0.195, 'FIGS WFC3/G102', verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transAxes, color='darkorange', size=20)
+    #ax.text(0.67, 0.26, 'PEARS ACS/G800L', verticalalignment='top', horizontalalignment='left', \
+    #        transform=ax.transAxes, color='royalblue', size=20)
+    #ax.text(0.67, 0.195, 'FIGS WFC3/G102', verticalalignment='top', horizontalalignment='left', \
+    #        transform=ax.transAxes, color='darkorange', size=20)
 
-    figname = stacking_figures_dir + 'massive_stack_' + str(z_low).replace('.','p') \
+    figname = stacking_figures_dir + 'massive_stack_contsub_' + str(z_low).replace('.','p') \
     + '_' + str(z_high).replace('.','p') + '.pdf'
     fig.savefig(figname, dpi=300, bbox_inches='tight')
 
-    plt.show()
+    #plt.show()
     # plt.clf()
     # plt.cla()
     # plt.close()
@@ -1295,8 +1314,8 @@ def main():
     # Get z intervals and their indices
     zp = cat['zp_minchi2']
 
-    all_z_low = np.array([0.17])
-    all_z_high = np.array([1.3])
+    all_z_low = np.array([0.17,0.17,0.60])
+    all_z_high = np.array([0.77,0.60,0.77])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
