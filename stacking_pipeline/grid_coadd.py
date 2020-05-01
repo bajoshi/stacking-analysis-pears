@@ -1340,7 +1340,18 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     fit_func = fitting.LevMarLSQFitter()
     g = fit_func(gauss_absorption_init, stack_lam_to_fit, stack_llam_to_fit)
 
-    print(g.parameters)
+    print("\n" + "Fitting parameters:")
+    print("Constant amp:", g.parameters[0])
+    print("Mg amp:", g.parameters[1])
+    print("Mg mean [kept fixed]:", g.parameters[2])
+    print("Mg stddev:", g.parameters[3])
+    print("Fe amp:", g.parameters[4])
+    print("Fe mean [kept fixed]:", g.parameters[5])
+    print("Fe stddev:", g.parameters[6])
+
+    mg_area = g.parameters[3] * np.sqrt(abs(g.parameters[1]))
+    fe_area = g.parameters[6] * np.sqrt(abs(g.parameters[4]))
+    mg2fe = mg_area/fe_area
 
     # plot fit
     fig = plt.figure()
