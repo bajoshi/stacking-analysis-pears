@@ -295,8 +295,8 @@ def take_median(old_llam, old_llamerr, lam_grid):
                 np.sqrt(len(masked_data)))**2 + np.sum(masked_dataerr) / len(masked_data))
 
         else:
-            old_llam[y] = 0.0
-            old_llamerr[y] = 0.0
+            old_llam[y] = np.nan
+            old_llamerr[y] = np.nan
 
     return old_llam, old_llamerr
 
@@ -932,8 +932,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     pears_field = cat['Field'][z_indices]
     zp = cat['zp_minchi2'][z_indices]
 
-    figs_id = cat['figs_id'][z_indices]
-    figs_field = cat['figs_field'][z_indices]
+    #figs_id = cat['figs_id'][z_indices]
+    #figs_field = cat['figs_field'][z_indices]
 
     ur_color = urcol[z_indices]
     stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below expects log(stellar mass)
@@ -947,12 +947,12 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # ----------------------------------------- Code config params ----------------------------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
-    lam_step = 80  # somewhat arbitrarily chosen # pretty much trial and error
+    lam_step = 20  # somewhat arbitrarily chosen # pretty much trial and error
 
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
-    lam_grid_low = 1800
-    lam_grid_high = 7400
+    lam_grid_low = 2500
+    lam_grid_high = 8200
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
@@ -962,16 +962,16 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # Find the indices (corresponding to massive galaxies)
     indices = np.where((ur_color >= 1.5) & (ur_color < 3.0) &\
                     (stellar_mass >= 10.5) & (stellar_mass < 12.0))[0]
-
+  
     num_massive = int(len(pears_id[indices]))
     print("Number of massive galaxies in this redshift range --", num_massive)
 
     # rescale to 200A band centered on the observed wavelengths
     # This function returns the median of the median values (in the given band) from all given spectra
     # All spectra to be coadded in a given grid cell need to be divided by this value
-    medarr, medval, stdval = rescale(figs_id[indices], figs_field[indices], zp[indices], dl_tbl)
-    print("The spectra in this cell have a median value of:", end=' ')
-    print("{:.3e}".format(medval), " [erg s^-1 A^-1]")
+    #medarr, medval, stdval = rescale(figs_id[indices], figs_field[indices], zp[indices], dl_tbl)
+    #print("The spectra in this cell have a median value of:", end=' ')
+    #print("{:.3e}".format(medval), " [erg s^-1 A^-1]")
 
     # Define empty arrays and lists for saving stacks
     pears_old_llam = np.zeros(len(lam_grid))
@@ -979,16 +979,16 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     pears_old_llam = pears_old_llam.tolist()
     pears_old_llamerr = pears_old_llamerr.tolist()
 
-    figs_old_llam = np.zeros(len(lam_grid))
-    figs_old_llamerr = np.zeros(len(lam_grid))
-    figs_old_llam = figs_old_llam.tolist()
-    figs_old_llamerr = figs_old_llamerr.tolist()
-
     pears_num_points = np.zeros(len(lam_grid))
     pears_num_galaxies = np.zeros(len(lam_grid))
 
-    figs_num_points = np.zeros(len(lam_grid))
-    figs_num_galaxies = np.zeros(len(lam_grid))
+    #figs_old_llam = np.zeros(len(lam_grid))
+    #figs_old_llamerr = np.zeros(len(lam_grid))
+    #figs_old_llam = figs_old_llam.tolist()
+    #figs_old_llamerr = figs_old_llamerr.tolist()
+
+    #figs_num_points = np.zeros(len(lam_grid))
+    #figs_num_galaxies = np.zeros(len(lam_grid))
 
     # Create figure
     fig = plt.figure(figsize=(10,6))
@@ -1006,8 +1006,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
                 pears_old_llam[x] = []
                 pears_old_llamerr[x] = []
             
-                figs_old_llam[x] = []
-                figs_old_llamerr[x] = []
+                #figs_old_llam[x] = []
+                #figs_old_llamerr[x] = []
 
         # Get redshift from catalog
         current_redshift = zp[indices][u]
@@ -1015,14 +1015,14 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         current_pears_id = pears_id[indices][u]
         current_pears_field = pears_field[indices][u]
 
-        current_figs_id = figs_id[indices][u]
-        current_figs_field = figs_field[indices][u]
+        #current_figs_id = figs_id[indices][u]
+        #current_figs_field = figs_field[indices][u]
 
         # ----------------------------- Get data ----------------------------- #
         # PEARS PA combined data
         grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
         # FIGS data
-        g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
+        #g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
         # Deredshift the observed data 
         zidx = np.argmin(abs(z_arr - current_redshift))
@@ -1034,9 +1034,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         pears_llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
         pears_lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
 
-        figs_lam_em = g102_lam_obs / (1 + current_redshift)
-        figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-        figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+        #figs_lam_em = g102_lam_obs / (1 + current_redshift)
+        #figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+        #figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
                 
         # Subtract continuum by fitting a third degree polynomial
         # Continuum fitted with potential emission line areas masked
@@ -1046,10 +1046,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         # mask emission lines 
         pears_llam_em_masked, pears_mask_ind = mask_em_lines(pears_lam_em, pears_llam_em)
-        figs_llam_em_masked, figs_mask_ind = mask_em_lines(figs_lam_em, figs_llam_em)
+        #figs_llam_em_masked, figs_mask_ind = mask_em_lines(figs_lam_em, figs_llam_em)
 
         p_pears = fit_p(p_init, pears_lam_em, pears_llam_em_masked)
-        p_figs  = fit_p(p_init, figs_lam_em, figs_llam_em_masked)
+        #p_figs  = fit_p(p_init, figs_lam_em, figs_llam_em_masked)
 
         # plot data and fit
         """
@@ -1063,10 +1063,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         ax2 = fig1.add_subplot(gs[4:,:])
 
         ax1.plot(pears_lam_em, pears_llam_em, color='turquoise', linewidth=1.5)
-        ax1.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5)
+        #ax1.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5)
 
         ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal')
-        ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown')
+        #ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown')
 
         # Show mask as shaded region
         all_lines, all_line_labels = get_all_line_wav()
@@ -1098,24 +1098,24 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         # Compute a chi2
         # use the masked array and the fit because the fitting was done on the masked array
         pears_chi2 = compute_chi2(pears_lam_em, pears_llam_em, pears_lerr, p_pears)
-        figs_chi2 = compute_chi2(figs_lam_em, figs_llam_em, figs_lerr, p_figs)
+        #figs_chi2 = compute_chi2(figs_lam_em, figs_llam_em, figs_lerr, p_figs)
 
         ax1.text(x=0.05, y=0.9, s=r"$\chi^2_{PEARS} = $" + "{:.2e}".format(pears_chi2), \
             verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
-        ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
-            verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
+        #ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
+        #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         """
 
         # Now subtract continuum
         pears_llam_em = pears_llam_em - p_pears(pears_lam_em)
-        figs_llam_em = figs_llam_em - p_figs(figs_lam_em)
-
+        #figs_llam_em = figs_llam_em - p_figs(figs_lam_em)
+        
         """
         # Plot "pure emission/absorption" spectrum
         ax2.axhline(y=0.0, ls='--', color='black', lw=1.5, zorder=1)
 
         ax2.plot(pears_lam_em, pears_llam_em, color='turquoise', linewidth=1.5, zorder=2)
-        ax2.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5, zorder=2)
+        #ax2.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5, zorder=2)
 
         # Limits 
         ax1.set_xlim(lam_grid_low, lam_grid_high)
@@ -1135,40 +1135,43 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         add_spec(pears_lam_em, pears_llam_em, pears_lerr, pears_old_llam, pears_old_llamerr, \
             pears_num_points, pears_num_galaxies, lam_grid, lam_step)
 
-        figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
-        add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
-            figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+        #figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
+        #add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
+        #    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
 
-        ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=1.5)
-        ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.5)
+        ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
+        #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.0)
 
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
     pears_old_llam, pears_old_llamerr = take_median(pears_old_llam, pears_old_llamerr, lam_grid)
-    figs_old_llam, figs_old_llamerr = take_median(figs_old_llam, figs_old_llamerr, lam_grid)
+    #figs_old_llam, figs_old_llamerr = take_median(figs_old_llam, figs_old_llamerr, lam_grid)
 
     pears_old_llam = np.asarray(pears_old_llam)
     pears_old_llamerr = np.asarray(pears_old_llamerr)
-    figs_old_llam = np.asarray(figs_old_llam)
-    figs_old_llamerr = np.asarray(figs_old_llamerr)
+    #figs_old_llam = np.asarray(figs_old_llam)
+    #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
     # Plot stacks
     pears_llam_zero_idx = np.where(pears_old_llam == 0.0)[0]
     pears_old_llam[pears_llam_zero_idx] = np.nan
     pears_old_llamerr[pears_llam_zero_idx] = np.nan
-    ax.errorbar(lam_grid, pears_old_llam, yerr=pears_old_llamerr, fmt='.-', color='royalblue', linewidth=2.5,\
-        elinewidth=1.0, ecolor='r', markeredgecolor='royalblue', capsize=0, markersize=4.0, zorder=5)
+    ax.errorbar(lam_grid, pears_old_llam, yerr=pears_old_llamerr, fmt='.-', color='royalblue', linewidth=1.5,\
+        elinewidth=0.7, ecolor='r', markeredgecolor='royalblue', capsize=0, markersize=1.0, zorder=5)
 
-    figs_llam_zero_idx = np.where(figs_old_llam == 0.0)[0]
-    figs_old_llam[figs_llam_zero_idx] = np.nan
-    figs_old_llamerr[figs_llam_zero_idx] = np.nan
-    ax.errorbar(lam_grid, figs_old_llam, yerr=figs_old_llamerr, fmt='.-', color='darkorange', linewidth=2.5,\
-                elinewidth=1.0, ecolor='r', markeredgecolor='darkorange', capsize=0, markersize=4.0, zorder=5)
+    #figs_llam_zero_idx = np.where(figs_old_llam == 0.0)[0]
+    #figs_old_llam[figs_llam_zero_idx] = np.nan
+    #figs_old_llamerr[figs_llam_zero_idx] = np.nan
+    #ax.errorbar(lam_grid, figs_old_llam, yerr=figs_old_llamerr, fmt='.-', color='darkorange', linewidth=2.5,\
+    #            elinewidth=1.0, ecolor='r', markeredgecolor='darkorange', capsize=0, markersize=4.0, zorder=5)
 
     ax.set_xlim(lam_grid_low, lam_grid_high)
-    ax.set_ylim(-2.5e39, 2.5e39)
+    ax.set_ylim(-1.8e39, 1.8e39)
     ax.axhline(y=0.0, ls='--', color='k')
     ax.minorticks_on()
+
+    plt.show()
+    sys.exit(0)
 
     # Mark some important features
     # Mgb
@@ -1261,13 +1264,13 @@ def main():
     
     # ----------------------------------------- READ IN CATALOGS ----------------------------------------- #
     # Read in results for all of PEARS
-    #cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True, encoding='ascii')
+    cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True, encoding='ascii')
     # Read in U-R color  # This was generated by make_col_ms_plots.py
-    #urcol = np.load(stacking_analysis_dir + 'ur_arr_all.npy')
+    urcol = np.load(stacking_analysis_dir + 'ur_arr_all.npy')
 
-    cat = np.genfromtxt(stacking_analysis_dir + 'pears_figs_combined_final_sample.txt', \
-        dtype=None, names=True, encoding='ascii')
-    urcol = cat['ur_col']
+    #cat = np.genfromtxt(stacking_analysis_dir + 'pears_figs_combined_final_sample.txt', \
+    #    dtype=None, names=True, encoding='ascii')
+    #urcol = cat['ur_col']
 
     """
     # ------------------------------- Read in photometry and grism+photometry catalogs ------------------------------- #
@@ -1292,8 +1295,8 @@ def main():
     # Get z intervals and their indices
     zp = cat['zp_minchi2']
 
-    all_z_low = np.array([0.4, 1.0])
-    all_z_high = np.array([1.0, 2.5])
+    all_z_low = np.array([0.17])
+    all_z_high = np.array([1.3])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
