@@ -1180,6 +1180,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
     print("[Mg/Fe] measured to be:", mg2fe)
+    sys.exit(0)
 
     # Plot stacks
     pears_llam_zero_idx = np.where(pears_old_llam == 0.0)[0]
@@ -1296,7 +1297,62 @@ def mask_em_lines(lam_em, llam_em):
 
 def fit_gauss_mgfe(stack_lam, stack_llam):
 
+    # First constrain the region to be fit
+    fitreg_idx = np.where((stack_lam >= 4700) & (stack_lam <= 5600))[0]
+    stack_lam_to_fit = stack_lam[fitreg_idx]
+    stack_llam_to_fit = stack_llam[fitreg_idx]
+
+    # The fitting cannot handle NaNs 
+    # Make sure any nan values are replaced by interpolated values
+    for i in range(len(stack_lam_to_fit)):
+
+        current_lam = stack_lam_to_fit[i]
+        current_llam = stack_llam_to_fit[i]
+        if not np.isfinite(stack_llam_to_fit[i]):
+
+            stack_lam_idx = np.argmin(abs(stack_lam - current_lam))
+            # Referenced to the original stack lam array because 
+            # just the fitting array might not have the values
+            # we need for interpolation
+
+            # I'm calling it interpolation but for now I'm just 
+            # taking an average of the two points around it.
+            stack_llam_to_fit[i] = (stack_llam[stack_lam_idx - 1] + stack_llam[stack_lam_idx + 1])/2
+
+    # Not using the GaussianAbsorption1D model becuase it is deprecated
+    # Instead I'm subtracting a Const1D model from the Gaussian1D model
+    # as suggested in the Astropy documentation.
+    const_init = models.Const1D(amplitude=1e40)
+    # for some reason, any initial amplitude guess other than exactly zero works well
     
+    gauss_mg_init = models.Gaussian1D(amplitude=5e38, mean=5175.0, stddev=50.0)
+    gauss_fe_init = models.Gaussian1D(amplitude=2e38, mean=5302.5, stddev=20.0)
+
+    # combine 
+    gauss_absorption_init = const_init - gauss_mg_init - gauss_fe_init
+
+    # Freeze the center of the absorption profile 
+    # only allowing stddev to be free.
+    gauss_absorption_init.mean_1.fixed = True
+    gauss_absorption_init.mean_2.fixed = True
+
+    # Fitting 
+    fit_func = fitting.LevMarLSQFitter()
+    g = fit_func(gauss_absorption_init, stack_lam_to_fit, stack_llam_to_fit)
+
+    print(g.parameters)
+
+    # plot fit
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    
+    ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
+        markeredgecolor='royalblue', markersize=1.0, zorder=1)
+    ax.plot(stack_lam_to_fit, g(stack_lam_to_fit), ls='--', color='firebrick', lw=2, zorder=2)
+
+    ax.axhline(y=0.0, ls='--', color='k')
+
+    plt.show()
 
     return mg2fe
 
