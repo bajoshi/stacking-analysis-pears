@@ -6,6 +6,7 @@ import numpy.ma as ma
 from astropy.io import fits
 from astropy.stats import sigma_clip
 from astropy.modeling import models, fitting
+from scipy.optimize import curve_fit
 
 import os
 import sys
@@ -1180,7 +1181,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
     print("[Mg/Fe] measured to be:", mg2fe)
-    sys.exit(0)
 
     # Plot stacks
     pears_llam_zero_idx = np.where(pears_old_llam == 0.0)[0]
@@ -1204,16 +1204,26 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     # Mark some important features
     # Mgb
-    ax.axvline(x=5175.0, ls='--', ymin=0.2, ymax=0.45, color='seagreen')
-    ax.text(0.47, 0.25, 'Mgb', verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transAxes, color='k', size=16)
+    ax.axvline(x=5175.0, ls='--', ymin=0.2, ymax=0.35, color='firebrick')
+    ax.text(5160.0, -1.13e39, r'$\mathrm{Mg_2 + Mgb}$', \
+        verticalalignment='top', horizontalalignment='right', \
+        transform=ax.transData, color='firebrick', size=10)
     # FeII
-    ax.axvline(x=5270.0, ls='--', ymin=0.2, ymax=0.45, color='seagreen')
-    ax.text(0.6, 0.45, r'$\mathrm{Fe}\lambda 5270$', verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transAxes, color='k', size=16)
-    ax.axvline(x=5335.0, ls='--', ymin=0.2, ymax=0.45, color='seagreen')
-    ax.text(0.6, 0.5, r'$\mathrm{Fe}\lambda 5335$', verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transAxes, color='k', size=16)
+    ax.axvline(x=5270.0, ls='--', ymin=0.2, ymax=0.35, color='firebrick')
+    ax.axvline(x=5335.0, ls='--', ymin=0.2, ymax=0.35, color='firebrick')
+    ax.text(5270, -1.13e39, r'$\mathrm{Fe}\lambda 5270$' + '+ \n' + r'$\mathrm{Fe}\lambda 5335$', \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transData, color='firebrick', size=10)
+
+    # Gband
+    ax.text(4300.0, -0.4e39, 'G-band', \
+        verticalalignment='center', horizontalalignment='center', \
+        transform=ax.transData, color='firebrick', size=10)
+
+    # Ca H & K
+    ax.text(3920.0, -0.5e39, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
+        verticalalignment='center', horizontalalignment='center', \
+        transform=ax.transData, color='firebrick', size=10)
 
     # Number of galaxies and redshift range on plot
     ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), verticalalignment='top', horizontalalignment='left', \
@@ -1234,6 +1244,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     figname = stacking_figures_dir + 'massive_stack_contsub_' + str(z_low).replace('.','p') \
     + '_' + str(z_high).replace('.','p') + '.pdf'
     fig.savefig(figname, dpi=300, bbox_inches='tight')
+
+    sys.exit(0)
 
     #plt.show()
     # plt.clf()
@@ -1295,10 +1307,13 @@ def mask_em_lines(lam_em, llam_em):
 
     return masked_llam_arr, mask_indices
 
+def Gauss(x, amp, mu, sigma):
+    return amp * np.exp(-(x - mu)**2 / (2 * sigma**2))
+
 def fit_gauss_mgfe(stack_lam, stack_llam):
 
     # First constrain the region to be fit
-    fitreg_idx = np.where((stack_lam >= 4700) & (stack_lam <= 5600))[0]
+    fitreg_idx = np.where((stack_lam >= 4650) & (stack_lam <= 5500))[0]
     stack_lam_to_fit = stack_lam[fitreg_idx]
     stack_llam_to_fit = stack_llam[fitreg_idx]
 
@@ -1319,51 +1334,111 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
             # taking an average of the two points around it.
             stack_llam_to_fit[i] = (stack_llam[stack_lam_idx - 1] + stack_llam[stack_lam_idx + 1])/2
 
+    # Initial params
+    mu = 5175.0
+    sigma = 30.0
+    amp = -1e39
+
+    popt, pcov = curve_fit(Gauss, x=stack_lam_to_fit, y=stack_llam_to_fit, p0=[amp, mu, sigma])
+
+    print(popt)
+    print(pcov)
+
+    # plot fit
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    
+    # Show data and combined fit
+    ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
+        markeredgecolor='royalblue', markersize=1.0, zorder=1)
+    ax.plot(stack_lam, Gauss(stack_lam, *popt), ls='--', color='rebeccapurple', lw=2, zorder=2)
+
+    plt.show()
+
+    sys.exit(0)
+
+
+
+
+
+
+
+
+
     # Not using the GaussianAbsorption1D model becuase it is deprecated
     # Instead I'm subtracting a Const1D model from the Gaussian1D model
     # as suggested in the Astropy documentation.
-    const_init = models.Const1D(amplitude=1e40)
+    const_init = models.Const1D(amplitude=0.0)
     # for some reason, any initial amplitude guess other than exactly zero works well
     
-    gauss_mg_init = models.Gaussian1D(amplitude=5e38, mean=5175.0, stddev=50.0)
-    gauss_fe_init = models.Gaussian1D(amplitude=2e38, mean=5302.5, stddev=20.0)
+    gauss_mg_init = models.Gaussian1D(amplitude=-5e40, mean=5175.0, stddev=50.0)
+    gauss_fe_init = models.Gaussian1D(amplitude=-2e40, mean=5302.5, stddev=20.0)
 
     # combine 
-    gauss_absorption_init = const_init - gauss_mg_init - gauss_fe_init
+    mg_abs_model = const_init - gauss_mg_init
+    fe_abs_model = const_init - gauss_fe_init
+    gauss_absorption_init = const_init - gauss_mg_init - gauss_fe_init  # mg_abs_model + fe_abs_model
 
     # Freeze the center of the absorption profile 
     # only allowing stddev to be free.
     gauss_absorption_init.mean_1.fixed = True
     gauss_absorption_init.mean_2.fixed = True
 
+    # Force the amplitude to be negative so it fits a gaussian in absorption
+    #gauss_absorption_init.amplitude_1.bounds = (None, -1e38)
+    #gauss_absorption_init.amplitude_3.bounds = (None, -1e38)
+
     # Fitting 
     fit_func = fitting.LevMarLSQFitter()
     g = fit_func(gauss_absorption_init, stack_lam_to_fit, stack_llam_to_fit)
 
-    print("\n" + "Fitting parameters:")
-    print("Constant amp:", g.parameters[0])
-    print("Mg amp:", g.parameters[1])
-    print("Mg mean [kept fixed]:", g.parameters[2])
-    print("Mg stddev:", g.parameters[3])
-    print("Fe amp:", g.parameters[4])
-    print("Fe mean [kept fixed]:", g.parameters[5])
-    print("Fe stddev:", g.parameters[6])
+    #print("\n" + "Fitting parameters:")
+    #print("Constant amp:", g.parameters[0])
+    #print("Mg amp:", g.parameters[1])
+    #print("Mg mean [kept fixed]:", g.parameters[2])
+    #print("Mg stddev:", g.parameters[3])
+    #print("Fe amp:", g.parameters[5])
+    #print("Fe mean [kept fixed]:", g.parameters[6])
+    #print("Fe stddev:", g.parameters[7])
+
+    print(g)
+
+    #print(g[0])
+    #print(g[1])
+    #print(g[2])
+    #print(g[3])
 
     mg_area = g.parameters[3] * np.sqrt(abs(g.parameters[1]))
-    fe_area = g.parameters[6] * np.sqrt(abs(g.parameters[4]))
+    fe_area = g.parameters[7] * np.sqrt(abs(g.parameters[5]))
     mg2fe = mg_area/fe_area
+    print(mg2fe)
 
     # plot fit
     fig = plt.figure()
     ax = fig.add_subplot(111)
     
+    # Show data and combined fit
     ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
         markeredgecolor='royalblue', markersize=1.0, zorder=1)
-    ax.plot(stack_lam_to_fit, g(stack_lam_to_fit), ls='--', color='firebrick', lw=2, zorder=2)
+    ax.plot(stack_lam_to_fit, g(stack_lam_to_fit), ls='--', color='rebeccapurple', lw=2, zorder=2)
 
+    # Show individual Gaussians
+    ax.plot(stack_lam_to_fit, g[1](stack_lam_to_fit), ls='--', color='forestgreen', lw=2, zorder=3)
+    ax.plot(stack_lam_to_fit, g[2](stack_lam_to_fit), ls='--', color='red', lw=2, zorder=3)
+
+    # Horizontal line
     ax.axhline(y=0.0, ls='--', color='k')
 
+    # Labels
+    ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
+    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{continuum\ subtracted}]$', fontsize=15)
+
+    ax.minorticks_on()
+
     plt.show()
+    sys.exit(0)
+
+    fig.savefig(stacking_figures_dir + 'Mg2Fe_fit_result.pdf', dpi=300, bbox_inches='tight')
 
     return mg2fe
 
