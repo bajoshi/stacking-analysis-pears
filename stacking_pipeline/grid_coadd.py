@@ -49,6 +49,11 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
         # add fluxes
         new_ind = np.where((lam_em >= lam_grid[i] - lam_step/2) & (lam_em < lam_grid[i] + lam_step/2))[0]
 
+        if (lam_grid[i] >= 5175) and (lam_grid[i] <= 5270):
+            print("Indices within %.2f to %.2f:" %(lam_grid[i] - lam_step/2, lam_grid[i] + lam_step/2))
+            print(new_ind, end='                  ')
+            print(llam_em[new_ind])
+
         if new_ind.size:
             
             # Not requiring any points to be positive anymore
@@ -965,8 +970,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     # Set the ends of the lambda grid
     # This is dependent on the redshift range being considered
-    lam_grid_low = 3400
-    lam_grid_high = 8200
+    lam_grid_low = 3000
+    lam_grid_high = 7600
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
@@ -1005,12 +1010,12 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_num_galaxies = np.zeros(len(lam_grid))
 
     # Rejected galaxies list
-    #galaxies_to_reject = [(95761, 'GOODS-N'), (70857, 'GOODS-N'), (114677, 'GOODS-S'), \
-    #(63307, 'GOODS-S'), (77558, 'GOODS-S'), (123736, 'GOODS-N'), (43381, 'GOODS-S'), \
-    #(111206, 'GOODS-S'), (123255, 'GOODS-N'), (70407, 'GOODS-S'), (90998, 'GOODS-S'), \
-    #(24439, 'GOODS-N'), (119621, 'GOODS-N'), (89237, 'GOODS-N'), (18862, 'GOODS-S'), \
-    #(106130, 'GOODS-S'), (16496, 'GOODS-S')]
-    #num_massive = num_massive - len(galaxies_to_reject)
+    galaxies_to_reject = [(95761, 'GOODS-N'), (70857, 'GOODS-N'), (114677, 'GOODS-S'), \
+    (63307, 'GOODS-S'), (77558, 'GOODS-S'), (123736, 'GOODS-N'), (43381, 'GOODS-S'), \
+    (111206, 'GOODS-S'), (123255, 'GOODS-N'), (70407, 'GOODS-S'), (90998, 'GOODS-S'), \
+    (24439, 'GOODS-N'), (119621, 'GOODS-N'), (89237, 'GOODS-N'), (18862, 'GOODS-S'), \
+    (106130, 'GOODS-S'), (16496, 'GOODS-S')]
+    num_massive = num_massive - len(galaxies_to_reject)
 
     # Create figure
     fig = plt.figure(figsize=(10,6))
@@ -1037,9 +1042,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         current_pears_id = pears_id[indices][u]
         current_pears_field = pears_field[indices][u]
 
-        #if (current_pears_id, current_pears_field) in galaxies_to_reject:
-        #    print("Skipping:", current_pears_id, current_pears_field)
-        #    continue
+        if (current_pears_id, current_pears_field) in galaxies_to_reject:
+            print("Skipping:", current_pears_id, current_pears_field)
+            continue
 
         #current_figs_id = figs_id[indices][u]
         #current_figs_field = figs_field[indices][u]
@@ -1169,6 +1174,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
         #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.0)
 
+    for g in range(len(lam_grid)):
+        
+        if lam_grid[g] == 5200 or lam_grid[g] == 5225:
+            print("\n", lam_grid[g], pears_old_llam[g])
+
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
     pears_old_llam, pears_old_llamerr = take_median(pears_old_llam, pears_old_llamerr, lam_grid)
@@ -1179,8 +1189,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_old_llam = np.asarray(figs_old_llam)
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
-    mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
-    print("[Mg/Fe] measured to be:", mg2fe)
+    #mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
+    #print("[Mg/Fe] measured to be:", mg2fe)
+
+
+    sys.exit(0)
 
     # Plot stacks
     pears_llam_zero_idx = np.where(pears_old_llam == 0.0)[0]
@@ -1188,7 +1201,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     pears_old_llamerr[pears_llam_zero_idx] = np.nan
     ax.plot(lam_grid, pears_old_llam, '.-', color='royalblue', linewidth=1.5, \
         markeredgecolor='royalblue', markersize=1.0, zorder=5)
-    ax.fill_between(lam_grid, pears_old_llam - pears_old_llamerr, pears_old_llam + pears_old_llamerr, color='gray', alpha=0.5)
+    ax.fill_between(lam_grid, pears_old_llam - pears_old_llamerr, pears_old_llam + pears_old_llamerr, \
+        color='gray', alpha=0.5, zorder=5)
 
     #figs_llam_zero_idx = np.where(figs_old_llam == 0.0)[0]
     #figs_old_llam[figs_llam_zero_idx] = np.nan
@@ -1245,12 +1259,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     + '_' + str(z_high).replace('.','p') + '.pdf'
     fig.savefig(figname, dpi=300, bbox_inches='tight')
 
-    sys.exit(0)
-
     #plt.show()
-    # plt.clf()
-    # plt.cla()
-    # plt.close()
+    plt.clf()
+    plt.cla()
+    plt.close()
 
     return None
 
@@ -1310,10 +1322,14 @@ def mask_em_lines(lam_em, llam_em):
 def Gauss(x, amp, mu, sigma):
     return amp * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
+def twoGauss(x, amp1, mu1, sigma1, amp2, mu2, sigma2):
+    return amp1 * np.exp(-(x - mu1)**2 / (2 * sigma1**2)) + \
+           amp2 * np.exp(-(x - mu2)**2 / (2 * sigma2**2))
+
 def fit_gauss_mgfe(stack_lam, stack_llam):
 
     # First constrain the region to be fit
-    fitreg_idx = np.where((stack_lam >= 4650) & (stack_lam <= 5500))[0]
+    fitreg_idx = np.where((stack_lam >= 4650) & (stack_lam <= 5700))[0]
     stack_lam_to_fit = stack_lam[fitreg_idx]
     stack_llam_to_fit = stack_llam[fitreg_idx]
 
@@ -1335,14 +1351,23 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
             stack_llam_to_fit[i] = (stack_llam[stack_lam_idx - 1] + stack_llam[stack_lam_idx + 1])/2
 
     # Initial params
-    mu = 5175.0
-    sigma = 30.0
-    amp = -1e39
+    amp1 = -1e39
+    mu1 = 5175.0
+    sigma1 = 50.0
+    amp2 = -0.5e39
+    mu2 = 5302.5
+    sigma2 = 10.0
 
-    popt, pcov = curve_fit(Gauss, x=stack_lam_to_fit, y=stack_llam_to_fit, p0=[amp, mu, sigma])
+    initial_guess = [amp1, mu1, sigma1, amp2, mu2, sigma2]
+
+    popt, pcov = curve_fit(twoGauss, xdata=stack_lam_to_fit, ydata=stack_llam_to_fit, p0=initial_guess)
 
     print(popt)
     print(pcov)
+
+    perr = np.sqrt(np.diag(pcov))
+
+    print(perr)
 
     # plot fit
     fig = plt.figure()
@@ -1351,62 +1376,11 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     # Show data and combined fit
     ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
         markeredgecolor='royalblue', markersize=1.0, zorder=1)
-    ax.plot(stack_lam, Gauss(stack_lam, *popt), ls='--', color='rebeccapurple', lw=2, zorder=2)
+    ax.plot(stack_lam, twoGauss(stack_lam, *popt), ls='--', color='rebeccapurple', lw=2, zorder=2)
 
     plt.show()
 
     sys.exit(0)
-
-
-
-
-
-
-
-
-
-    # Not using the GaussianAbsorption1D model becuase it is deprecated
-    # Instead I'm subtracting a Const1D model from the Gaussian1D model
-    # as suggested in the Astropy documentation.
-    const_init = models.Const1D(amplitude=0.0)
-    # for some reason, any initial amplitude guess other than exactly zero works well
-    
-    gauss_mg_init = models.Gaussian1D(amplitude=-5e40, mean=5175.0, stddev=50.0)
-    gauss_fe_init = models.Gaussian1D(amplitude=-2e40, mean=5302.5, stddev=20.0)
-
-    # combine 
-    mg_abs_model = const_init - gauss_mg_init
-    fe_abs_model = const_init - gauss_fe_init
-    gauss_absorption_init = const_init - gauss_mg_init - gauss_fe_init  # mg_abs_model + fe_abs_model
-
-    # Freeze the center of the absorption profile 
-    # only allowing stddev to be free.
-    gauss_absorption_init.mean_1.fixed = True
-    gauss_absorption_init.mean_2.fixed = True
-
-    # Force the amplitude to be negative so it fits a gaussian in absorption
-    #gauss_absorption_init.amplitude_1.bounds = (None, -1e38)
-    #gauss_absorption_init.amplitude_3.bounds = (None, -1e38)
-
-    # Fitting 
-    fit_func = fitting.LevMarLSQFitter()
-    g = fit_func(gauss_absorption_init, stack_lam_to_fit, stack_llam_to_fit)
-
-    #print("\n" + "Fitting parameters:")
-    #print("Constant amp:", g.parameters[0])
-    #print("Mg amp:", g.parameters[1])
-    #print("Mg mean [kept fixed]:", g.parameters[2])
-    #print("Mg stddev:", g.parameters[3])
-    #print("Fe amp:", g.parameters[5])
-    #print("Fe mean [kept fixed]:", g.parameters[6])
-    #print("Fe stddev:", g.parameters[7])
-
-    print(g)
-
-    #print(g[0])
-    #print(g[1])
-    #print(g[2])
-    #print(g[3])
 
     mg_area = g.parameters[3] * np.sqrt(abs(g.parameters[1]))
     fe_area = g.parameters[7] * np.sqrt(abs(g.parameters[5]))
@@ -1483,8 +1457,8 @@ def main():
     # Get z intervals and their indices
     zp = cat['zp_minchi2']
 
-    all_z_low = np.array([0.17,0.17,0.60])
-    all_z_high = np.array([0.77,0.60,0.77])
+    all_z_low  = np.array([0.17,0.17,0.60,0.17])
+    all_z_high = np.array([0.77,0.60,0.77,1.24])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
