@@ -49,11 +49,6 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galax
         # add fluxes
         new_ind = np.where((lam_em >= lam_grid[i] - lam_step/2) & (lam_em < lam_grid[i] + lam_step/2))[0]
 
-        if (lam_grid[i] >= 5175) and (lam_grid[i] <= 5270):
-            print("Indices within %.2f to %.2f:" %(lam_grid[i] - lam_step/2, lam_grid[i] + lam_step/2))
-            print(new_ind, end='                  ')
-            print(llam_em[new_ind])
-
         if new_ind.size:
             
             # Not requiring any points to be positive anymore
@@ -279,12 +274,14 @@ def take_median(old_llam, old_llamerr, lam_grid):
 
         if old_llam[y]:
 
+            #old_llam[y] = np.median(old_llam[y])
+            #num_in_bin = len(old_llamerr[y])
+            #old_llamerr[y] = np.sqrt(np.sum(old_llamerr[y])) / num_in_bin
+
             # Actual stack value after 3 sigma clipping
             # Only allowing 3 iterations right now
-            #print("\n")
-            #print(old_llam[y])
             masked_data = sigma_clip(data=old_llam[y], sigma=3, maxiters=3)
-            old_llam[y] = np.median(masked_data)
+            old_llam[y] = np.ma.median(masked_data)
 
             #print(masked_data)
             #print(old_llam[y])
@@ -299,11 +296,8 @@ def take_median(old_llam, old_llamerr, lam_grid):
             # take the square root of all errors that were added in quadrature
             # couldn't do this earlier because it is a list of lists which 
             # has to be fully constructed before I can do this
-            old_llamerr[y] = np.sqrt(np.sum(masked_dataerr)) / len(masked_dataerr)
-
-            #print(old_llamerr[y])
-            #print("{:.2f}".format(old_llam[y]/old_llamerr[y]))
-            #if y > 24 : sys.exit(0)
+            num_after_mask = len(masked_dataerr) - len(np.where(mask)[0])
+            old_llamerr[y] = np.ma.sqrt(np.ma.sum(masked_dataerr)) / num_after_mask
 
             # Error on each point of the stack
             # This only uses the points that passed the 3 sigma clipping before
@@ -1015,7 +1009,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     (111206, 'GOODS-S'), (123255, 'GOODS-N'), (70407, 'GOODS-S'), (90998, 'GOODS-S'), \
     (24439, 'GOODS-N'), (119621, 'GOODS-N'), (89237, 'GOODS-N'), (18862, 'GOODS-S'), \
     (106130, 'GOODS-S'), (16496, 'GOODS-S')]
-    num_massive = num_massive - len(galaxies_to_reject)
 
     # Create figure
     fig = plt.figure(figsize=(10,6))
@@ -1044,6 +1037,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         if (current_pears_id, current_pears_field) in galaxies_to_reject:
             print("Skipping:", current_pears_id, current_pears_field)
+            num_massive -= 1
             continue
 
         #current_figs_id = figs_id[indices][u]
@@ -1174,11 +1168,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
         #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.0)
 
-    for g in range(len(lam_grid)):
-        
-        if lam_grid[g] == 5200 or lam_grid[g] == 5225:
-            print("\n", lam_grid[g], pears_old_llam[g])
-
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
     pears_old_llam, pears_old_llamerr = take_median(pears_old_llam, pears_old_llamerr, lam_grid)
@@ -1191,9 +1180,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     #mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
     #print("[Mg/Fe] measured to be:", mg2fe)
-
-
-    sys.exit(0)
 
     # Plot stacks
     pears_llam_zero_idx = np.where(pears_old_llam == 0.0)[0]
