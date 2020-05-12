@@ -1180,7 +1180,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
     mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
-    print("[Mg/Fe] measured to be:", mg2fe)
 
     # Plot stacks
     ax.plot(lam_grid, pears_old_llam, '.-', color='mediumblue', linewidth=1.5, \
@@ -1322,6 +1321,11 @@ def GaussAbs(x, amp1, mu1, sigma1, amp2, mu2, sigma2, amp3, mu3, sigma3, \
            amp4 * np.exp(-(x - mu4)**2 / (2 * sigma4**2)) + \
            amp5 * np.exp(-(x - mu5)**2 / (2 * sigma5**2))
 
+def GaussAbs_central_wav_fixed(x, amp1, sigma1, amp2, sigma2, amp3, sigma3):
+    return amp1 * np.exp(-(x - 4861.0)**2 / (2 * sigma1**2)) + \
+           amp2 * np.exp(-(x - 5175.0)**2 / (2 * sigma2**2)) + \
+           amp3 * np.exp(-(x - 5335.0)**2 / (2 * sigma3**2))
+
 def fit_gauss_mgfe(stack_lam, stack_llam):
 
     # Add/Subtract factor to have continuum subtracted value at 4500 A be exactly zero
@@ -1356,7 +1360,7 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     # Hbeta
     amp_hb = -0.5e39
     mu_hb = 4861.0
-    sigma_hb = 25.0
+    sigma_hb = 80.0
 
     # OIII 4959
     amp_oiii1 = 0.5e39
@@ -1371,28 +1375,28 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     # Mg2 + Mgb
     amp_mg = -0.8e39
     mu_mg = 5175.0
-    sigma_mg = 50.0
+    sigma_mg = 100.0
 
     # Fe 5270
-    amp_fe1 = -0.2e39
+    amp_fe1 = -0.5e39
     mu_fe1 = 5270.0
     sigma_fe1 = 10.0
 
     # Fe 5335
-    amp_fe2 = -0.2e39
+    amp_fe2 = -1e38
     mu_fe2 = 5335.0
-    sigma_fe2 = 10.0
+    sigma_fe2 = 80.0
 
     # Fe 5406
-    amp_fe3 = -0.2e39
+    amp_fe3 = -0.5e39
     mu_fe3 = 5406.0
     sigma_fe3 = 10.0
 
-    initial_guess = [amp_hb, mu_hb, sigma_hb, \
-    amp_mg, mu_mg, sigma_mg, \
-    amp_fe1, mu_fe1, sigma_fe1, \
-    amp_fe2, mu_fe2, sigma_fe2, \
-    amp_fe3, mu_fe3, sigma_fe3]
+    # initial_guess = [amp_hb, mu_hb, sigma_hb, \
+    # amp_mg, mu_mg, sigma_mg, \
+    # amp_fe1, mu_fe1, sigma_fe1, \
+    # amp_fe2, mu_fe2, sigma_fe2, \
+    # amp_fe3, mu_fe3, sigma_fe3]
 
     # Set bounds. You need to pass to curve_fit,
     # a tuple which is a set of two lists. 
@@ -1418,7 +1422,8 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     fe3_amp_low, fe3_amp_high = -0.7e39, -0.1e39
     fe3_mu_low, fe3_mu_high = 5400.0, 5410.0
     fe3_sigma_low, fe3_sigma_high = 5.0, 75.0
-    """
+
+    
     hb_amp_low, hb_amp_high = -np.inf, np.inf
     hb_mu_low, hb_mu_high = 4820.0, 4940.0
     hb_sigma_low, hb_sigma_high = -np.inf, np.inf
@@ -1445,8 +1450,14 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
         [hb_amp_high, hb_mu_high, hb_sigma_high, mg_amp_high, mg_mu_high, mg_sigma_high, \
         fe1_amp_high, fe1_mu_high, fe1_sigma_high, fe2_amp_high, fe2_mu_high, fe2_sigma_high, \
         fe3_amp_high, fe3_mu_high, fe3_sigma_high])
+    """
 
-    popt, pcov = curve_fit(GaussAbs, xdata=stack_lam_to_fit, ydata=stack_llam_to_fit, p0=initial_guess, bounds=bounds)
+    initial_guess = [amp_hb, sigma_hb, \
+    amp_mg, sigma_mg, \
+    amp_fe2, sigma_fe2]
+
+    popt, pcov = curve_fit(GaussAbs_central_wav_fixed, xdata=stack_lam_to_fit, ydata=stack_llam_to_fit, \
+    p0=initial_guess)#, bounds=bounds)
 
     print("Optimal param values:", np.array_repr(popt, precision=2))
     print("\n")
@@ -1460,7 +1471,7 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     # Show data and combined fit
     ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
         markeredgecolor='royalblue', markersize=1.0, zorder=1)
-    ax.plot(stack_lam, GaussAbs(stack_lam, *popt), ls='--', color='rebeccapurple', lw=2, zorder=4)
+    ax.plot(stack_lam, GaussAbs_central_wav_fixed(stack_lam, *popt), ls='--', color='rebeccapurple', lw=2, zorder=4)
 
     # Show individual gaussians
     # hbeta_params = popt[0:3]
@@ -1469,19 +1480,17 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     # mg_params = popt[9:12]
     # fe_params = popt[12:15]
 
-    hbeta_params = popt[0:3]
-    mg_params = popt[3:6]
-    fe1_params = popt[6:9]
-    fe2_params = popt[9:12]
-    fe3_params = popt[12:15]
+    hb_amp_best, hb_sigma_best = popt[0], popt[1]
+    mg_amp_best, mg_sigma_best = popt[2], popt[3]
+    #fe1_amp_best, fe1_sigma_best = popt[4], popt[5]
+    fe2_amp_best, fe2_sigma_best = popt[4], popt[5]
+    #fe3_amp_best, fe3_sigma_best = popt[8], popt[9]
 
-    hbeta_gaussian = Gauss(stack_lam, *hbeta_params)
-    #oiii4959_gaussian = Gauss(stack_lam, *oiii4959_params)
-    #oiii5007_gaussian = Gauss(stack_lam, *oiii5007_params)
-    mg_gaussian = Gauss(stack_lam, *mg_params)
-    fe1_gaussian = Gauss(stack_lam, *fe1_params)
-    fe2_gaussian = Gauss(stack_lam, *fe2_params)
-    fe3_gaussian = Gauss(stack_lam, *fe3_params)
+    hbeta_gaussian = Gauss(stack_lam, hb_amp_best, 4861.0, hb_sigma_best)
+    mg_gaussian = Gauss(stack_lam, mg_amp_best, 5175.0, mg_sigma_best)
+    #fe1_gaussian = Gauss(stack_lam, fe1_amp_best, 5270.0, fe1_sigma_best)
+    fe2_gaussian = Gauss(stack_lam, fe2_amp_best, 5335.0, fe2_sigma_best)
+    #fe3_gaussian = Gauss(stack_lam, fe3_amp_best, 5406.0, fe3_sigma_best)
 
     ax.plot(stack_lam, hbeta_gaussian, color='dodgerblue', zorder=2)
     ax.fill_between(stack_lam, hbeta_gaussian.max(), hbeta_gaussian, facecolor='dodgerblue', alpha=0.4, zorder=2)
@@ -1489,12 +1498,12 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     ax.plot(stack_lam, mg_gaussian, color='springgreen', zorder=2)
     ax.fill_between(stack_lam, mg_gaussian.max(), mg_gaussian, facecolor='springgreen', alpha=0.4, zorder=2)
 
-    ax.plot(stack_lam, fe1_gaussian, color='crimson', zorder=2)
-    ax.fill_between(stack_lam, fe1_gaussian.max(), fe1_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
+    #ax.plot(stack_lam, fe1_gaussian, color='crimson', zorder=2)
+    #ax.fill_between(stack_lam, fe1_gaussian.max(), fe1_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
     ax.plot(stack_lam, fe2_gaussian, color='crimson', zorder=2)
     ax.fill_between(stack_lam, fe2_gaussian.max(), fe2_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
-    ax.plot(stack_lam, fe3_gaussian, color='crimson', zorder=2)
-    ax.fill_between(stack_lam, fe3_gaussian.max(), fe3_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
+    #ax.plot(stack_lam, fe3_gaussian, color='crimson', zorder=2)
+    #ax.fill_between(stack_lam, fe3_gaussian.max(), fe3_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
 
     # Horizontal line
     ax.axhline(y=0.0, ls='--', color='k')
@@ -1505,14 +1514,15 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
 
     ax.minorticks_on()
 
-    plt.show()
-
-    # mg_area = g.parameters[3] * np.sqrt(abs(g.parameters[1]))
-    # fe_area = g.parameters[7] * np.sqrt(abs(g.parameters[5]))
-    # mg2fe = mg_area/fe_area
-    # print(mg2fe)
+    mg_area = mg_amp_best * abs(mg_sigma_best)
+    fe_area = fe2_amp_best * abs(fe2_sigma_best)
+    mg2fe = mg_area/fe_area
+    print("Mg to Fe flux ratio: %.2f" % mg2fe)
+    print("log(Mg/Fe) measured to be: %.2f" % np.log10(mg2fe))
 
     fig.savefig(stacking_figures_dir + 'Mg2Fe_fit_result.pdf', dpi=300, bbox_inches='tight')
+
+    plt.show()
 
     return mg2fe
 
