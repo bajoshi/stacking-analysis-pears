@@ -1014,7 +1014,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     fig = plt.figure(figsize=(10,6))
     ax = fig.add_subplot(111)
 
-    # Loop over all spectra in a grid cell and coadd them
+    # Loop over all spectra and coadd them
     for u in range(len(pears_id[indices])):
         
         # This step should only be done on the first iteration within a grid cell
@@ -1066,7 +1066,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         # Subtract continuum by fitting a third degree polynomial
         # Continuum fitted with potential emission line areas masked
         # print chi2 value on plot?
-        p_init = models.Polynomial1D(degree=3)
+        p_init = models.Polynomial1D(degree=5)
         fit_p = fitting.LinearLSQFitter()
 
         # mask emission lines 
@@ -1133,10 +1133,15 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         """
 
-        # Now subtract continuum
-        pears_llam_em = pears_llam_em - p_pears(pears_lam_em)
-        #figs_llam_em = figs_llam_em - p_figs(figs_lam_em)
-        
+        # Now divide continuum
+        pears_llam_em = pears_llam_em / p_pears(pears_lam_em)
+        #figs_llam_em = figs_llam_em / p_figs(figs_lam_em)
+
+        # Also divide errors 
+        # If you
+        pears_lerr = pears_lerr / p_pears(pears_lam_em)
+        #figs_lerr = figs_lerr / p_figs(figs_lam_em)
+
         """
         # Plot "pure emission/absorption" spectrum
         ax2.axhline(y=0.0, ls='--', color='black', lw=1.5, zorder=1)
@@ -1179,7 +1184,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_old_llam = np.asarray(figs_old_llam)
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
-    mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
+    #mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
 
     # Plot stacks
     ax.plot(lam_grid, pears_old_llam, '.-', color='mediumblue', linewidth=1.5, \
@@ -1194,39 +1199,65 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #            elinewidth=1.0, ecolor='r', markeredgecolor='darkorange', capsize=0, markersize=4.0, zorder=5)
 
     ax.set_xlim(lam_grid_low, lam_grid_high)
-    ax.set_ylim(-1.8e39, 1.8e39)
-    # ax.set_ylim(0.93, 1.07)  # if dividing by the continuum instead of subtracting
-    ax.axhline(y=0.0, ls='--', color='k')
+    # ax.set_ylim(-1.8e39, 1.8e39)
+    ax.set_ylim(0.9, 1.1)  # if dividing by the continuum instead of subtracting
+    ax.axhline(y=1.0, ls='--', color='k')
     ax.minorticks_on()
 
     # Mark some important features
     # Mgb
-    ax.axvline(x=5175.0, ls='--', ymin=0.2, ymax=0.35, color='firebrick')
-    ax.text(5160.0, -1.13e39, r'$\mathrm{Mg_2 + Mgb}$', \
+    ax.axvline(x=5175.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
+    ax.text(5165.0, 0.935, r'$\mathrm{Mg_2 + Mgb}$', \
         verticalalignment='top', horizontalalignment='right', \
-        transform=ax.transData, color='firebrick', size=10)
+        transform=ax.transData, color='firebrick', size=11)
     # FeII
-    ax.axvline(x=5270.0, ls='--', ymin=0.2, ymax=0.35, color='firebrick')
-    ax.axvline(x=5335.0, ls='--', ymin=0.2, ymax=0.35, color='firebrick')
-    ax.text(5270, -1.13e39, r'$\mathrm{Fe}\lambda 5270$' + '+ \n' + r'$\mathrm{Fe}\lambda 5335$', \
+    ax.axvline(x=5270.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
+    ax.axvline(x=5335.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
+    ax.axvline(x=5406.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
+    fe_str = r'$\mathrm{Fe}\lambda 5270$' + '+ \n' + r'$\mathrm{Fe}\lambda 5335$' + '+' + r'$\mathrm{Fe}\lambda 5406$'
+    ax.text(5270, 0.935, fe_str, \
         verticalalignment='top', horizontalalignment='left', \
-        transform=ax.transData, color='firebrick', size=10)
+        transform=ax.transData, color='firebrick', size=11)
+
+    # Hbeta
+    ax.axvline(x=4861.0, ls='--', ymin=0.3, ymax=0.38, color='firebrick')
+    ax.text(4861.0, 0.955, r'$\mathrm{H}\beta$', \
+        verticalalignment='top', horizontalalignment='right', \
+        transform=ax.transData, color='firebrick', size=11)
+
+    # [OIII]
+    ax.axvline(x=4959.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
+    ax.axvline(x=5007.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
+    ax.text(4980.0, 1.03, r'$\mathrm{[OIII]}\lambda\lambda 4959,5007$', \
+        verticalalignment='top', horizontalalignment='center', \
+        transform=ax.transData, color='firebrick', size=11)
+
+    # [OII]
+    ax.axvline(x=3727.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
+    ax.axvline(x=3729.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
+    ax.text(3695.0, 1.03, r'$\mathrm{[OII]}\lambda\lambda 3727,3729$', \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transData, color='firebrick', size=11)
 
     # Gband
-    ax.text(4300.0, -0.4e39, 'G-band', \
+    ax.text(4300.0, 0.96, 'G-band', \
         verticalalignment='center', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=10)
+        transform=ax.transData, color='firebrick', size=11)
 
     # Ca H & K
-    ax.text(3920.0, -0.5e39, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
+    ax.text(3920.0, 0.96, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
         verticalalignment='center', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=10)
+        transform=ax.transData, color='firebrick', size=11)
 
-    # NaD
-    ax.axvline(x=5890.0, ls='--', ymin=0.33, ymax=0.4, color='firebrick')
-    ax.text(5890.0, -0.9e39, r'$\mathrm{NaD}$', \
+    # NaD + TiO
+    ax.text(5890.0, 0.98, r'$\mathrm{NaD}$' + '+ \n' + r'$\mathrm{TiO}$', \
         verticalalignment='center', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=10)
+        transform=ax.transData, color='firebrick', size=11)
+
+    # TiO
+    ax.text(6230.0, 0.98, r'$\mathrm{TiO}$', \
+        verticalalignment='center', horizontalalignment='center', \
+        transform=ax.transData, color='firebrick', size=11)
 
     # Number of galaxies and redshift range on plot
     ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), verticalalignment='top', horizontalalignment='left', \
@@ -1237,14 +1268,14 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     # Labels
     ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
-    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{continuum\ subtracted}]$', fontsize=15)
+    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{divided\ by\ continuum}]$', fontsize=15)
 
     #ax.text(0.67, 0.26, 'PEARS ACS/G800L', verticalalignment='top', horizontalalignment='left', \
     #        transform=ax.transAxes, color='royalblue', size=20)
     #ax.text(0.67, 0.195, 'FIGS WFC3/G102', verticalalignment='top', horizontalalignment='left', \
     #        transform=ax.transAxes, color='darkorange', size=20)
 
-    figname = stacking_figures_dir + 'massive_stack_contsub_' + str(z_low).replace('.','p') \
+    figname = stacking_figures_dir + 'massive_stack_divcont_' + str(z_low).replace('.','p') \
     + '_' + str(z_high).replace('.','p') + '.pdf'
     fig.savefig(figname, dpi=300, bbox_inches='tight')
 
@@ -1252,8 +1283,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     plt.clf()
     plt.cla()
     plt.close()
-
-    sys.exit(0)
 
     return None
 
@@ -1323,14 +1352,14 @@ def GaussAbs(x, amp1, mu1, sigma1, amp2, mu2, sigma2, amp3, mu3, sigma3, \
 
 def GaussAbs_central_wav_fixed(x, amp1, sigma1, amp2, sigma2, amp3, sigma3):
     return amp1 * np.exp(-(x - 4861.0)**2 / (2 * sigma1**2)) + \
-           amp2 * np.exp(-(x - 5175.0)**2 / (2 * sigma2**2)) + \
+           amp2 * np.exp(-(x - 5160.0)**2 / (2 * sigma2**2)) + \
            amp3 * np.exp(-(x - 5335.0)**2 / (2 * sigma3**2))
 
 def fit_gauss_mgfe(stack_lam, stack_llam):
 
     # Add/Subtract factor to have continuum subtracted value at 4500 A be exactly zero
-    lam4500 = np.argmin(abs(stack_lam - 4500))
-    stack_llam -= stack_llam[lam4500]
+    #lam4500 = np.argmin(abs(stack_lam - 4500))
+    #stack_llam -= stack_llam[lam4500]
 
     # First constrain the region to be fit
     fitreg_idx = np.where((stack_lam >= 4470) & (stack_lam <= 5780))[0]
@@ -1471,7 +1500,7 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     # Show data and combined fit
     ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
         markeredgecolor='royalblue', markersize=1.0, zorder=1)
-    ax.plot(stack_lam, GaussAbs_central_wav_fixed(stack_lam, *popt), ls='--', color='rebeccapurple', lw=2, zorder=4)
+    ax.plot(stack_lam, GaussAbs_central_wav_fixed(stack_lam, *popt), ls='--', color='orange', lw=2, zorder=4)
 
     # Show individual gaussians
     # hbeta_params = popt[0:3]
@@ -1487,7 +1516,7 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     #fe3_amp_best, fe3_sigma_best = popt[8], popt[9]
 
     hbeta_gaussian = Gauss(stack_lam, hb_amp_best, 4861.0, hb_sigma_best)
-    mg_gaussian = Gauss(stack_lam, mg_amp_best, 5175.0, mg_sigma_best)
+    mg_gaussian = Gauss(stack_lam, mg_amp_best, 5160.0, mg_sigma_best)
     #fe1_gaussian = Gauss(stack_lam, fe1_amp_best, 5270.0, fe1_sigma_best)
     fe2_gaussian = Gauss(stack_lam, fe2_amp_best, 5335.0, fe2_sigma_best)
     #fe3_gaussian = Gauss(stack_lam, fe3_amp_best, 5406.0, fe3_sigma_best)
