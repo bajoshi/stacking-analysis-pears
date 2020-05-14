@@ -1184,8 +1184,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_old_llam = np.asarray(figs_old_llam)
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
-    #mg2fe = fit_gauss_mgfe(lam_grid, pears_old_llam)
-
     # Plot stacks
     ax.plot(lam_grid, pears_old_llam, '.-', color='mediumblue', linewidth=1.5, \
         markeredgecolor='mediumblue', markersize=1.0, zorder=5)
@@ -1204,7 +1202,62 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     ax.axhline(y=1.0, ls='--', color='k')
     ax.minorticks_on()
 
-    # Mark some important features
+    add_line_labels(ax)
+
+    # Number of galaxies and redshift range on plot
+    ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=16)
+    ax.text(0.66, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=16)
+
+    # Labels
+    ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
+    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{divided\ by\ continuum}]$', fontsize=15)
+
+    #ax.text(0.67, 0.26, 'PEARS ACS/G800L', verticalalignment='top', horizontalalignment='left', \
+    #        transform=ax.transAxes, color='royalblue', size=20)
+    #ax.text(0.67, 0.195, 'FIGS WFC3/G102', verticalalignment='top', horizontalalignment='left', \
+    #        transform=ax.transAxes, color='darkorange', size=20)
+
+    # Measure Mg/Fe
+    mg2fe = fit_gauss_mgfe_astropy(lam_grid, pears_old_llam, num_massive, z_low, z_high)
+
+    figname = stacking_figures_dir + 'massive_stack_divcont_' + str(z_low).replace('.','p') \
+    + '_' + str(z_high).replace('.','p') + '.pdf'
+    fig.savefig(figname, dpi=300, bbox_inches='tight')
+
+    #plt.show()
+    plt.clf()
+    plt.cla()
+    plt.close()
+
+    return None
+
+def add_line_labels(ax, label_flag='all'):
+    """
+    Mark some important features on the plot.
+    """
+
+    if label_flag == 'all':
+        # [OII]
+        ax.axvline(x=3727.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
+        ax.axvline(x=3729.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
+        ax.text(3695.0, 1.03, r'$\mathrm{[OII]}\lambda\lambda 3727,3729$', \
+            verticalalignment='top', horizontalalignment='left', \
+            transform=ax.transData, color='firebrick', size=11)
+
+        # Ca H & K
+        ax.text(3920.0, 0.96, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
+            verticalalignment='center', horizontalalignment='center', \
+            transform=ax.transData, color='firebrick', size=11)
+
+        # TiO
+        ax.text(6230.0, 0.98, r'$\mathrm{TiO}$', \
+            verticalalignment='center', horizontalalignment='center', \
+            transform=ax.transData, color='firebrick', size=11)
+
+    # These remaining features below will always be marked
     # Mgb
     ax.axvline(x=5175.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
     ax.text(5165.0, 0.935, r'$\mathrm{Mg_2 + Mgb}$', \
@@ -1232,20 +1285,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         verticalalignment='top', horizontalalignment='center', \
         transform=ax.transData, color='firebrick', size=11)
 
-    # [OII]
-    ax.axvline(x=3727.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
-    ax.axvline(x=3729.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
-    ax.text(3695.0, 1.03, r'$\mathrm{[OII]}\lambda\lambda 3727,3729$', \
-        verticalalignment='top', horizontalalignment='left', \
-        transform=ax.transData, color='firebrick', size=11)
-
     # Gband
-    ax.text(4300.0, 0.96, 'G-band', \
-        verticalalignment='center', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=11)
-
-    # Ca H & K
-    ax.text(3920.0, 0.96, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
+    ax.text(4300.0, 0.98, 'G-band', \
         verticalalignment='center', horizontalalignment='center', \
         transform=ax.transData, color='firebrick', size=11)
 
@@ -1253,36 +1294,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     ax.text(5890.0, 0.98, r'$\mathrm{NaD}$' + '+ \n' + r'$\mathrm{TiO}$', \
         verticalalignment='center', horizontalalignment='center', \
         transform=ax.transData, color='firebrick', size=11)
-
-    # TiO
-    ax.text(6230.0, 0.98, r'$\mathrm{TiO}$', \
-        verticalalignment='center', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=11)
-
-    # Number of galaxies and redshift range on plot
-    ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), verticalalignment='top', horizontalalignment='left', \
-        transform=ax.transAxes, color='k', size=16)
-    ax.text(0.66, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
-        verticalalignment='top', horizontalalignment='left', \
-        transform=ax.transAxes, color='k', size=16)
-
-    # Labels
-    ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
-    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{divided\ by\ continuum}]$', fontsize=15)
-
-    #ax.text(0.67, 0.26, 'PEARS ACS/G800L', verticalalignment='top', horizontalalignment='left', \
-    #        transform=ax.transAxes, color='royalblue', size=20)
-    #ax.text(0.67, 0.195, 'FIGS WFC3/G102', verticalalignment='top', horizontalalignment='left', \
-    #        transform=ax.transAxes, color='darkorange', size=20)
-
-    figname = stacking_figures_dir + 'massive_stack_divcont_' + str(z_low).replace('.','p') \
-    + '_' + str(z_high).replace('.','p') + '.pdf'
-    fig.savefig(figname, dpi=300, bbox_inches='tight')
-
-    #plt.show()
-    plt.clf()
-    plt.cla()
-    plt.close()
 
     return None
 
@@ -1351,18 +1362,107 @@ def GaussAbs(x, amp1, mu1, sigma1, amp2, mu2, sigma2, amp3, mu3, sigma3, \
            amp5 * np.exp(-(x - mu5)**2 / (2 * sigma5**2))
 
 def GaussAbs_central_wav_fixed(x, amp1, sigma1, amp2, sigma2, amp3, sigma3):
-    return amp1 * np.exp(-(x - 4861.0)**2 / (2 * sigma1**2)) + \
-           amp2 * np.exp(-(x - 5160.0)**2 / (2 * sigma2**2)) + \
-           amp3 * np.exp(-(x - 5335.0)**2 / (2 * sigma3**2))
+    return (amp1 * np.exp(-(x - 4861.0)**2 / (2 * sigma1**2))) + \
+           (amp2 * np.exp(-(x - 5160.0)**2 / (2 * sigma2**2))) + \
+           (amp3 * np.exp(-(x - 5335.0)**2 / (2 * sigma3**2)))
 
-def fit_gauss_mgfe(stack_lam, stack_llam):
+def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive, z_low, z_high):
+
+    # First constrain the region to be fit
+    fitreg_idx = np.where((stack_lam >= 4600) & (stack_lam <= 5650))[0]
+    stack_lam_to_fit = stack_lam[fitreg_idx]
+    stack_llam_to_fit = stack_llam[fitreg_idx]
+
+    # Inititalize models
+    const_init = models.Const1D(amplitude=1.0)
+    hb_abs_init = models.Gaussian1D(amplitude=0.01, mean=4861.0, stddev=100.0)
+    mg_abs_init = models.Gaussian1D(amplitude=0.05, mean=5150.0, stddev=100.0)
+    fe_abs_init = models.Gaussian1D(amplitude=0.02, mean=5335.0, stddev=150.0)
+
+    # Fitting
+    # gauss_init = (const_init - hb_abs_init) + (const_init - mg_abs_init) + (const_init - fe_abs_init)
+    gauss_init = const_init - hb_abs_init -  mg_abs_init - fe_abs_init
+
+    # Freeze central wavelengths
+    # and give bounds
+    gauss_init.mean_1.fixed = True
+    gauss_init.mean_2.fixed = True
+    gauss_init.mean_3.fixed = True
+
+    gauss_init.stddev_3.min, gauss_init.stddev_3.max = 5.0, 250.0
+
+    fit_gauss = fitting.LevMarLSQFitter()
+    g = fit_gauss(gauss_init, stack_lam_to_fit, stack_llam_to_fit)
+    
+    print(g)
+    print("\n")
+    print(np.array_repr(g.parameters, precision=3))
+
+    # Compute mg2fe ratio
+    mg_amp = g.parameters[4]
+    mg_stddev = g.parameters[6]
+    fe_amp = g.parameters[7]
+    fe_stddev = g.parameters[9]
+
+    mg_area = mg_amp * mg_stddev
+    fe_area = fe_amp * fe_stddev
+    mg2fe = mg_area/fe_area
+
+    print("Mg to Fe flux ratio: %.2f" % mg2fe)
+    print("log(Mg/Fe) measured to be: %.2f" % np.log10(mg2fe))
+
+    # plot fit
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    
+    # Show data and combined fit
+    ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
+        markeredgecolor='royalblue', markersize=1.0, zorder=1)
+    ax.plot(stack_lam, g(stack_lam), ls='--', color='orange', lw=2, zorder=5)
+
+    # Show individual gaussians
+    ax.plot(stack_lam, g[0](stack_lam) - g[1](stack_lam), ls='--', color='dodgerblue', lw=2, zorder=4)
+    ax.plot(stack_lam, g[0](stack_lam) - g[2](stack_lam), ls='--', color='springgreen', lw=2, zorder=4)
+    ax.plot(stack_lam, g[0](stack_lam) - g[3](stack_lam), ls='--', color='crimson', lw=2, zorder=4)
+
+    # Horizontal line
+    ax.axhline(y=1.0, ls='--', color='k')
+
+    # Labels
+    ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
+    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{continuum\ subtracted}]$', fontsize=15)
+
+    ax.set_xlim(4000, 6200)
+    ax.set_ylim(0.9, 1.1)
+    ax.minorticks_on()
+
+    add_line_labels(ax, None)
+
+    # Number of galaxies and redshift range on plot
+    ax.text(0.68, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=12)
+    ax.text(0.68, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=12)
+    ax.text(0.68, 0.87, r'$\mathrm{[Mg/Fe] = }$' + "{:.2f}".format(np.log10(mg2fe)), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=12)
+
+    fig.savefig(stacking_figures_dir + 'Mg2Fe_fit_result_'+ \
+        str(z_low).replace('.','p') + '_' + str(z_high).replace('.','p') +
+        '.pdf', dpi=300, bbox_inches='tight')
+
+    return None
+
+def fit_gauss_mgfe_scipy(stack_lam, stack_llam, z_low, z_high):
 
     # Add/Subtract factor to have continuum subtracted value at 4500 A be exactly zero
     #lam4500 = np.argmin(abs(stack_lam - 4500))
     #stack_llam -= stack_llam[lam4500]
 
     # First constrain the region to be fit
-    fitreg_idx = np.where((stack_lam >= 4470) & (stack_lam <= 5780))[0]
+    fitreg_idx = np.where((stack_lam >= 4600) & (stack_lam <= 5600))[0]
     stack_lam_to_fit = stack_lam[fitreg_idx]
     stack_llam_to_fit = stack_llam[fitreg_idx]
 
@@ -1387,37 +1487,37 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
 
     # Initial params
     # Hbeta
-    amp_hb = -0.5e39
+    amp_hb = 0.5
     mu_hb = 4861.0
     sigma_hb = 80.0
 
     # OIII 4959
-    amp_oiii1 = 0.5e39
+    amp_oiii1 = 0.1
     mu_oiii1 = 4959.0
     sigma_oiii1 = 20.0
 
     # OIII 5007
-    amp_oiii2 = 1e39
+    amp_oiii2 = 0.4
     mu_oiii2 = 5007.0
     sigma_oiii2 = 20.0
 
     # Mg2 + Mgb
-    amp_mg = -0.8e39
+    amp_mg = 0.8
     mu_mg = 5175.0
     sigma_mg = 100.0
 
     # Fe 5270
-    amp_fe1 = -0.5e39
+    amp_fe1 = 0.3
     mu_fe1 = 5270.0
     sigma_fe1 = 10.0
 
     # Fe 5335
-    amp_fe2 = -1e38
+    amp_fe2 = 0.3
     mu_fe2 = 5335.0
     sigma_fe2 = 80.0
 
     # Fe 5406
-    amp_fe3 = -0.5e39
+    amp_fe3 = 0.3
     mu_fe3 = 5406.0
     sigma_fe3 = 10.0
 
@@ -1485,8 +1585,8 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     amp_mg, sigma_mg, \
     amp_fe2, sigma_fe2]
 
-    popt, pcov = curve_fit(GaussAbs_central_wav_fixed, xdata=stack_lam_to_fit, ydata=stack_llam_to_fit, \
-    p0=initial_guess)#, bounds=bounds)
+    popt, pcov = curve_fit(GaussAbs_central_wav_fixed, xdata=stack_lam_to_fit, ydata=stack_llam_to_fit)#, \
+    #p0=initial_guess)#, bounds=bounds)
 
     print("Optimal param values:", np.array_repr(popt, precision=2))
     print("\n")
@@ -1549,9 +1649,12 @@ def fit_gauss_mgfe(stack_lam, stack_llam):
     print("Mg to Fe flux ratio: %.2f" % mg2fe)
     print("log(Mg/Fe) measured to be: %.2f" % np.log10(mg2fe))
 
-    fig.savefig(stacking_figures_dir + 'Mg2Fe_fit_result.pdf', dpi=300, bbox_inches='tight')
-
     plt.show()
+    sys.exit(0)
+
+    fig.savefig(stacking_figures_dir + 'Mg2Fe_fit_result_'+ \
+        str(z_low).replace('.','p') + '_' + str(z_high).replace('.','p') +
+        '.pdf', dpi=300, bbox_inches='tight')
 
     return mg2fe
 
@@ -1596,8 +1699,8 @@ def main():
     # Get z intervals and their indices
     zp = cat['zp_minchi2']
 
-    all_z_low  = np.array([0.17,0.17,0.60,0.17])
-    all_z_high = np.array([0.77,0.60,0.77,1.24])
+    all_z_low  = np.array([0.16,0.16,0.60,0.16])
+    all_z_high = np.array([0.96,0.60,0.96,1.42])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file

@@ -65,9 +65,9 @@ def main():
     ax.set_xlim(-0.2, 6.0)
     ax.set_ylim(4.0, 12.0) 
 
-    ax.axhline(y=9.0, ls='--', color='red', lw=2.0)
-    ax.axvline(x=3.0, ls='--', color='red', lw=2.0)
-    ax.axvline(x=0.5, ls='--', color='red', lw=2.0)
+    ax.axhline(y=9.5, ls='--', color='red', lw=2.0)
+    #ax.axvline(x=3.0, ls='--', color='red', lw=2.0)
+    #ax.axvline(x=0.5, ls='--', color='red', lw=2.0)
 
     ax.legend(loc=4, frameon=True, fontsize=14, markerscale=2.0, fancybox=True)
 
