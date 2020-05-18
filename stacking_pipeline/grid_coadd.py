@@ -7,6 +7,7 @@ from astropy.io import fits
 from astropy.stats import sigma_clip
 from astropy.modeling import models, fitting
 from scipy.optimize import curve_fit
+from scipy import interpolate
 
 import os
 import sys
@@ -215,12 +216,16 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
     for k in range(len(id_arr_cell)):
 
         # Get current ID and Field
-        current_figs_id = id_arr_cell[k]
-        current_figs_field = field_arr_cell[k]
+        #current_figs_id = id_arr_cell[k]
+        #current_figs_field = field_arr_cell[k]
+
+        current_pears_id = id_arr_cell[k]
+        current_pears_field = field_arr_cell[k]
 
         # Get observed data and deredshift the spectrum
         # FIGS data
-        g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
+        #lam_obs, flam_obs, ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
+        lam_obs, flam_obs, ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
 
         # If the return code was 0, then exit,
         # i.e., the observed spectrum is unuseable.
@@ -238,8 +243,8 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
         # used to generate the dl lookup table.
         dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
 
-        lam_em = g102_lam_obs / (1 + redshift)
-        llam_em = g102_flam_obs * (1 + redshift) * (4 * np.pi * dl * dl)
+        lam_em = lam_obs / (1 + redshift)
+        llam_em = flam_obs * (1 + redshift) * (4 * np.pi * dl * dl)
 
         # Code block from previous version        
         # Store median of values from 4400A-4600A for each spectrum
@@ -323,8 +328,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     pears_field = cat['Field'][z_indices]
     zp = cat['zp_minchi2'][z_indices]
 
-    figs_id = cat['figs_id'][z_indices]
-    figs_field = cat['figs_field'][z_indices]
+    #figs_id = cat['figs_id'][z_indices]
+    #figs_field = cat['figs_field'][z_indices]
 
     ur_color = urcol[z_indices]
     stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below expects log(stellar mass)
@@ -396,21 +401,21 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             pears_old_llam = pears_old_llam.tolist()
             pears_old_llamerr = pears_old_llamerr.tolist()
 
-            figs_old_llam = np.zeros(len(lam_grid))
-            figs_old_llamerr = np.zeros(len(lam_grid))
-            figs_old_llam = figs_old_llam.tolist()
-            figs_old_llamerr = figs_old_llamerr.tolist()
+            #figs_old_llam = np.zeros(len(lam_grid))
+            #figs_old_llamerr = np.zeros(len(lam_grid))
+            #figs_old_llam = figs_old_llam.tolist()
+            #figs_old_llamerr = figs_old_llamerr.tolist()
 
             pears_num_points = np.zeros(len(lam_grid))
             pears_num_galaxies = np.zeros(len(lam_grid))
 
-            figs_num_points = np.zeros(len(lam_grid))
-            figs_num_galaxies = np.zeros(len(lam_grid))
+            #figs_num_points = np.zeros(len(lam_grid))
+            #figs_num_galaxies = np.zeros(len(lam_grid))
 
             # rescale to 200A band centered on the observed wavelengths
             # This function returns the median of the median values (in the given band) from all given spectra
             # All spectra to be coadded in a given grid cell need to be divided by this value
-            medarr, medval, stdval = rescale(figs_id[indices], figs_field[indices], zp[indices], dl_tbl)
+            medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
             print("This cell has a maximum possible of", len(pears_id[indices]), "spectra.")
             print("The spectra in this cell have a median value of:", end=' ')
             print("{:.3e}".format(medval), " [erg s^-1 A^-1]")
@@ -427,8 +432,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                         pears_old_llam[x] = []
                         pears_old_llamerr[x] = []
             
-                        figs_old_llam[x] = []
-                        figs_old_llamerr[x] = []
+                        #figs_old_llam[x] = []
+                        #figs_old_llamerr[x] = []
 
                 # Get redshift from catalog
                 current_redshift = zp[indices][u]
@@ -436,16 +441,16 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 current_pears_id = pears_id[indices][u]
                 current_pears_field = pears_field[indices][u]
 
-                current_figs_id = figs_id[indices][u]
-                current_figs_field = figs_field[indices][u]
+                #current_figs_id = figs_id[indices][u]
+                #current_figs_field = figs_field[indices][u]
 
                 # ----------------------------- Get data ----------------------------- #
                 # PEARS PA combined data
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = \
                 get_pears_data(current_pears_id, current_pears_field)
                 # FIGS data # This is PA combined already, from Nor
-                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = \
-                get_figs_data(current_figs_id, current_figs_field)
+                #g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = \
+                #get_figs_data(current_figs_id, current_figs_field)
 
                 # Deredshift the observed data 
                 zidx = np.argmin(abs(z_arr - current_redshift))
@@ -457,9 +462,9 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 pears_llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
                 pears_lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
 
-                figs_lam_em = g102_lam_obs / (1 + current_redshift)
-                figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-                figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                #figs_lam_em = g102_lam_obs / (1 + current_redshift)
+                #figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                #figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
 
                 # Match with photometry catalog and get photometry data
                 
@@ -468,8 +473,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 pears_llam_em = (pears_llam_em / medarr[u]) * medval
                 pears_lerr = (pears_lerr / medarr[u]) * medval
 
-                figs_llam_em = (figs_llam_em / medarr[u]) * medval
-                figs_lerr = (figs_lerr / medarr[u]) * medval
+                #figs_llam_em = (figs_llam_em / medarr[u]) * medval
+                #figs_lerr = (figs_lerr / medarr[u]) * medval
 
                 # add the spectrum
                 added_gal += 1
@@ -478,14 +483,14 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 add_spec(pears_lam_em, pears_llam_em, pears_lerr, pears_old_llam, pears_old_llamerr, \
                     pears_num_points, pears_num_galaxies, lam_grid, lam_step)
 
-                figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
-                add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
-                    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
+                #figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
+                #add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
+                #    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
 
             # Now take the median of all flux points appended within the list of lists
             # This function also does the 3-sigma clipping
             pears_old_llam, pears_old_llamerr = take_median(pears_old_llam, pears_old_llamerr, lam_grid)
-            figs_old_llam, figs_old_llamerr = take_median(figs_old_llam, figs_old_llamerr, lam_grid)
+            #figs_old_llam, figs_old_llamerr = take_median(figs_old_llam, figs_old_llamerr, lam_grid)
 
             # ---------------- Check stack by making a preliminary plot ---------------- #
             # ---------------- DO NOT DELETE CODE BLOCK! Useful for checking ---------------- #
@@ -591,10 +596,14 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             exthdr["AVGMASS"] = str(avgmass)
 
             # Now reshape the data and append
+            """
             pears_dat = np.array((pears_old_llam, pears_old_llamerr)).reshape(2, len(lam_grid))
             figs_dat = np.array((figs_old_llam, figs_old_llamerr)).reshape(2, len(lam_grid))
             all_dat = np.vstack((pears_dat, figs_dat))
             hdulist.append(fits.ImageHDU(data=all_dat, header=exthdr))
+            """
+            pears_dat = np.array((pears_old_llam, pears_old_llamerr)).reshape(2, len(lam_grid))
+            hdulist.append(fits.ImageHDU(data=pears_dat, header=exthdr))
 
             # Update the array containing the cellwise distribution of galaxies
             row = int(col/col_step)
@@ -720,8 +729,8 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
     pears_field = cat['Field'][z_indices]
     zp = cat['zp_minchi2'][z_indices]
 
-    figs_id = cat['figs_id'][z_indices]
-    figs_field = cat['figs_field'][z_indices]
+    #figs_id = cat['figs_id'][z_indices]
+    #figs_field = cat['figs_field'][z_indices]
 
     ur_color = urcol[z_indices]
     stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below expects log(stellar mass)
@@ -789,7 +798,7 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 transform=ax.transAxes, color='k', size=14)
 
             if column == (2 * nummass):
-                ax.text(0.93, 0.65, "{:.2f}".format(float(avgcolarr_to_print[row])), \
+                ax.text(0.98, 0.65, "{:.2f}".format(float(avgcolarr_to_print[row])), \
                 verticalalignment='top', horizontalalignment='left', \
                 transform=ax.transAxes, color='k', size=14, rotation=270)
 
@@ -813,7 +822,8 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
             # Check that the cell isn't empty and then proceed
             if indices.size:
                 print("Number of spectra in this grid cell --", len(indices))
-                medarr, medval, stdval = rescale(figs_id[indices], figs_field[indices], zp[indices], dl_tbl)
+                #medarr, medval, stdval = rescale(figs_id[indices], figs_field[indices], zp[indices], dl_tbl)
+                medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
             else:
                 # Delete axes spines and labels if skipping
                 remove_axes_spines_ticks(ax)
@@ -846,16 +856,16 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 current_pears_id = pears_id[indices][u]
                 current_pears_field = pears_field[indices][u]
 
-                current_figs_id = figs_id[indices][u]
-                current_figs_field = figs_field[indices][u]
+                #current_figs_id = figs_id[indices][u]
+                #current_figs_field = figs_field[indices][u]
 
                 # ----------------------------- Get data ----------------------------- #
                 # PEARS PA combined data
                 grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = \
                 get_pears_data(current_pears_id, current_pears_field)
                 # FIGS data
-                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = \
-                get_figs_data(current_figs_id, current_figs_field)
+                #g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = \
+                #get_figs_data(current_figs_id, current_figs_field)
 
                 # Deredshift the observed data 
                 zidx = np.argmin(abs(z_arr - current_redshift))
@@ -867,50 +877,55 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 pears_llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
                 pears_lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
                 
-                figs_lam_em = g102_lam_obs / (1 + current_redshift)
-                figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-                figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                #figs_lam_em = g102_lam_obs / (1 + current_redshift)
+                #figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+                #figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
 
                 # Divide by median value at 4400A to 4600A to rescale. 
                 # Multiplying by median value of the flux medians to get it back to physical units
                 pears_llam_em = (pears_llam_em / medarr[u]) * medval
                 pears_lerr = (pears_lerr / medarr[u]) * medval
 
-                figs_llam_em = (figs_llam_em / medarr[u]) * medval
-                figs_lerr = (figs_lerr / medarr[u]) * medval
+                #figs_llam_em = (figs_llam_em / medarr[u]) * medval
+                #figs_lerr = (figs_lerr / medarr[u]) * medval
 
                 # Plotting
                 ax.plot(pears_lam_em, pears_llam_em, ls='-', color='paleturquoise', linewidth=0.5)
-                ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=0.5)
+                #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=0.5)
                 ax.get_yaxis().set_ticklabels([])
-                ax.get_xaxis().set_ticklabels([])
-                ax.set_xlim(1800, 7500)
+                #ax.get_xaxis().set_ticklabels([])
+                ax.get_xaxis().set_ticklabels(['','0.4','0.6'])
+                ax.set_xlim(3500, 6700)
 
                 ax.minorticks_on()
 
             # Plot stack
             pears_llam = stack_hdu[cellcount+2].data[0]
             pears_llam_err = stack_hdu[cellcount+2].data[1]
-            figs_llam = stack_hdu[cellcount+2].data[2]
-            figs_llam_err = stack_hdu[cellcount+2].data[3]
+            #figs_llam = stack_hdu[cellcount+2].data[2]
+            #figs_llam_err = stack_hdu[cellcount+2].data[3]
 
             # Force zeros to NaNs so that they're not plotted
             pears_llam_zero_idx = np.where(pears_llam == 0.0)[0]
             pears_llam[pears_llam_zero_idx] = np.nan
-            ax.errorbar(lam, pears_llam, yerr=pears_llam_err, fmt='.-', color='royalblue', linewidth=0.5,\
-                        elinewidth=0.2, ecolor='r', markeredgecolor='royalblue', capsize=0, markersize=0.5, zorder=5)
+            ax.errorbar(lam, pears_llam, yerr=pears_llam_err, fmt='.-', color='mediumblue', linewidth=0.5,\
+                        elinewidth=0.2, ecolor='r', markeredgecolor='mediumblue', capsize=0, markersize=0.5, zorder=5)
 
-            figs_llam_zero_idx = np.where(figs_llam == 0.0)[0]
-            figs_llam[figs_llam_zero_idx] = np.nan
-            ax.errorbar(lam, figs_llam, yerr=figs_llam_err, fmt='.-', color='darkorange', linewidth=0.5,\
-                        elinewidth=0.2, ecolor='r', markeredgecolor='darkorange', capsize=0, markersize=0.5, zorder=5)
+            #figs_llam_zero_idx = np.where(figs_llam == 0.0)[0]
+            #figs_llam[figs_llam_zero_idx] = np.nan
+            #ax.errorbar(lam, figs_llam, yerr=figs_llam_err, fmt='.-', color='darkorange', linewidth=0.5,\
+            #            elinewidth=0.2, ecolor='r', markeredgecolor='darkorange', capsize=0, markersize=0.5, zorder=5)
 
             # Y Limits 
             # Find min and max within the stack and add some padding
             # Using the nan functions here because some stacks have nan values
-            stack_min = np.min([np.nanmin(pears_llam), np.nanmin(figs_llam)])
-            stack_max = np.max([np.nanmax(pears_llam), np.nanmax(figs_llam)])
-            stack_mederr = np.median([np.nanmedian(pears_llam_err), np.nanmedian(figs_llam_err)])
+            #stack_min = np.min([np.nanmin(pears_llam), np.nanmin(figs_llam)])
+            #stack_max = np.max([np.nanmax(pears_llam), np.nanmax(figs_llam)])
+            #stack_mederr = np.median([np.nanmedian(pears_llam_err), np.nanmedian(figs_llam_err)])
+
+            stack_min = np.nanmin(pears_llam)
+            stack_max = np.nanmax(pears_llam)
+            stack_mederr = np.nanmedian(pears_llam_err)
             # median of all errors on hte stack
             ax.set_ylim(stack_min - 3 * stack_mederr, stack_max + 3 * stack_mederr)
 
@@ -921,11 +936,11 @@ def plot_stacks(cat, urcol, z_low, z_high, z_indices, start):
 
             # add number of galaxies in plot
             ax.text(0.8, 0.2, numspec, verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transAxes, color='k', size=10)
+            transform=ax.transAxes, color='k', size=9)
 
             # Normalization value
-            ax.text(0.04, 0.94, normval, verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transAxes, color='k', size=10)
+            ax.text(0.02, 0.2, normval, verticalalignment='top', horizontalalignment='left', \
+            transform=ax.transAxes, color='k', size=9)
 
             cellcount += 1
 
@@ -972,9 +987,12 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # and the initially chosen redshift range 0.6 < z < 1.2
     # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range
 
+    ms_lim_low = 10.5
+    ms_lim_high = 12.0
+
     # Find the indices (corresponding to massive galaxies)
-    indices = np.where((ur_color >= 1.5) & (ur_color < 3.0) &\
-                    (stellar_mass >= 10.5) & (stellar_mass < 12.0))[0]
+    indices = np.where((ur_color >= 1.8) & (ur_color < 3.0) &\
+                    (stellar_mass >= ms_lim_low) & (stellar_mass < ms_lim_high))[0]
   
     num_massive = int(len(pears_id[indices]))
     print("Number of massive galaxies in this redshift range --", num_massive)
@@ -1010,6 +1028,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     (24439, 'GOODS-N'), (119621, 'GOODS-N'), (89237, 'GOODS-N'), (18862, 'GOODS-S'), \
     (106130, 'GOODS-S'), (16496, 'GOODS-S')]
 
+    to_reject_but_might_be_okay_with_masking = [(94867, 'GOODS-N')]
+
     # Create figure
     fig = plt.figure(figsize=(10,6))
     ax = fig.add_subplot(111)
@@ -1035,7 +1055,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         current_pears_id = pears_id[indices][u]
         current_pears_field = pears_field[indices][u]
 
-        if (current_pears_id, current_pears_field) in galaxies_to_reject:
+        if (current_pears_id, current_pears_field) in galaxies_to_reject or \
+        (current_pears_id, current_pears_field) in to_reject_but_might_be_okay_with_masking:
             print("Skipping:", current_pears_id, current_pears_field)
             num_massive -= 1
             continue
@@ -1076,6 +1097,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         p_pears = fit_p(p_init, pears_lam_em, pears_llam_em_masked)
         #p_figs  = fit_p(p_init, figs_lam_em, figs_llam_em_masked)
 
+        # splinefit = interpolate.UnivariateSpline(pears_lam_em, pears_llam_em_masked)
+        pfit = np.ma.polyfit(pears_lam_em, pears_llam_em_masked, deg=3)
+        np_polynomial = np.poly1d(pfit)
+
         # plot data and fit
         """
         print("PEARS object:", current_pears_id, current_pears_field)
@@ -1092,6 +1117,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal')
         #ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown')
+        ax1.plot(pears_lam_em, np_polynomial(pears_lam_em), color='crimson')
 
         # Show mask as shaded region
         all_lines, all_line_labels = get_all_line_wav()
@@ -1138,13 +1164,12 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #figs_llam_em = figs_llam_em / p_figs(figs_lam_em)
 
         # Also divide errors 
-        # If you
         pears_lerr = pears_lerr / p_pears(pears_lam_em)
         #figs_lerr = figs_lerr / p_figs(figs_lam_em)
 
         """
         # Plot "pure emission/absorption" spectrum
-        ax2.axhline(y=0.0, ls='--', color='black', lw=1.5, zorder=1)
+        ax2.axhline(y=1.0, ls='--', color='black', lw=1.5, zorder=1)
 
         ax2.plot(pears_lam_em, pears_llam_em, color='turquoise', linewidth=1.5, zorder=2)
         #ax2.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5, zorder=2)
@@ -1211,6 +1236,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=16)
 
+    # Mass range
+    ax.text(0.66, 0.86, str(ms_lim_low) + r'$\,\leq \mathrm{M\ [M_\odot]} <\,$' + str(ms_lim_high), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=16)
+
     # Labels
     ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
     ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{divided\ by\ continuum}]$', fontsize=15)
@@ -1221,9 +1251,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #        transform=ax.transAxes, color='darkorange', size=20)
 
     # Measure Mg/Fe
-    mg2fe = fit_gauss_mgfe_astropy(lam_grid, pears_old_llam, num_massive, z_low, z_high)
+    mg2fe = fit_gauss_mgfe_astropy(lam_grid, pears_old_llam, num_massive, z_low, z_high, ms_lim_low, ms_lim_high)
 
-    figname = stacking_figures_dir + 'massive_stack_divcont_' + str(z_low).replace('.','p') \
+    figname = stacking_figures_dir + 'massive_stack_' + str(z_low).replace('.','p') \
     + '_' + str(z_high).replace('.','p') + '.pdf'
     fig.savefig(figname, dpi=300, bbox_inches='tight')
 
@@ -1313,11 +1343,13 @@ def get_all_line_wav():
     mg2_mgb = 5175
     fe5270 = 5270
     fe5335 = 5335
+    #fe5406 = 5406
+    #nad = 5890
 
     # Now put all the line wavelengths in a list and return
-    all_lines = [oii3727, hbeta, oiii4959, oiii5007, halpha, gband, mg2_mgb, fe5270, fe5335]
+    all_lines = [oii3727, hbeta, oiii4959, oiii5007, halpha, gband, mg2_mgb, fe5270, fe5335]#, fe5406, nad]
     all_line_labels = [r'$[OII]3727$', r'H$\beta$', r'$[OIII]4959$', r'$[OIII]5007$', \
-    r'H$\alpha + [NII]$', 'G-band', r'$\mathrm{Mg_2 + Mgb}$', 'Fe5270', 'Fe5335']
+    r'H$\alpha + [NII]$', 'G-band', r'$\mathrm{Mg_2 + Mgb}$', 'Fe5270', 'Fe5335']#, 'Fe5406', 'NaD+TiO']
 
     return all_lines, all_line_labels
 
@@ -1366,7 +1398,7 @@ def GaussAbs_central_wav_fixed(x, amp1, sigma1, amp2, sigma2, amp3, sigma3):
            (amp2 * np.exp(-(x - 5160.0)**2 / (2 * sigma2**2))) + \
            (amp3 * np.exp(-(x - 5335.0)**2 / (2 * sigma3**2)))
 
-def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive, z_low, z_high):
+def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive, z_low, z_high, ms_lim_low, ms_lim_high):
 
     # First constrain the region to be fit
     fitreg_idx = np.where((stack_lam >= 4600) & (stack_lam <= 5650))[0]
@@ -1439,17 +1471,30 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive, z_low, z_high):
     add_line_labels(ax, None)
 
     # Number of galaxies and redshift range on plot
-    ax.text(0.68, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), \
+    ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), \
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=12)
-    ax.text(0.68, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
-        verticalalignment='top', horizontalalignment='left', \
-        transform=ax.transAxes, color='k', size=12)
-    ax.text(0.68, 0.87, r'$\mathrm{[Mg/Fe] = }$' + "{:.2f}".format(np.log10(mg2fe)), \
+    ax.text(0.66, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=12)
 
-    fig.savefig(stacking_figures_dir + 'Mg2Fe_fit_result_'+ \
+    # Mass range
+    ax.text(0.66, 0.86, str(ms_lim_low) + r'$\,\leq \mathrm{M\ [M_\odot]} <\,$' + str(ms_lim_high), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=12)
+
+    # [Mg/Fe] on plot
+    ax.text(0.66, 0.81, r'$\mathrm{[Mg/Fe] = }$' + "{:.2f}".format(np.log10(mg2fe)), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=12)
+
+    # Save figure
+    if ms_lim_low == 9.5:
+        msstr = 'intermediate_mass_'
+    elif ms_lim_low == 10.5:
+        msstr = 'massive_'
+
+    fig.savefig(stacking_figures_dir + 'Mg2Fe_fit_result_'+ msstr + \
         str(z_low).replace('.','p') + '_' + str(z_high).replace('.','p') +
         '.pdf', dpi=300, bbox_inches='tight')
 
@@ -1714,6 +1759,8 @@ def main():
         #create_stacks(cat, urcol, z_low, z_high, z_indices, start)
         #plot_stacks(cat, urcol, z_low, z_high, z_indices, start)
         stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start)
+
+        sys.exit(0)
 
     # Total time taken
     print("Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes.")
