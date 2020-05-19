@@ -1209,6 +1209,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_old_llam = np.asarray(figs_old_llam)
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
+    # Shift it to force stack value =1.0 at 4500A
+    shift_idx = np.argmin(abs(lam_grid - 4500))
+    pears_old_llam /= pears_old_llam[shift_idx]
+
     # Plot stacks
     ax.plot(lam_grid, pears_old_llam, '.-', color='mediumblue', linewidth=1.5, \
         markeredgecolor='mediumblue', markersize=1.0, zorder=5)
@@ -1278,19 +1282,19 @@ def add_line_labels(ax, label_flag='all'):
             transform=ax.transData, color='firebrick', size=11)
 
         # Ca H & K
-        ax.text(3920.0, 0.96, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
+        ax.text(3920.0, 0.945, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
             verticalalignment='center', horizontalalignment='center', \
             transform=ax.transData, color='firebrick', size=11)
 
         # TiO
-        ax.text(6230.0, 0.98, r'$\mathrm{TiO}$', \
+        ax.text(6230.0, 0.97, r'$\mathrm{TiO}$', \
             verticalalignment='center', horizontalalignment='center', \
             transform=ax.transData, color='firebrick', size=11)
 
     # These remaining features below will always be marked
     # Mgb
-    ax.axvline(x=5175.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
-    ax.text(5165.0, 0.935, r'$\mathrm{Mg_2 + Mgb}$', \
+    ax.axvline(x=5175.0, ls='--', ymin=0.18, ymax=0.27, color='firebrick')
+    ax.text(5165.0, 0.925, r'$\mathrm{Mg_2 + Mgb}$', \
         verticalalignment='top', horizontalalignment='right', \
         transform=ax.transData, color='firebrick', size=11)
     # FeII
@@ -1316,12 +1320,12 @@ def add_line_labels(ax, label_flag='all'):
         transform=ax.transData, color='firebrick', size=11)
 
     # Gband
-    ax.text(4300.0, 0.98, 'G-band', \
+    ax.text(4300.0, 0.97, 'G-band', \
         verticalalignment='center', horizontalalignment='center', \
         transform=ax.transData, color='firebrick', size=11)
 
     # NaD + TiO
-    ax.text(5890.0, 0.98, r'$\mathrm{NaD}$' + '+ \n' + r'$\mathrm{TiO}$', \
+    ax.text(5890.0, 0.97, r'$\mathrm{NaD}$' + '+ \n' + r'$\mathrm{TiO}$', \
         verticalalignment='center', horizontalalignment='center', \
         transform=ax.transData, color='firebrick', size=11)
 
