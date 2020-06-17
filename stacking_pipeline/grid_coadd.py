@@ -1426,9 +1426,13 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive, z_low, z_high, ms
     gauss_init.mean_3.fixed = True
 
     gauss_init.stddev_3.min, gauss_init.stddev_3.max = 5.0, 250.0
+    # In Angstroms # These units are NOT km/s !!! 
 
     fit_gauss = fitting.LevMarLSQFitter()
     g = fit_gauss(gauss_init, stack_lam_to_fit, stack_llam_to_fit)
+
+    #res = abs(g(stack_lam_to_fit) - stack_llam_to_fit)
+    #print(np.std(res))
     
     print(g)
     print("\n")
@@ -1443,6 +1447,9 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive, z_low, z_high, ms
     mg_area = mg_amp * mg_stddev
     fe_area = fe_amp * fe_stddev
     mg2fe = mg_area/fe_area
+
+    print("Mg flux:", mg_area * np.sqrt(2*np.pi))
+    print("Fe flux:", fe_area * np.sqrt(2*np.pi))
 
     print("Mg to Fe flux ratio: %.2f" % mg2fe)
     print("log(Mg/Fe) measured to be: %.2f" % np.log10(mg2fe))
@@ -1488,9 +1495,23 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive, z_low, z_high, ms
         transform=ax.transAxes, color='k', size=12)
 
     # [Mg/Fe] on plot
-    ax.text(0.66, 0.81, r'$\mathrm{[Mg/Fe] = }$' + "{:.2f}".format(np.log10(mg2fe)), \
+    mg2fe_str = r'$\mathrm{[Mg/Fe] = }$' + "{:.2f}".format(np.log10(mg2fe)) + r'$\pm\, 0.11$'
+    ax.text(0.66, 0.81, mg2fe_str, \
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=12)
+
+    # Add inset figure to show line broadening 
+    left, bottom, width, height = [0.18, 0.66, 0.35, 0.2]
+    axins = fig.add_axes([left, bottom, width, height])
+
+    width_z_err = 0.029 * 5175  # in angstrom; assumes a mean 3% error on redshifts
+    width_lsf_err = 3 * 50  # in angstrom; number of ACS pixels of a typical galaxy times spectral res at mgb
+    quad_width = np.sqrt(width_z_err**2 + width_lsf_err**2)
+
+    y_ins = 1.0 - Gauss(stack_lam, 1.0, 5175.0, quad_width)
+    axins.plot(stack_lam, y_ins, color='k')
+    axins.set_xlim(4000, 6200)
+    axins.minorticks_on()
 
     # Save figure
     if ms_lim_low == 9.5:
