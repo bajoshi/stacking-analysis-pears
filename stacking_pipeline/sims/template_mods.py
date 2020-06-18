@@ -5,6 +5,12 @@ import sys
 
 import matplotlib.pyplot as plt
 
+def deredshift(template_wav, template_llam, redshift):
+
+    
+
+    return redshifted_wav, redshifted_flux
+
 def main():
 
     # Read in templates and redshifts file 
@@ -32,10 +38,10 @@ def main():
         # 4. Not all galaxies within a sample will be the same brightness so you need take this into account. 
         = deredshift(current_template_wav, current_template_llam)
         = lsf_convolve()
-        = downsample()
         = luminosity_func_mod()
-        = add_systematic_noise()
         = add_statistical_noise()
+        = downsample()
+        = add_systematic_noise()
 
         # Add into numpy array
 
