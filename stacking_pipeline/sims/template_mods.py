@@ -3,6 +3,8 @@ from astropy.convolution import Gaussian1DKernel, convolve
 
 import os
 import sys
+import time
+import datetime
 
 import matplotlib.pyplot as plt
 
@@ -10,7 +12,7 @@ home = os.getenv('HOME')  # Does not have a trailing slash at the end
 figs_dir = home + "/Desktop/FIGS/"
 stacking_analysis_dir = figs_dir + "stacking-analysis-pears/"
 
-stacking_utils_dir = stacking_analysis_dir + "util_codes"
+stacking_utils_dir = stacking_analysis_dir + "util_codes/"
 sys.path.append(stacking_utils_dir)
 import proper_and_lum_dist as pl
 
@@ -29,7 +31,7 @@ def redshift_spectrum(template_wav, template_llam, redshift):
 
 def lsf_convolve(spec):
 
-    mock_lsf = Gaussian1DKernel(2.0)
+    mock_lsf = Gaussian1DKernel(8.0)
     lsf_convolved_spectrum = convolve(spec, mock_lsf, boundary='extend')
 
     return lsf_convolved_spectrum
@@ -88,21 +90,33 @@ def chop_spectrum(spec_wav, spec_flux, final_wav_grid):
 
     return grism_spec
 
+def get_final_wav_grid():
+
+    grism_low_wav = 6000
+    grism_high_wav = 9500
+    pears_spec_points = 88
+
+    final_wav_grid = np.linspace(grism_low_wav, grism_high_wav, pears_spec_points)
+
+    return final_wav_grid
+
 def main():
+
+    # Start time
+    start = time.time()
+    dt = datetime.datetime
+    print("Starting template mods --", dt.now())
 
     # Read in templates and redshifts file 
     templates = np.genfromtxt('template_and_redshift_choices.txt', dtype=None, names=True, encoding='ascii')
 
     # Read in each template, modify it and store 
     # all modified templates in a large numpy array
-    # First define the final wavelength grid
-    grism_low_wav = 6000
-    grism_high_wav = 9500
-    pears_spec_points = 88
-
-    final_wav_grid = np.linspace(grism_low_wav, grism_high_wav, pears_spec_points)
+    # First get the final wavelength grid
+    final_wav_grid = get_final_wav_grid()
     templates_with_mods = np.zeros((len(templates), len(final_wav_grid)))
 
+    #i_init = 7460
     for i in range(len(templates)):
 
         current_template_name = templates['template_name'][i]
@@ -124,6 +138,7 @@ def main():
         # * Convolve model with grism sensitivity curve. Downsample to grism resolution, 
         # while also adding in systematic noise... i.e., correlated flux measurements.
         redshifted_wav, redshifted_flux = redshift_spectrum(current_template_wav, current_template_llam, current_redshift)
+        # = add_kinematics()
         # = add_dust()
         # = luminosity_func_mod()
         spec_noise = add_statistical_noise(redshifted_flux)
@@ -143,13 +158,16 @@ def main():
         plt.clf()
         plt.close()
 
-        if i > 7480: break
+        if i > i_init+20: sys.exit(0)
         """
 
         # Add into numpy array
         templates_with_mods[i] = final_spec
 
-    np.save("modified_templates.npy", templates_with_mods)
+    np.save(figs_dir + "modified_templates.npy", templates_with_mods)
+
+    # Total time taken
+    print("Total time taken for all mods --", "{:.2f}".format((time.time() - start)/60.0), "minutes.")
 
     return None
 

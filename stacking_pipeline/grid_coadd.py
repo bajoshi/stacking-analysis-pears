@@ -984,8 +984,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
-    # and the initially chosen redshift range 0.6 < z < 1.2
-    # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range
+    # and the initially chosen redshift range 0.16 < z < 0.96
 
     ms_lim_low = 10.5
     ms_lim_high = 12.0
