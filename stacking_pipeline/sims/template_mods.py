@@ -41,10 +41,10 @@ def add_stellar_vdisp(spec_wav, spec_flux, vdisp):
 
     vdisp_spec = np.zeros(len(spec_wav))
 
-    print(len(spec_wav))
+    #print(len(spec_wav))
 
     for w in range(len(spec_wav)):
-        print(w)
+        #print(w)
         
         lam = spec_wav[w]
 
@@ -207,6 +207,7 @@ def main():
         lsf_convolved_spectrum = lsf_convolve(spec_noise)
         grism_spec = downsample(redshifted_wav, lsf_convolved_spectrum)
         
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111)
         #ax.plot(current_template_wav, current_template_llam, color='k')
@@ -222,9 +223,10 @@ def main():
         plt.close()
 
         if i > i_init+20: sys.exit(0)
+        """
 
         # Add into numpy array
-        #templates_with_mods[i] = final_spec
+        templates_with_mods[i] = grism_spec
 
     np.save(figs_dir + "modified_templates.npy", templates_with_mods)
 
