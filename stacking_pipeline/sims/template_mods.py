@@ -55,7 +55,7 @@ def add_stellar_vdisp(spec_wav, spec_flux, vdisp):
         # +- 3-sigma using the specified velocity dispersion.
         # Mean of all velocities should be 0,
         # of course since the avg vel of all stars within
-        # a rotating disk should be zero.
+        # a rotating disk or in an elliptical galaxy should be zero.
         for v in np.arange(-3*vdisp, 3*vdisp, delta_v):
 
             beta = 1 + (v/speed_of_light)
@@ -103,29 +103,29 @@ def downsample(spec_wav, spec_flux):
     # First multiply by grism sensitivity curve
 
     # Downsample to grism resolution
-    extended_grism_wav_grid = np.arange(4000, 12000 + 40, 40.0)
+    final_wav_grid = get_final_wav_grid()
 
-    resampled_flux = np.zeros((len(extended_grism_wav_grid)))
-    for k in range(len(extended_grism_wav_grid)):
+    resampled_flux = np.zeros((len(final_wav_grid)))
+    for k in range(len(final_wav_grid)):
 
         if k == 0:
-            lam_step_high = extended_grism_wav_grid[k+1] - extended_grism_wav_grid[k]
+            lam_step_high = final_wav_grid[k+1] - final_wav_grid[k]
             lam_step_low = lam_step_high
 
-        elif k == len(extended_grism_wav_grid) - 1:
-            lam_step_low = extended_grism_wav_grid[k] - extended_grism_wav_grid[k-1]
+        elif k == len(final_wav_grid) - 1:
+            lam_step_low = final_wav_grid[k] - final_wav_grid[k-1]
             lam_step_high = lam_step_low
 
         else:
-            lam_step_high = extended_grism_wav_grid[k+1] - extended_grism_wav_grid[k]
-            lam_step_low = extended_grism_wav_grid[k] - extended_grism_wav_grid[k-1]
+            lam_step_high = final_wav_grid[k+1] - final_wav_grid[k]
+            lam_step_low = final_wav_grid[k] - final_wav_grid[k-1]
 
-        new_ind = np.where((spec_wav >= extended_grism_wav_grid[k] - lam_step_low) & \
-            (spec_wav < extended_grism_wav_grid[k] + lam_step_high))[0]
+        new_ind = np.where((spec_wav >= final_wav_grid[k] - lam_step_low) & \
+            (spec_wav < final_wav_grid[k] + lam_step_high))[0]
 
         resampled_flux[k] = np.mean(spec_flux[new_ind])
 
-    return resampled_flux, extended_grism_wav_grid
+    return resampled_flux
 
 def chop_spectrum(spec_wav, spec_flux, chop_lim_low, chop_lim_high):
 
@@ -184,8 +184,8 @@ def main():
 
         # Decide how to shorten the BC03 spectra
         # These wavelengths are in angstroms in the rest-frame
-        chop_lim_low = 2000
-        chop_lim_high = 15000
+        chop_lim_low = 3000
+        chop_lim_high = 10000
 
         # Mods. Steps:
         # * First chop the spectrum so that the remaining computationally expensive steps 
@@ -203,15 +203,16 @@ def main():
         vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
         # = add_dust()
         # = luminosity_func_mod()
-        #spec_noise = add_statistical_noise(vdisp_flux)
-        #lsf_convolved_spectrum = lsf_convolve(spec_noise)
-        #grism_spec, extended_grism_wav_grid = downsample(redshifted_wav, lsf_convolved_spectrum)
+        spec_noise = add_statistical_noise(vdisp_flux)
+        lsf_convolved_spectrum = lsf_convolve(spec_noise)
+        grism_spec = downsample(redshifted_wav, lsf_convolved_spectrum)
         
         fig = plt.figure()
         ax = fig.add_subplot(111)
         #ax.plot(current_template_wav, current_template_llam, color='k')
         ax.plot(redshifted_wav, redshifted_flux)
         ax.plot(redshifted_wav, vdisp_flux)
+        ax.plot(final_wav_grid, grism_spec)
         ax.set_xscale('log')
         ax.set_xlim(5000, 10000)
         plt.show()
