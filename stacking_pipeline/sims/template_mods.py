@@ -11,10 +11,13 @@ import matplotlib.pyplot as plt
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
 figs_dir = home + "/Desktop/FIGS/"
 stacking_analysis_dir = figs_dir + "stacking-analysis-pears/"
+massive_galaxies_dir = home + "/Desktop/FIGS/massive-galaxies/"
 
 stacking_utils_dir = stacking_analysis_dir + "util_codes/"
 sys.path.append(stacking_utils_dir)
+sys.path.append(massive_galaxies_dir + "grismz_pipeline/for_hst_cluster_proposal/")
 import proper_and_lum_dist as pl
+from template_sed_plot import get_dust_atten_model
 
 def redshift_spectrum(template_wav, template_llam, redshift):
 
@@ -37,7 +40,7 @@ def add_stellar_vdisp(spec_wav, spec_flux, vdisp):
     # Integration done numerically as a Riemann sum.
 
     speed_of_light = 299792.458  # km per second
-    delta_v = 1.0
+    delta_v = 10.0
 
     vdisp_spec = np.zeros(len(spec_wav))
 
@@ -66,7 +69,7 @@ def add_stellar_vdisp(spec_wav, spec_flux, vdisp):
 
             gauss_exp_func = np.exp(-1*v*v/(2*vdisp*vdisp))
 
-            prod = flux_at_new_lam * gauss_exp_func
+            prod = flux_at_new_lam * gauss_exp_func * delta_v
             I += prod
 
         vdisp_spec[w] = I / (vdisp*np.sqrt(2*np.pi))
@@ -164,13 +167,16 @@ def main():
     final_wav_grid = get_final_wav_grid()
     templates_with_mods = np.zeros((len(templates), len(final_wav_grid)))
 
-    i_init = 8000
-    for i in range(i_init, len(templates)):
+    # Define stellar velocity dispersion and dust arrays 
+    # to randomly choose values from 
+    stellar_vdisp_arr = np.linspace(200, 300, 11)
+    av_arr = np.arange(0.0, 1.6, 0.1)
+
+    #i_init = 8000
+    for i in range(len(templates)):
 
         current_template_name = templates['template_name'][i]
         current_redshift = templates['redshift'][i]
-
-        print(i, ":  ", current_template_name, "  ", current_redshift)
 
         # Read in template
         tt = np.genfromtxt(current_template_name, dtype=None, names=True, encoding='ascii')
@@ -179,8 +185,12 @@ def main():
 
         # For now randomly assign a stellar velocity dispersion
         # value betwen 200 to 300 km/s 
-        stellar_vdisp_arr = np.linspace(200, 300, 11)
-        stellar_vdisp = np.random.choice(stellar_vdisp_arr, size=1)
+        stellar_vdisp = float(np.random.choice(stellar_vdisp_arr, size=1))
+
+        # Choose Av
+        av = float(np.random.choice(av_arr, size=1))
+
+        print(i, ":  ", current_template_name, "  ", current_redshift, "  ", stellar_vdisp, "  ", av)
 
         # Decide how to shorten the BC03 spectra
         # These wavelengths are in angstroms in the rest-frame
@@ -201,9 +211,9 @@ def main():
         short_wav, short_spec = chop_spectrum(current_template_wav, current_template_llam, chop_lim_low, chop_lim_high)
         redshifted_wav, redshifted_flux = redshift_spectrum(short_wav, short_spec, current_redshift)
         vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
-        # = add_dust()
+        dusty_spec = get_dust_atten_model(redshifted_wav, vdisp_flux, av)
         # = luminosity_func_mod()
-        spec_noise = add_statistical_noise(vdisp_flux)
+        spec_noise = add_statistical_noise(dusty_spec)
         lsf_convolved_spectrum = lsf_convolve(spec_noise)
         grism_spec = downsample(redshifted_wav, lsf_convolved_spectrum)
         
@@ -213,7 +223,7 @@ def main():
         #ax.plot(current_template_wav, current_template_llam, color='k')
         ax.plot(redshifted_wav, redshifted_flux)
         ax.plot(redshifted_wav, vdisp_flux)
-        ax.plot(final_wav_grid, grism_spec)
+        ax.plot(final_wav_grid, grism_spec, lw=2.0)
         ax.set_xscale('log')
         ax.set_xlim(5000, 10000)
         plt.show()
@@ -222,7 +232,9 @@ def main():
         plt.clf()
         plt.close()
 
-        if i > i_init+20: sys.exit(0)
+        print("Time upto now --", "{:.2f}".format(time.time() - start), "seconds.")
+
+        if i > i_init+10: sys.exit(0)
         """
 
         # Add into numpy array
