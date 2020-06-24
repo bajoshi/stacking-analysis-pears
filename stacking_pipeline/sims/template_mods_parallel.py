@@ -3,8 +3,6 @@ from astropy.convolution import Gaussian1DKernel, convolve
 
 import os
 import sys
-import time
-import datetime
 
 import matplotlib.pyplot as plt
 
@@ -151,102 +149,73 @@ def get_final_wav_grid():
 
     return final_wav_grid
 
-def main():
+def do_mods(current_template_name, current_template_wav, current_template_llam, current_redshift, \
+    stellar_vdisp, av, template_index, par_savedir):
 
-    # Start time
-    start = time.time()
-    dt = datetime.datetime
-    print("Starting template mods --", dt.now())
+    # Decide how to shorten the BC03 spectra
+    # These wavelengths are in angstroms in the rest-frame
+    chop_lim_low = 3000
+    chop_lim_high = 10000
+
+    # Mods. Steps:
+    # * First chop the spectrum so that the remaining computationally expensive steps 
+    # can be done relatively faster.
+    # * Redshift spectrum.
+    # * Convolve with a line spread function.
+    # * The BC03 models have no dust. Add in dust if needed according to the Calzetti prescription.
+    # * Not all galaxies within a sample will be the same brightness so you need take this into account. 
+    # * Add random noise to each flux point.
+    # * Convolve model with grism sensitivity curve. Downsample to grism resolution, 
+    # while also adding in systematic noise... i.e., correlated flux measurements.
+
+    short_wav, short_spec = chop_spectrum(current_template_wav, current_template_llam, chop_lim_low, chop_lim_high)
+    redshifted_wav, redshifted_flux = redshift_spectrum(short_wav, short_spec, current_redshift)
+    vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
+    dusty_spec = get_dust_atten_model(redshifted_wav, vdisp_flux, av)
+    spec_noise = add_statistical_noise(dusty_spec)
+    lsf_convolved_spectrum = lsf_convolve(spec_noise)
+    grism_spec = downsample(redshifted_wav, lsf_convolved_spectrum)
+
+    np.save(par_savedir + 'modified_template_' + str(template_index) + '.npy', grism_spec)
+
+    return None
+
+def main(arr_index):
 
     # Read in templates and redshifts file 
     templates = np.genfromtxt('template_and_redshift_choices.txt', dtype=None, names=True, encoding='ascii')
-
-    # Read in each template, modify it and store 
-    # all modified templates in a large numpy array
-    # First get the final wavelength grid
-    final_wav_grid = get_final_wav_grid()
-    templates_with_mods = np.zeros((len(templates), len(final_wav_grid)))
 
     # Define stellar velocity dispersion and dust arrays 
     # to randomly choose values from 
     stellar_vdisp_arr = np.linspace(200, 300, 11)
     av_arr = np.arange(0.0, 1.6, 0.1)
 
-    #i_init = 8000
-    for i in range(len(templates)):
+    par_savedir = stacking_analysis_dir + "stacking_pipeline/sims/temp_parallel_savedir/"
 
-        current_template_name = templates['template_name'][i]
-        current_redshift = templates['redshift'][i]
+    current_template_name = templates['template_name'][arr_index]
+    current_redshift = templates['redshift'][arr_index]
 
-        # Read in template
-        tt = np.genfromtxt(current_template_name, dtype=None, names=True, encoding='ascii')
-        current_template_wav = tt['wav']
-        current_template_llam = tt['llam']
+    # Read in template
+    tt = np.genfromtxt(current_template_name, dtype=None, names=True, encoding='ascii')
+    current_template_wav = tt['wav']
+    current_template_llam = tt['llam']
 
-        # For now randomly assign a stellar velocity dispersion
-        # value betwen 200 to 300 km/s 
-        stellar_vdisp = float(np.random.choice(stellar_vdisp_arr, size=1))
+    # For now randomly assign a stellar velocity dispersion
+    # value betwen 200 to 300 km/s 
+    stellar_vdisp = float(np.random.choice(stellar_vdisp_arr, size=1))
 
-        # Choose Av
-        av = float(np.random.choice(av_arr, size=1))
+    # Choose Av
+    av = float(np.random.choice(av_arr, size=1))
 
-        print(i, ":  ", current_template_name, "  ", current_redshift, "  ", stellar_vdisp, "  ", av)
+    print(arr_index, ":  ", current_template_name, "  ", current_redshift, "  ", stellar_vdisp, "  ", av)
 
-        # Decide how to shorten the BC03 spectra
-        # These wavelengths are in angstroms in the rest-frame
-        chop_lim_low = 3000
-        chop_lim_high = 10000
-
-        # Mods. Steps:
-        # * First chop the spectrum so that the remaining computationally expensive steps 
-        # can be done relatively faster.
-        # * Redshift spectrum.
-        # * Convolve with a line spread function.
-        # * The BC03 models have no dust. Add in dust if needed according to the Calzetti prescription.
-        # * Not all galaxies within a sample will be the same brightness so you need take this into account. 
-        # * Add random noise to each flux point.
-        # * Convolve model with grism sensitivity curve. Downsample to grism resolution, 
-        # while also adding in systematic noise... i.e., correlated flux measurements.
-
-        short_wav, short_spec = chop_spectrum(current_template_wav, current_template_llam, chop_lim_low, chop_lim_high)
-        redshifted_wav, redshifted_flux = redshift_spectrum(short_wav, short_spec, current_redshift)
-        vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
-        dusty_spec = get_dust_atten_model(redshifted_wav, vdisp_flux, av)
-        # = luminosity_func_mod()
-        spec_noise = add_statistical_noise(dusty_spec)
-        lsf_convolved_spectrum = lsf_convolve(spec_noise)
-        grism_spec = downsample(redshifted_wav, lsf_convolved_spectrum)
-        
-        """
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        #ax.plot(current_template_wav, current_template_llam, color='k')
-        ax.plot(redshifted_wav, redshifted_flux)
-        ax.plot(redshifted_wav, vdisp_flux)
-        ax.plot(final_wav_grid, grism_spec, lw=2.0)
-        ax.set_xscale('log')
-        ax.set_xlim(5000, 10000)
-        plt.show()
-
-        plt.cla()
-        plt.clf()
-        plt.close()
-
-        print("Time upto now --", "{:.2f}".format(time.time() - start), "seconds.")
-
-        if i > i_init+10: sys.exit(0)
-        """
-
-        # Add into numpy array
-        templates_with_mods[i] = grism_spec
-
-    np.save(figs_dir + "modified_templates.npy", templates_with_mods)
-
-    # Total time taken
-    print("Total time taken for all mods --", "{:.2f}".format((time.time() - start)/60.0), "minutes.")
+    do_mods(current_template_name, current_template_wav, current_template_llam, current_redshift, \
+        stellar_vdisp, av, arr_index, par_savedir)
 
     return None
 
 if __name__ == '__main__':
-    main()
+    # Take in argument from bash script and run
+    arr_index = int(sys.argv[1])
+    main(arr_index)
     sys.exit(0)
