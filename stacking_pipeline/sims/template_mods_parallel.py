@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.convolution import Gaussian1DKernel, convolve
+import scipy
 
 import os
 import sys
@@ -76,10 +77,14 @@ def add_stellar_vdisp(spec_wav, spec_flux, vdisp):
 
 def lsf_convolve(spec):
 
+    """
     gauss_kernel_sigma = 8.0
 
     mock_lsf = Gaussian1DKernel(gauss_kernel_sigma)
     lsf_convolved_spectrum = convolve(spec, mock_lsf, boundary='extend')
+    """
+
+    lsf_convolved_spectrum = scipy.ndimage.gaussian_filter(spec, 15.0, order=0)
 
     return lsf_convolved_spectrum
 

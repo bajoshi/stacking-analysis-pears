@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.convolution import Gaussian1DKernel, convolve
+import scipy
 
 import os
 import sys
@@ -78,10 +79,17 @@ def add_stellar_vdisp(spec_wav, spec_flux, vdisp):
 
 def lsf_convolve(spec):
 
-    gauss_kernel_sigma = 8.0
+    """
+    gauss_kernel_sigma_pix = 3.0
+    gauss_kernel_sigma_ang = gauss_kernel_sigma_pix * 40.0
 
-    mock_lsf = Gaussian1DKernel(gauss_kernel_sigma)
-    lsf_convolved_spectrum = convolve(spec, mock_lsf, boundary='extend')
+    gx = np.linspace(-5*gauss_kernel_sigma_ang, 5*gauss_kernel_sigma_ang, len(spec))
+
+    mock_lsf = (1/(gauss_kernel_sigma_ang * np.sqrt(2*np.pi))) * np.exp( -1 * gx**2 / (2 * gauss_kernel_sigma_ang**2))
+    lsf_convolved_spectrum = np.convolve(spec, mock_lsf)
+    """
+
+    lsf_convolved_spectrum = scipy.ndimage.gaussian_filter(spec, 15.0, order=0)
 
     return lsf_convolved_spectrum
 
@@ -210,8 +218,8 @@ def main():
 
         short_wav, short_spec = chop_spectrum(current_template_wav, current_template_llam, chop_lim_low, chop_lim_high)
         redshifted_wav, redshifted_flux = redshift_spectrum(short_wav, short_spec, current_redshift)
-        vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
-        dusty_spec = get_dust_atten_model(redshifted_wav, vdisp_flux, av)
+        #vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
+        dusty_spec = get_dust_atten_model(redshifted_wav, redshifted_flux, av)
         # = luminosity_func_mod()
         spec_noise = add_statistical_noise(dusty_spec)
         lsf_convolved_spectrum = lsf_convolve(spec_noise)
@@ -222,8 +230,8 @@ def main():
         ax = fig.add_subplot(111)
         #ax.plot(current_template_wav, current_template_llam, color='k')
         ax.plot(redshifted_wav, redshifted_flux)
-        ax.plot(redshifted_wav, vdisp_flux)
-        ax.plot(final_wav_grid, grism_spec, lw=2.0)
+        ax.plot(redshifted_wav, lsf_convolved_spectrum)
+        ax.plot(final_wav_grid, grism_spec, lw=3.0)
         ax.set_xscale('log')
         ax.set_xlim(5000, 10000)
         plt.show()
