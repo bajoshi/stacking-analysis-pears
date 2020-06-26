@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 home = os.getenv('HOME')  # Does not have a trailing slash at the end
 figs_dir = home + "/Desktop/FIGS/"
 stacking_analysis_dir = figs_dir + "stacking-analysis-pears/"
+stacking_figures_dir = figs_dir + "stacking-analysis-figures/"
 
 sys.path.append(stacking_analysis_dir + "util_codes/")
 sys.path.append(stacking_analysis_dir + "stacking_pipeline/")
@@ -52,7 +53,7 @@ def main():
     templates = np.genfromtxt('template_and_redshift_choices.txt', dtype=None, names=True, encoding='ascii')
 
     # Read in all modified templates
-    templates_with_mods = np.load(figs_dir + "modified_templates.npy")
+    templates_with_mods = np.load("modified_templates_novdisp.npy")
 
     # Use the constant measurement significane that the modification code used
     # Confirm with that code that this number is the same in both places
@@ -135,13 +136,17 @@ def main():
         color='gray', alpha=0.5, zorder=5)
 
     ax.set_xlim(lam_grid_low, lam_grid_high)
-    ax.set_ylim(0.9, 1.1)  # if dividing by the continuum instead of subtracting
+    ax.set_ylim(0.8, 1.2)  # if dividing by the continuum instead of subtracting
     ax.axhline(y=1.0, ls='--', color='k')
     ax.minorticks_on()
 
     gd.add_line_labels(ax)
 
-    plt.show()
+    # Labels
+    ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
+    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{divided\ by\ continuum}]$', fontsize=15)
+
+    fig.savefig(stacking_figures_dir + 'template_stack_novdisp.pdf', dpi=150, bbox_inches='tight')
 
     return None
 

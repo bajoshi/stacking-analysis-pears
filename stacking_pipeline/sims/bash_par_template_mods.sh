@@ -6,7 +6,7 @@ echo "This script will call the Python script -- $1"
 echo "that saves each modified template to a numpy array."
 echo "This bash script expects the name of the Python script as its first argument."
 
-ncores=2
+ncores=5
 total_templates=10000
 total_par_runs=$((total_templates/ncores))
 

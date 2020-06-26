@@ -170,8 +170,8 @@ def do_mods(current_template_name, current_template_wav, current_template_llam, 
 
     short_wav, short_spec = chop_spectrum(current_template_wav, current_template_llam, chop_lim_low, chop_lim_high)
     redshifted_wav, redshifted_flux = redshift_spectrum(short_wav, short_spec, current_redshift)
-    vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
-    dusty_spec = get_dust_atten_model(redshifted_wav, vdisp_flux, av)
+    #vdisp_flux = add_stellar_vdisp(redshifted_wav, redshifted_flux, stellar_vdisp)
+    dusty_spec = get_dust_atten_model(redshifted_wav, redshifted_flux, av)
     spec_noise = add_statistical_noise(dusty_spec)
     lsf_convolved_spectrum = lsf_convolve(spec_noise)
     grism_spec = downsample(redshifted_wav, lsf_convolved_spectrum)
