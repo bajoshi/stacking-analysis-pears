@@ -1030,7 +1030,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     to_reject_but_might_be_okay_with_masking = [(94867, 'GOODS-N')]
 
-    fails_with_MKL_err = [(89031, 'GOODS-S'), (44756, 'GOODS-N')]
+    fails_with_MKL_err = [(89031, 'GOODS-S'), (44756, 'GOODS-N'), (86216, 'GOODS-N')]
 
     # Create figure
     fig = plt.figure(figsize=(10,6))
@@ -1092,7 +1092,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
                 
         # Subtract continuum by fitting a third degree polynomial
         # Continuum fitted with potential emission line areas masked
-        # print chi2 value on plot?
         p_init = models.Polynomial1D(degree=3)
         fit_p = fitting.LinearLSQFitter()
 
@@ -1109,8 +1108,28 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #splinefit = CubicSpline(pears_lam_em, pears_llam_em_masked)
 
         # Rebin data and refit the same low degree polynomial
+        rebin_step = 200.0
+        rebin_start = int(pears_lam_em[0] / rebin_step) * rebin_step
+        rebin_end = int(pears_lam_em[-1] / rebin_step) * rebin_step
+        rebin_grid = np.arange(rebin_start, rebin_end + rebin_step, rebin_step)
+        pears_llam_em_rebinned = interpolate.griddata(points=pears_lam_em, values=pears_llam_em, \
+            xi=rebin_grid, method='cubic')
+
+        # find NaNs and replace them with the nearest value in rebinned data
+        nan_idx = np.where(np.isnan(pears_llam_em_rebinned))[0]
+
+        if nan_idx.size:
+            for i in nan_idx:
+                if i == (len(pears_llam_em_rebinned) -1):
+                    pears_llam_em_rebinned[i] = pears_llam_em_rebinned[i-1]
+                else:
+                    pears_llam_em_rebinned[i] = pears_llam_em_rebinned[i+1]
+
+        rebin_fit = np.ma.polyfit(rebin_grid, pears_llam_em_rebinned, deg=3)
+        rebin_polynomial = np.poly1d(rebin_fit)
 
         """
+        # Plotting
         fig1 = plt.figure(figsize=(9,6))
         gs = gridspec.GridSpec(6,2)
         gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.00, hspace=0.7)
@@ -1124,6 +1143,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal')
         #ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown')
         ax1.plot(pears_lam_em, np_polynomial(pears_lam_em), color='crimson')
+        ax1.plot(pears_lam_em, rebin_polynomial(pears_lam_em), color='tab:brown')
 
         # Show mask as shaded region
         all_lines, all_line_labels = get_all_line_wav()
@@ -1163,7 +1183,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
             verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         #ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
         #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
-        """
 
         # Now divide continuum
         # Using astropy fits
@@ -1177,6 +1196,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         # Using Numpy fits
         pears_llam_em = pears_llam_em / np_polynomial(pears_lam_em)
         pears_lerr = pears_lerr / np_polynomial(pears_lam_em)
+        """
+
+        # Using fits on rebinned data
+        pears_llam_em = pears_llam_em / rebin_polynomial(pears_lam_em)
+        pears_lerr = pears_lerr / rebin_polynomial(pears_lam_em)
 
         """
         # Plot "pure emission/absorption" spectrum
