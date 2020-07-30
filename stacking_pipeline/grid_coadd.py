@@ -8,6 +8,7 @@ from astropy.stats import sigma_clip
 from astropy.modeling import models, fitting
 from scipy.optimize import curve_fit
 from scipy import interpolate
+from scipy.interpolate import CubicSpline
 
 import os
 import sys
@@ -1029,9 +1030,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     to_reject_but_might_be_okay_with_masking = [(94867, 'GOODS-N')]
 
+    fails_with_MKL_err = [(89031, 'GOODS-S'), (44756, 'GOODS-N')]
+
     # Create figure
-    #fig = plt.figure(figsize=(10,6))
-    #ax = fig.add_subplot(111)
+    fig = plt.figure(figsize=(10,6))
+    ax = fig.add_subplot(111)
 
     # Loop over all spectra and coadd them
     for u in range(len(pears_id[indices])):
@@ -1055,13 +1058,17 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         current_pears_field = pears_field[indices][u]
 
         if (current_pears_id, current_pears_field) in galaxies_to_reject or \
-        (current_pears_id, current_pears_field) in to_reject_but_might_be_okay_with_masking:
+        (current_pears_id, current_pears_field) in to_reject_but_might_be_okay_with_masking or \
+        (current_pears_id, current_pears_field) in fails_with_MKL_err:
             print("Skipping:", current_pears_id, current_pears_field)
             num_massive -= 1
             continue
 
         #current_figs_id = figs_id[indices][u]
         #current_figs_field = figs_field[indices][u]
+
+        # plot data and fit
+        print("PEARS object:", current_pears_id, current_pears_field)
 
         # ----------------------------- Get data ----------------------------- #
         # PEARS PA combined data
@@ -1086,7 +1093,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         # Subtract continuum by fitting a third degree polynomial
         # Continuum fitted with potential emission line areas masked
         # print chi2 value on plot?
-        p_init = models.Polynomial1D(degree=5)
+        p_init = models.Polynomial1D(degree=3)
         fit_p = fitting.LinearLSQFitter()
 
         # mask emission lines 
@@ -1099,10 +1106,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         # splinefit = interpolate.UnivariateSpline(pears_lam_em, pears_llam_em_masked)
         pfit = np.ma.polyfit(pears_lam_em, pears_llam_em_masked, deg=3)
         np_polynomial = np.poly1d(pfit)
+        #splinefit = CubicSpline(pears_lam_em, pears_llam_em_masked)
 
-        # plot data and fit
-        print("PEARS object:", current_pears_id, current_pears_field)
+        # Rebin data and refit the same low degree polynomial
 
+        """
         fig1 = plt.figure(figsize=(9,6))
         gs = gridspec.GridSpec(6,2)
         gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.00, hspace=0.7)
@@ -1155,15 +1163,22 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
             verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         #ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
         #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
+        """
 
         # Now divide continuum
-        pears_llam_em = pears_llam_em / p_pears(pears_lam_em)
+        # Using astropy fits
+        #pears_llam_em = pears_llam_em / p_pears(pears_lam_em)
         #figs_llam_em = figs_llam_em / p_figs(figs_lam_em)
 
         # Also divide errors 
-        pears_lerr = pears_lerr / p_pears(pears_lam_em)
+        #pears_lerr = pears_lerr / p_pears(pears_lam_em)
         #figs_lerr = figs_lerr / p_figs(figs_lam_em)
+        
+        # Using Numpy fits
+        pears_llam_em = pears_llam_em / np_polynomial(pears_lam_em)
+        pears_lerr = pears_lerr / np_polynomial(pears_lam_em)
 
+        """
         # Plot "pure emission/absorption" spectrum
         ax2.axhline(y=1.0, ls='--', color='black', lw=1.5, zorder=1)
 
@@ -1181,6 +1196,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         plt.cla()
         plt.clf()
         plt.close()
+        """
 
         # add the continuum subtracted spectrum
         pears_old_llam, pears_old_llamerr, pears_num_points, pears_num_galaxies = \
@@ -1191,10 +1207,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
         #    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
 
-        #ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
+        ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
         #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.0)
-
-    sys.exit(0)
 
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
@@ -1279,7 +1293,7 @@ def add_line_labels(ax, label_flag='all'):
             transform=ax.transData, color='firebrick', size=11)
 
         # Ca H & K
-        ax.text(3920.0, 0.945, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\,\&\, K}$', \
+        ax.text(3920.0, 0.945, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\, &\, K}$', \
             verticalalignment='center', horizontalalignment='center', \
             transform=ax.transData, color='firebrick', size=11)
 
