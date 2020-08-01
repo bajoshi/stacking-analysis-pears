@@ -30,8 +30,8 @@ def plot_sfhs_verbose():
     fig = plt.figure() 
     ax = fig.add_subplot(111)
 
-    ax.set_xlabel('Time [Gyr]')
-    ax.set_ylabel('SFR [M_sol/yr]')
+    ax.set_xlabel(r'$\mathrm{Time\ [Gyr]}$', fontsize=14)
+    ax.set_ylabel(r'$\mathrm{SFR\ [M_\odot/yr]}$', fontsize=14)
 
     for i in range(num_models): 
         gamma = np.random.random() # SFR timescale in 1/Gyr # uniformly distributed between 0 to 1
@@ -52,7 +52,6 @@ def plot_sfhs_verbose():
         burst_timescale = np.random.choice(burst_timescale_list)
 
         print("\n" + "Parameters chosen:")
-        print(t)
         print("Formation time [Gyr ago]:", "{:.2f}".format(current_tform))
         print("SFR timescale gamma [1/Gyr]:", "{:.2f}".format(gamma))
 
@@ -133,12 +132,14 @@ def plot_sfhs_verbose():
         ax.plot(t, sfr_cont, color='tab:blue', zorder=1)
         ax.plot(t, sfr_burst, color='tab:red', zorder=1)
 
-    ax.minorticks_on()
+        ax.minorticks_on()
 
-    plt.show() 
-    plt.clf() 
-    plt.cla() 
-    plt.close() 
+        plt.show() 
+
+        break
+        plt.clf() 
+        plt.cla() 
+        plt.close() 
 
     return None
 
