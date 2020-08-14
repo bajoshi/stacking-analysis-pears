@@ -1033,8 +1033,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     fails_with_MKL_err = [(89031, 'GOODS-S'), (44756, 'GOODS-N'), (86216, 'GOODS-N')]
 
     # Create figure
-    #fig = plt.figure(figsize=(10,6))
-    #ax = fig.add_subplot(111)
+    fig = plt.figure(figsize=(10,6))
+    ax = fig.add_subplot(111)
 
     # Loop over all spectra and coadd them
     for u in range(len(pears_id[indices])):
@@ -1128,6 +1128,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         rebin_fit = np.ma.polyfit(rebin_grid, pears_llam_em_rebinned, deg=3)
         rebin_polynomial = np.poly1d(rebin_fit)
 
+        """
         # Plotting
         fig1 = plt.figure(figsize=(9,6))
         gs = gridspec.GridSpec(6,2)
@@ -1182,6 +1183,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
             verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         #ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
         #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
+        """
 
         # Now divide continuum
         # Using astropy fits
@@ -1200,6 +1202,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         pears_llam_em = pears_llam_em / rebin_polynomial(pears_lam_em)
         pears_lerr = pears_lerr / rebin_polynomial(pears_lam_em)
 
+        """
         # Plot "pure emission/absorption" spectrum
         ax2.axhline(y=1.0, ls='--', color='black', lw=1.5, zorder=1)
 
@@ -1217,6 +1220,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         plt.cla()
         plt.clf()
         plt.close()
+        """
 
         # add the continuum subtracted spectrum
         pears_old_llam, pears_old_llamerr, pears_num_points, pears_num_galaxies = \
@@ -1227,10 +1231,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
         #    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
 
-        #ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
+        ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
         #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.0)
-
-    sys.exit(0)
 
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
@@ -1251,6 +1253,17 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         markeredgecolor='mediumblue', markersize=1.0, zorder=5)
     ax.fill_between(lam_grid, pears_old_llam - pears_old_llamerr, pears_old_llam + pears_old_llamerr, \
         color='gray', alpha=0.5, zorder=5)
+
+    # Save stack as plain text file
+    fh = open(stacking_analysis_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '.txt', 'w')
+    fh.write("# lam flam flam_err")
+    fh.write("\n")
+    for q in range(len(lam_grid)):
+        # These flux and error values should be representable by "{:.6f}"
+        # because they're all around 1.0. I don't think the numbers need the sci notation.
+        fh.write("{:.2f}".format(lam_grid[q]) + " " + "{:.6f}".format(pears_old_llam[q]) + " " + "{:.6f}".format(pears_old_llamerr[q]))
+        fh.write("\n")
+    fh.close()
 
     #figs_llam_zero_idx = np.where(figs_old_llam == 0.0)[0]
     #figs_old_llam[figs_llam_zero_idx] = np.nan
@@ -1315,7 +1328,7 @@ def add_line_labels(ax, label_flag='all'):
             transform=ax.transData, color='firebrick', size=11)
 
         # Ca H & K
-        ax.text(3920.0, 0.945, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\, &\, K}$', \
+        ax.text(3920.0, 0.94, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\, \&\, K}$', \
             verticalalignment='center', horizontalalignment='center', \
             transform=ax.transData, color='firebrick', size=11)
 
