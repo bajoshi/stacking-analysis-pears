@@ -960,6 +960,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     pears_id = cat['PearsID'][z_indices]
     pears_field = cat['Field'][z_indices]
     zp = cat['zp_minchi2'][z_indices]
+    zs = cat['zspec'][z_indices]
 
     #figs_id = cat['figs_id'][z_indices]
     #figs_field = cat['figs_field'][z_indices]
@@ -1032,6 +1033,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     fails_with_MKL_err = [(89031, 'GOODS-S'), (44756, 'GOODS-N'), (86216, 'GOODS-N')]
 
+    #to_check = [(109151, 'GOODS-S'), (56663, 'GOODS-N'), (21592, 'GOODS-S'), (109794, 'GOODS-S'), (47814, 'GOODS-N')]
+    # these are galaxies with strong absorption features
+    # if the code works well on these then it should work 
+    # well on the rest.
+
     # Create figure
     fig = plt.figure(figsize=(10,6))
     ax = fig.add_subplot(111)
@@ -1057,6 +1063,22 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         current_pears_id = pears_id[indices][u]
         current_pears_field = pears_field[indices][u]
 
+        #if (current_pears_id, current_pears_field) not in to_check:
+        #    continue
+
+        # Apply cut on redshift error
+        redshift_err_tol = 0.02
+        current_spec_redshift = zs[indices][u]
+        zerr = abs(current_redshift - current_spec_redshift) / (1 + current_spec_redshift)
+        print("Spec-z, photo-z, and redshift error for this galaxy:", current_spec_redshift, current_redshift, zerr)
+        # This will let the ones with spec-z = -99.0, 
+        # i.e., unknown spec-z, through, which is what we want.
+        if zerr >= redshift_err_tol:
+            print("Skipping due to large redshift error.", "\n")
+            num_massive -= 1
+            continue
+
+        # Reject galaxy if it is in one of the rejection lists
         if (current_pears_id, current_pears_field) in galaxies_to_reject or \
         (current_pears_id, current_pears_field) in to_reject_but_might_be_okay_with_masking or \
         (current_pears_id, current_pears_field) in fails_with_MKL_err:
@@ -1108,7 +1130,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #splinefit = CubicSpline(pears_lam_em, pears_llam_em_masked)
 
         # Rebin data and refit the same low degree polynomial
-        rebin_step = 200.0
+        rebin_step = 250.0
         rebin_start = int(pears_lam_em[0] / rebin_step) * rebin_step
         rebin_end = int(pears_lam_em[-1] / rebin_step) * rebin_step
         rebin_grid = np.arange(rebin_start, rebin_end + rebin_step, rebin_step)
@@ -1137,13 +1159,13 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         ax1 = fig1.add_subplot(gs[:4,:])
         ax2 = fig1.add_subplot(gs[4:,:])
 
-        ax1.plot(pears_lam_em, pears_llam_em, 'o-', markersize=3.0, color='turquoise', linewidth=1.5)
-        #ax1.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5)
+        ax1.plot(pears_lam_em, pears_llam_em, 'o-', markersize=3.0, color='turquoise', linewidth=1.5, label='PEARS obs data')
+        #ax1.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5, label='FIGS obs data')
 
-        ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal')
-        #ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown')
-        ax1.plot(pears_lam_em, np_polynomial(pears_lam_em), color='crimson')
-        ax1.plot(pears_lam_em, rebin_polynomial(pears_lam_em), color='tab:brown')
+        ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal', zorder=1.0, label='AstroPy polynomial fit')
+        #ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown', label='FIGS obs data')
+        ax1.plot(pears_lam_em, np_polynomial(pears_lam_em), color='crimson', zorder=1.0, label='NumPy polynomial fit')
+        ax1.plot(pears_lam_em, rebin_polynomial(pears_lam_em), lw=3.0, zorder=2.0, color='tab:brown', label='NumPy rebin polynomial fit')
 
         # Show mask as shaded region
         all_lines, all_line_labels = get_all_line_wav()
@@ -1179,11 +1201,13 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         pears_chi2 = compute_chi2(pears_lam_em, pears_llam_em, pears_lerr, p_pears)
         #figs_chi2 = compute_chi2(figs_lam_em, figs_llam_em, figs_lerr, p_figs)
 
+        # Add galaxy info to plot
+        ax1.text(x=0.05, y=0.8, s=str(current_pears_id) + "  " + current_pears_field, \
+            verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         ax1.text(x=0.05, y=0.9, s=r"$\chi^2_{PEARS} = $" + "{:.2e}".format(pears_chi2), \
             verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         #ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
         #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
-        """
 
         # Now divide continuum
         # Using astropy fits
@@ -1197,6 +1221,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         # Using Numpy fits
         #pears_llam_em = pears_llam_em / np_polynomial(pears_lam_em)
         #pears_lerr = pears_lerr / np_polynomial(pears_lam_em)
+        """
 
         # Using fits on rebinned data
         pears_llam_em = pears_llam_em / rebin_polynomial(pears_lam_em)
@@ -1215,6 +1240,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         ax1.minorticks_on()
         ax2.minorticks_on()
+
+        ax1.legend(loc=1)
 
         plt.show()
         plt.cla()
@@ -1244,9 +1271,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_old_llam = np.asarray(figs_old_llam)
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
 
-    # Shift it to force stack value =1.0 at 4500A
-    shift_idx = np.argmin(abs(lam_grid - 4500))
-    pears_old_llam /= pears_old_llam[shift_idx]
+    # Shift it to force stack value ~1.0 at ~4600A
+    shift_idx = np.where((lam_grid >= 4500) & (lam_grid <= 4700))[0]
+    scaling_fac = np.mean(pears_old_llam[shift_idx])
+    pears_old_llam /= scaling_fac
 
     # Plot stacks
     ax.plot(lam_grid, pears_old_llam, '.-', color='mediumblue', linewidth=1.5, \
@@ -1328,7 +1356,7 @@ def add_line_labels(ax, label_flag='all'):
             transform=ax.transData, color='firebrick', size=11)
 
         # Ca H & K
-        ax.text(3920.0, 0.94, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\, \&\, K}$', \
+        ax.text(3920.0, 0.94, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\ &\ K}$', \
             verticalalignment='center', horizontalalignment='center', \
             transform=ax.transData, color='firebrick', size=11)
 
@@ -1787,6 +1815,9 @@ def main():
     cat = np.genfromtxt(stacking_analysis_dir + 'full_pears_results_chabrier.txt', dtype=None, names=True, encoding='ascii')
     # Read in U-R color  # This was generated by make_col_ms_plots.py
     urcol = np.load(stacking_analysis_dir + 'ur_arr_all.npy')
+
+    print("Read in following catalog header.")
+    print(cat.dtype.names)
 
     #cat = np.genfromtxt(stacking_analysis_dir + 'pears_figs_combined_final_sample.txt', \
     #    dtype=None, names=True, encoding='ascii')
