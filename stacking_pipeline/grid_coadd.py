@@ -1066,6 +1066,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #if (current_pears_id, current_pears_field) not in to_check:
         #    continue
 
+        print("PEARS object:", current_pears_id, current_pears_field)
+
         # Apply cut on redshift error
         redshift_err_tol = 0.02
         current_spec_redshift = zs[indices][u]
@@ -1090,8 +1092,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #current_figs_field = figs_field[indices][u]
 
         # plot data and fit
-        print("PEARS object:", current_pears_id, current_pears_field)
-
         # ----------------------------- Get data ----------------------------- #
         # PEARS PA combined data
         grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
