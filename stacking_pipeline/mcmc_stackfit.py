@@ -1,3 +1,8 @@
+"""
+This code will fit, using Markov Chain Monte Carlo, the
+supplied continuum divided stack of spectra. 
+"""
+
 import numpy as np
 from astropy.io import fits
 import emcee
