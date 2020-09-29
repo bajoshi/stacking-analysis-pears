@@ -407,10 +407,26 @@ def main():
     # Get autocorrelation time
     try:
         tau = sampler.get_autocorr_time()
-    except AutocorrError:
+    except emcee.autocorr.AutocorrError:
+        print(errmsg)
+        print("\n")
         print("Emcee AutocorrError occured.")
         print("The chain is shorter than 50 times the integrated autocorrelation time for 5 parameter(s).")
         print("Use this estimate with caution and run a longer chain!")
+        print("\n")
+
+        tau_list_str = str(errmsg).split('tau:')[-1]
+        tau_list = tau_list_str.split(' ')
+
+        tau = []
+        for j in range(ndim):
+            if tau_list[j+1][0] == '[':
+                tau.append(float(tau_list[j+1].lstrip('[')))
+            elif tau_list[j+1][-1] == ']':
+                tau.append(float(tau_list[j+1].rstrip(']')))
+            else:
+                tau.append(float(tau_list[j+1]))
+
     print("Autocorrelation time (i.e., steps that walkers take in each dimension before they forget where they started):", tau)
 
     # Discard burn-in. You do not want to consider the burn in the corner plots/estimation.
