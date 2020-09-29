@@ -409,7 +409,8 @@ def main():
         tau = sampler.get_autocorr_time()
     except AutocorrError:
         print("Emcee AutocorrError occured.")
-        print("The chain is shorter than 50 times the integrated autocorrelation time for 5 parameter(s). Use this estimate with caution and run a longer chain!")
+        print("The chain is shorter than 50 times the integrated autocorrelation time for 5 parameter(s).")
+        print("Use this estimate with caution and run a longer chain!")
     print("Autocorrelation time (i.e., steps that walkers take in each dimension before they forget where they started):", tau)
 
     # Discard burn-in. You do not want to consider the burn in the corner plots/estimation.
@@ -423,7 +424,8 @@ def main():
     print("Flat samples shape:", flat_samples.shape)
 
     # plot corner plot
-    fig2 = corner.corner(flat_samples, plot_contours='True', labels=label_list, label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14})
+    fig2 = corner.corner(flat_samples, plot_contours='True', labels=label_list, \
+        label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14})
 
     plt.show()
 
