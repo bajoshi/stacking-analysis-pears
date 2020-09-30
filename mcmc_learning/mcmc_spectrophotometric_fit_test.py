@@ -128,7 +128,7 @@ def logprior(theta):
     age_at_z = Planck15.age(z).value  # in Gyr
     age_lim = age_at_z - 0.1  # in Gyr
 
-    if ( 0.01 <= z <= 6.0  and  0.01 <= age <= age_lim  and  0.01 <= tau <= 100.0  and  0.0 <= av <= 3.0  and  10.0 <= lsf_sigma <= 300.0  ):
+    if ( 0.01 <= z <= 6.0  and  0.01 <= age <= age_lim  and  0.01 <= tau <= 100.0  and  0.0 <= av <= 3.0  and  10.0 <= lsf_sigma <= 180.0  ):
         return 0.0
     
     return -np.inf
@@ -202,8 +202,10 @@ def main():
     print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift.   * * * *\n")
 
     # ---- Load in data
-    pears_id = 109151
-    pears_field = 'GOODS-S'
+    pears_id = 75267
+    pears_field = 'GOODS-N'
+
+    print("Working on:", pears_field, pears_id)
 
     fname = pears_field + '_' + str(pears_id) + '_' + 'PAcomb.fits'
 
@@ -222,6 +224,8 @@ def main():
     flam = flam[arg_low:arg_high+1]
     ferr = ferr[arg_low:arg_high+1]
 
+    # ferr /= 3.0
+
     # ---- Plot data if you want to check what it looks like
     """
     fig = plt.figure()
@@ -229,6 +233,7 @@ def main():
     ax.plot(wav, flam)
     ax.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5)
     plt.show()
+    sys.exit(0)
     """
 
     # ----------------------- Using numpy polyfitting ----------------------- #
@@ -407,7 +412,7 @@ def main():
     # Get autocorrelation time
     try:
         tau = sampler.get_autocorr_time()
-    except emcee.autocorr.AutocorrError:
+    except emcee.autocorr.AutocorrError as errmsg:
         print(errmsg)
         print("\n")
         print("Emcee AutocorrError occured.")
@@ -416,16 +421,18 @@ def main():
         print("\n")
 
         tau_list_str = str(errmsg).split('tau:')[-1]
-        tau_list = tau_list_str.split(' ')
+        tau_list = tau_list_str.split()
+        print("Tau list:", tau_list)
 
         tau = []
-        for j in range(ndim):
-            if tau_list[j+1][0] == '[':
-                tau.append(float(tau_list[j+1].lstrip('[')))
-            elif tau_list[j+1][-1] == ']':
-                tau.append(float(tau_list[j+1].rstrip(']')))
-            else:
-                tau.append(float(tau_list[j+1]))
+        for j in range(len(tau_list)):
+            curr_elem = tau_list[j]
+            if ('[' in curr_elem) and (len(curr_elem) > 1):
+                tau.append(float(curr_elem.lstrip('[')))
+            elif (']' in curr_elem) and (len(curr_elem) > 1):
+                tau.append(float(curr_elem.rstrip(']')))
+            elif len(curr_elem) > 1:
+                tau.append(float(tau_list[j]))
 
     print("Autocorrelation time (i.e., steps that walkers take in each dimension before they forget where they started):", tau)
 
@@ -457,7 +464,8 @@ def main():
     for ind in inds:
         sample = flat_samples[ind]
         m = model(wav, sample[0], sample[1], sample[2], sample[3], sample[4]) 
-        ax3.plot(wav, m, color='tab:red', alpha=0.2, zorder=2)
+        a = np.sum(flam * m / ferr**2) / np.sum(m**2 / ferr**2)
+        ax3.plot(wav, a * m, color='tab:red', alpha=0.2, zorder=2)
 
     plt.show()
 
