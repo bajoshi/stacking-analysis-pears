@@ -115,7 +115,7 @@ def loglike(theta, x, data, err):
 
     y = y * alpha
 
-    lnLike = -0.5 * np.sum((y-data)**2/err**2)
+    lnLike = -0.5 * np.sum( (y-data)**2/err**2  +  np.log(2 * np.pi * err**2))
     
     return lnLike
 
@@ -202,7 +202,7 @@ def main():
     print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift.   * * * *\n")
 
     # ---- Load in data
-    pears_id = 75267
+    pears_id = 47814
     pears_field = 'GOODS-N'
 
     print("Working on:", pears_field, pears_id)
@@ -227,6 +227,10 @@ def main():
     # ferr /= 3.0
 
     # ---- Plot data if you want to check what it looks like
+    snr_arr = flam/ferr
+    print("Signal to noise array for this galaxy:", snr_arr)
+    print("Mean of signal to noise array for this galaxy:", np.mean(snr_arr))
+
     """
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -235,6 +239,7 @@ def main():
     plt.show()
     sys.exit(0)
     """
+
 
     # ----------------------- Using numpy polyfitting ----------------------- #
     # -------- The best-fit will be used to set the initial position for the MCMC walkers.
@@ -389,7 +394,7 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool)
-        sampler.run_mcmc(pos, 5000, progress=True)
+        sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
 
@@ -474,5 +479,14 @@ def main():
 if __name__ == '__main__':
     main()
     sys.exit(0)
+
+
+
+
+
+
+
+
+
 
 
