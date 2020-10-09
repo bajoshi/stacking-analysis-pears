@@ -267,7 +267,6 @@ def get_bc03_spectrum(age, tau, metals, outdir_ised, save2ascii=True):
     age *= 1e9
 
     age_idx = np.argmin(abs(ages - age))
-    print("age idx:", age_idx)
 
     llam = h[3 + age_idx].data
 
