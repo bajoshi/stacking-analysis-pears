@@ -102,11 +102,12 @@ def ised2fits(modelfile, del_modelfile=False):
     totalwavelengths = read_current_filepos(fh)[0]
     allwavelengths = read_current_filepos(fh, dtype='f', number=totalwavelengths)
     
-    seds = np.zeros((totalages, totalwavelengths))
+    seds = np.zeros((totalages, totalwavelengths), dtype=np.float32)
     
+    # Open fits file
     hdu = fits.PrimaryHDU()
-    
     hdulist = fits.HDUList(hdu)
+
     hdulist.append(fits.ImageHDU(allwavelengths))
     hdulist.append(fits.ImageHDU(allages))
     
@@ -190,7 +191,7 @@ def call_cspgalaxev(isedfile, tau, output, dust='N', z='0', sfh='1', recycle='N'
     # parameters separated by lines. This is what csp_galaxev expects.
 
     # Print info to the screen
-    print("\nCommunicating the following to the process:")
+    print("\nCommunicating the following parameters to csp_galaxev:")
     print("isedfile for SSP spectra:", isedfile)
     print("Include dust?:", dust)
     print("Redshift for spectrum within csp_galaxev:", z)
