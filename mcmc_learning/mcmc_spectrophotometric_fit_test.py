@@ -12,6 +12,7 @@ import emcee
 import corner
 import scipy
 from astropy.cosmology import Planck15
+from scipy.interpolate import griddata
 
 import os
 import sys
@@ -193,17 +194,144 @@ def model(x, z, age_gyr, tau_gyr, av, lsf_sigma):
 
     return model_mod
 
+def get_photometry_data(gal_id, field):
+
+    # Assign catalogs 
+    if field == 'GOODS-N':
+        phot_cat_3dhst = goodsn_phot_cat_3dhst
+    elif field == 'GOODS-S':
+        phot_cat_3dhst = goodss_phot_cat_3dhst
+
+    threed_ra = phot_cat_3dhst['ra']
+    threed_dec = phot_cat_3dhst['dec']
+
+    # Now match
+    ra_lim = 0.3/3600  # arcseconds in degrees
+    dec_lim = 0.3/3600
+    threed_phot_idx = np.where((threed_ra >= current_ra - ra_lim) & (threed_ra <= current_ra + ra_lim) & \
+        (threed_dec >= current_dec - dec_lim) & (threed_dec <= current_dec + dec_lim))[0]
+
+    """
+    If there are multiple matches with the photometry catalog 
+    within 0.3 arseconds then choose the closest one.
+    """
+    if len(threed_phot_idx) > 1:
+        print("Multiple matches found in photmetry catalog. Choosing the closest one.")
+
+        ra_two = current_ra
+        dec_two = current_dec
+
+        dist_list = []
+        for v in range(len(threed_phot_idx)):
+
+            ra_one = threed_ra[threed_phot_idx][v]
+            dec_one = threed_dec[threed_phot_idx][v]
+
+            dist = np.arccos(np.cos(dec_one*np.pi/180) * \
+                np.cos(dec_two*np.pi/180) * np.cos(ra_one*np.pi/180 - ra_two*np.pi/180) + \
+                np.sin(dec_one*np.pi/180) * np.sin(dec_two*np.pi/180))
+            dist_list.append(dist)
+
+        dist_list = np.asarray(dist_list)
+        dist_idx = np.argmin(dist_list)
+        threed_phot_idx = threed_phot_idx[dist_idx]
+
+    elif len(threed_phot_idx) == 0:
+        print("Match not found in Photmetry catalog. Exiting.")
+        sys.exit(0)
+
+    # ------------------------------- Get photometric fluxes and their errors ------------------------------- #
+    flam_f435w = cf.get_flam('F435W', phot_cat_3dhst['f_F435W'][threed_phot_idx])
+    flam_f606w = cf.get_flam('F606W', phot_cat_3dhst['f_F606W'][threed_phot_idx])
+    flam_f775w = cf.get_flam('F775W', phot_cat_3dhst['f_F775W'][threed_phot_idx])
+    flam_f850lp = cf.get_flam('F850LP', phot_cat_3dhst['f_F850LP'][threed_phot_idx])
+    flam_f125w = cf.get_flam('F125W', phot_cat_3dhst['f_F125W'][threed_phot_idx])
+    flam_f140w = cf.get_flam('F140W', phot_cat_3dhst['f_F140W'][threed_phot_idx])
+    flam_f160w = cf.get_flam('F160W', phot_cat_3dhst['f_F160W'][threed_phot_idx])
+
+    flam_U = cf.get_flam_nonhst('kpno_mosaic_u', phot_cat_3dhst['f_U'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    flam_irac1 = cf.get_flam_nonhst('irac1', phot_cat_3dhst['f_IRAC1'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    flam_irac2 = cf.get_flam_nonhst('irac2', phot_cat_3dhst['f_IRAC2'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    flam_irac3 = cf.get_flam_nonhst('irac3', phot_cat_3dhst['f_IRAC3'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    flam_irac4 = cf.get_flam_nonhst('irac4', phot_cat_3dhst['f_IRAC4'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+
+    ferr_f435w = cf.get_flam('F435W', phot_cat_3dhst['e_F435W'][threed_phot_idx])
+    ferr_f606w = cf.get_flam('F606W', phot_cat_3dhst['e_F606W'][threed_phot_idx])
+    ferr_f775w = cf.get_flam('F775W', phot_cat_3dhst['e_F775W'][threed_phot_idx])
+    ferr_f850lp = cf.get_flam('F850LP', phot_cat_3dhst['e_F850LP'][threed_phot_idx])
+    ferr_f125w = cf.get_flam('F125W', phot_cat_3dhst['e_F125W'][threed_phot_idx])
+    ferr_f140w = cf.get_flam('F140W', phot_cat_3dhst['e_F140W'][threed_phot_idx])
+    ferr_f160w = cf.get_flam('F160W', phot_cat_3dhst['e_F160W'][threed_phot_idx])
+
+    ferr_U = cf.get_flam_nonhst('kpno_mosaic_u', phot_cat_3dhst['e_U'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    ferr_irac1 = cf.get_flam_nonhst('irac1', phot_cat_3dhst['e_IRAC1'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    ferr_irac2 = cf.get_flam_nonhst('irac2', phot_cat_3dhst['e_IRAC2'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    ferr_irac3 = cf.get_flam_nonhst('irac3', phot_cat_3dhst['e_IRAC3'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+    ferr_irac4 = cf.get_flam_nonhst('irac4', phot_cat_3dhst['e_IRAC4'][threed_phot_idx], \
+        vega_spec_fnu, vega_spec_flam, vega_nu, vega_lam)
+
+    # ------------------------------- Apply aperture correction ------------------------------- #
+    # First interpolate the given filter curve on to the wavelength frid of the grism data
+    # You only need the F775W filter here since you're only using this filter to get the 
+    # aperture correction factor.
+    if survey == 'PEARS':
+        f775w_filt_curve = np.genfromtxt(figs_data_dir + 'filter_curves/f775w_filt_curve.txt', \
+            dtype=None, names=['wav', 'trans'])
+        filt_trans_interp = griddata(points=f775w_filt_curve['wav'], values=f775w_filt_curve['trans'], \
+            xi=grism_lam_obs, method='linear')
+
+    # multiply grism spectrum to filter curve
+    num = 0
+    den = 0
+    for w in range(len(grism_flam_obs)):
+        num += grism_flam_obs[w] * filt_trans_interp[w]
+        den += filt_trans_interp[w]
+
+    avg_f775w_flam_grism = num / den
+    aper_corr_factor = flam_f775w / avg_f775w_flam_grism
+    print("Aperture correction factor:", "{:.3}".format(aper_corr_factor))
+
+    grism_flam_obs *= aper_corr_factor  # applying factor
+
+    # ------------------------------- Make unified photometry arrays ------------------------------- #
+    phot_fluxes_arr = np.array([flam_U, flam_f435w, flam_f606w, flam_f775w, flam_f850lp, flam_f125w, flam_f140w, flam_f160w,
+        flam_irac1, flam_irac2, flam_irac3, flam_irac4])
+    phot_errors_arr = np.array([ferr_U, ferr_f435w, ferr_f606w, ferr_f775w, ferr_f850lp, ferr_f125w, ferr_f140w, ferr_f160w,
+        ferr_irac1, ferr_irac2, ferr_irac3, ferr_irac4])
+
+    # Pivot wavelengths
+    # From here --
+    # ACS: http://www.stsci.edu/hst/acs/analysis/bandwidths/
+    # WFC3: http://www.stsci.edu/hst/wfc3/documents/handbooks/currentIHB/c07_ir06.html#400352
+    # KPNO/MOSAIC U-band: https://www.noao.edu/kpno/mosaic/filters/k1001.html
+    # Spitzer IRAC channels: http://irsa.ipac.caltech.edu/data/SPITZER/docs/irac/iracinstrumenthandbook/6/#_Toc410728283
+    phot_lam = np.array([3582.0, 4328.2, 5921.1, 7692.4, 9033.1, 12486.0, 13923.0, 15369.0, 
+    35500.0, 44930.0, 57310.0, 78720.0])  # angstroms
+
+
+    return phot_lam, phot_fluxes_arr, phot_errors_arr
+
 def main():
 
     print("Starting at:", datetime.datetime.now())
 
-    print("\n* * * *   [WARNING]: the downgraded model is offset by delta_lambda/2 where delta_lambda is the grism wavelength sampling.   * * * *\n")
-    print("\n* * * *   [WARNING]: not interpolating to find matching models in parameter space.   * * * *\n")
-    print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift.   * * * *\n")
+    print("\n* * * *   [WARNING]: the downgraded model is offset by delta_lambda/2 where delta_lambda is the grism wavelength sampling.   * * * *")
+    print("\n* * * *   [WARNING]: not interpolating to find matching models in parameter space.   * * * *")
+    print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift.   * * * *")
+    print("\n* * * *   [INFO]: check if you can use CANDELS photometry directly instead of 3D-HST   * * * *")
 
     # ---- Load in data
-    pears_id = 47814
-    pears_field = 'GOODS-N'
+    pears_id = 126769
+    pears_field = 'GOODS-S'
 
     print("Working on:", pears_field, pears_id)
 
@@ -226,19 +354,24 @@ def main():
 
     # ferr /= 3.0
 
+    # ---- Get photometry as well
+    phot_lam, phot_flam, phot_ferr = get_photometry_data(pears_id, pears_field)
+
     # ---- Plot data if you want to check what it looks like
     snr_arr = flam/ferr
     print("Signal to noise array for this galaxy:", snr_arr)
     print("Mean of signal to noise array for this galaxy:", np.mean(snr_arr))
 
-    """
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(wav, flam)
+
+    ax.plot(wav, flam, color='k')
     ax.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5)
+
+    ax.errorbar(phot_lam, phot_flam, yerr=phot_ferr, color='k')
+
     plt.show()
     sys.exit(0)
-    """
 
 
     # ----------------------- Using numpy polyfitting ----------------------- #
@@ -394,7 +527,7 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool)
-        sampler.run_mcmc(pos, 1000, progress=True)
+        sampler.run_mcmc(pos, 5000, progress=True)
 
     print("Finished running emcee.")
 
