@@ -357,6 +357,36 @@ def get_photometry_data(gal_id, field, survey, grism_lam_obs, grism_flam_obs, cu
 
     return phot_lam, phot_fluxes_arr, phot_errors_arr
 
+def combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr):
+
+    count = 0
+        
+    comb_wav = wav
+    comb_flam = flam
+    comb_ferr = ferr
+        
+    for l in phot_lam:
+
+        # First find the index where to insert
+        if l < comb_wav[0]:
+            l_insert_idx = 0
+
+        elif l > comb_wav[-1]:
+            l_insert_idx = len(comb_wav)
+
+        else:
+            l_insert_idx = np.where(comb_wav > l)[0][0]
+
+        # Now do the combining
+        comb_wav = np.insert(comb_wav, l_insert_idx, l)
+        comb_flam = np.insert(comb_flam, l_insert_idx, phot_flam[count])
+        comb_ferr = np.insert(comb_ferr, l_insert_idx, phot_ferr[count])
+
+        # Update counter
+        count += 1 
+
+    return comb_wav, comb_flam, comb_ferr
+
 def main():
 
     print("Starting at:", datetime.datetime.now())
@@ -400,7 +430,12 @@ def main():
         wav, flam, gal_ra, gal_dec)
 
     # ---- Combine grism and photometry data into one array
-    comb_wav = 
+    comb_wav, comb_flam, comb_ferr = combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr)
+
+    for c in range(len(comb_wav)):
+        print(comb_wav[c], comb_flam[c], comb_ferr[c])
+
+    sys.exit(0)
 
     # ---- Plot data if you want to check what it looks like
     """
