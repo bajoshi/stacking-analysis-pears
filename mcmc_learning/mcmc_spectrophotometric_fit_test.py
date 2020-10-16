@@ -28,9 +28,14 @@ home = os.getenv('HOME')
 pears_figs_dir = datadir = home + '/Documents/pears_figs_data/'
 datadir = home + '/Documents/pears_figs_data/data_spectra_only/'
 stacking_utils = home + '/Documents/GitHub/stacking-analysis-pears/util_codes/'
+threedhst_datadir = home + '/Documents/3dhst_data/'
+massive_galaxies_dir = home + '/Documents/GitHub/massive-galaxies/'
+cluster_codedir = massive_galaxies_dir + 'cluster_codes/'
 
 sys.path.append(stacking_utils)
 import proper_and_lum_dist as cosmo
+sys.path.append(cluster_codedir)
+import cluster_do_fitting as cf
 
 # Read in all models and parameters
 model_lam_grid = np.load(pears_figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
@@ -48,6 +53,23 @@ Array ranges are:
 3. Tau: 0.01 to 63.095 (this is in Gyr. SSP models get -99.0)
 4. TauV: 0.0 to 2.8 (Visual dust extinction in magnitudes. SSP models get -99.0)
 """
+
+# ------------------------------- Read in photometry catalogs ------------------------------- #
+# GOODS photometry catalogs from 3DHST
+# The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
+# The combined grism+photometry fits, redshifts, and derived parameters are given in v4.1.5 (Momcheva et al. 2016)
+photometry_names = ['id', 'ra', 'dec', 'f_F160W', 'e_F160W', 'f_F435W', 'e_F435W', 'f_F606W', 'e_F606W', \
+'f_F775W', 'e_F775W', 'f_F850LP', 'e_F850LP', 'f_F125W', 'e_F125W', 'f_F140W', 'e_F140W', \
+'f_U', 'e_U', 'f_IRAC1', 'e_IRAC1', 'f_IRAC2', 'e_IRAC2', 'f_IRAC3', 'e_IRAC3', 'f_IRAC4', 'e_IRAC4', \
+'IRAC1_contam', 'IRAC2_contam', 'IRAC3_contam', 'IRAC4_contam']
+goodsn_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodsn_3dhst.v4.1.cat', \
+    dtype=None, names=photometry_names, \
+    usecols=(0,3,4, 9,10, 15,16, 27,28, 39,40, 45,46, 48,49, 54,55, 12,13, 63,64, 66,67, 69,70, 72,73, 90,91,92,93), \
+    skip_header=3)
+goodss_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodss_3dhst.v4.1.cat', \
+    dtype=None, names=photometry_names, \
+    usecols=(0,3,4, 9,10, 18,19, 30,31, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
+    skip_header=3)
 
 def get_template(age, tau, tauv, metallicity, \
     log_age_arr, metal_arr, tau_gyr_arr, tauv_arr, \
@@ -192,9 +214,13 @@ def model(x, z, age_gyr, tau_gyr, av, lsf_sigma):
     idx = np.where((model_lam_z >= x[-1] - lam_step) & (model_lam_z < x[-1] + lam_step))[0]
     model_mod[-1] = np.mean(model_lsfconv[idx])
 
-    return model_mod
+    # ----------------- Now get the model photometry
+    # and combine with the grism model
 
-def get_photometry_data(gal_id, field):
+
+    return comb_model_mod
+
+def get_photometry_data(gal_id, field, survey, grism_lam_obs, grism_flam_obs, current_ra, current_dec):
 
     # Assign catalogs 
     if field == 'GOODS-N':
@@ -240,6 +266,17 @@ def get_photometry_data(gal_id, field):
         print("Match not found in Photmetry catalog. Exiting.")
         sys.exit(0)
 
+    # ------------- Need spectrum of Vega for correct coversion to AB mag from Vega mags
+    # Read in Vega spectrum and get it in the appropriate forms
+    vega = np.genfromtxt(pears_figs_dir + 'vega_reference.dat', dtype=None, \
+        names=['wav', 'flam'], skip_header=7)
+
+    speed_of_light = 299792458e10  # angstroms per second
+    vega_lam = vega['wav']
+    vega_spec_flam = vega['flam']
+    vega_nu = speed_of_light / vega_lam
+    vega_spec_fnu = vega_lam**2 * vega_spec_flam / speed_of_light
+
     # ------------------------------- Get photometric fluxes and their errors ------------------------------- #
     flam_f435w = cf.get_flam('F435W', phot_cat_3dhst['f_F435W'][threed_phot_idx])
     flam_f606w = cf.get_flam('F606W', phot_cat_3dhst['f_F606W'][threed_phot_idx])
@@ -284,9 +321,9 @@ def get_photometry_data(gal_id, field):
     # You only need the F775W filter here since you're only using this filter to get the 
     # aperture correction factor.
     if survey == 'PEARS':
-        f775w_filt_curve = np.genfromtxt(figs_data_dir + 'filter_curves/f775w_filt_curve.txt', \
-            dtype=None, names=['wav', 'trans'])
-        filt_trans_interp = griddata(points=f775w_filt_curve['wav'], values=f775w_filt_curve['trans'], \
+        f775w_filt_curve = np.genfromtxt(massive_galaxies_dir + 'grismz_pipeline/f775w_filt_curve.txt', \
+            dtype=None, names=['wav', 'thru'])
+        filt_trans_interp = griddata(points=f775w_filt_curve['wav'], values=f775w_filt_curve['thru'], \
             xi=grism_lam_obs, method='linear')
 
     # multiply grism spectrum to filter curve
@@ -333,7 +370,7 @@ def main():
     pears_id = 126769
     pears_field = 'GOODS-S'
 
-    print("Working on:", pears_field, pears_id)
+    print("\nWorking on:", pears_field, pears_id)
 
     fname = pears_field + '_' + str(pears_id) + '_' + 'PAcomb.fits'
 
@@ -354,12 +391,25 @@ def main():
 
     # ferr /= 3.0
 
+    # Get coordinates for matching with photometry
+    gal_ra = spec_hdu[2].header['RA']
+    gal_dec = spec_hdu[2].header['DEC']
+
     # ---- Get photometry as well
-    phot_lam, phot_flam, phot_ferr = get_photometry_data(pears_id, pears_field)
+    phot_lam, phot_flam, phot_ferr = get_photometry_data(pears_id, pears_field, 'PEARS', \
+        wav, flam, gal_ra, gal_dec)
+
+    # ---- Combine grism and photometry data into one array
+    comb_wav = 
 
     # ---- Plot data if you want to check what it looks like
+    """
+    #print("Photometry and errors:")
+    #print(phot_flam)
+    #print(phot_ferr)
+    
     snr_arr = flam/ferr
-    print("Signal to noise array for this galaxy:", snr_arr)
+    #print("Signal to noise array for this galaxy:", snr_arr)
     print("Mean of signal to noise array for this galaxy:", np.mean(snr_arr))
 
     fig = plt.figure()
@@ -368,10 +418,14 @@ def main():
     ax.plot(wav, flam, color='k')
     ax.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5)
 
-    ax.errorbar(phot_lam, phot_flam, yerr=phot_ferr, color='k')
+    ax.errorbar(phot_lam, phot_flam, yerr=phot_ferr, ms=5.0, fmt='o', \
+        color='k', ecolor='k')
+
+    ax.set_xscale('log')
 
     plt.show()
     sys.exit(0)
+    """
 
 
     # ----------------------- Using numpy polyfitting ----------------------- #
@@ -415,7 +469,8 @@ def main():
 
     # The parameter vector is (redshift, age, tau, av)
     # age in gyr and tau in gyr
-    # last parameter is av not tauv
+    # dust parameter is av not tauv
+    # last param is LSF in Angstroms
     r = np.array([0.1, 1.0, 1.0, 1.0, 10.0])  # initial position
     print("Initial parameter vector:", r)
 
@@ -428,13 +483,14 @@ def main():
 
     label_list = [r'$z$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$LSF [\AA]$']
 
-    """
-    logp = logpost(r, wav, flam, ferr)  # evaluating the probability at the initial guess
+    logp = logpost(r, comb_wav, comb_flam, comb_ferr)  # evaluating the probability at the initial guess
     
     print("Initial guess log(probability):", logp)
 
     samples = []  #creating array to hold parameter vector with time
     accept = 0.
+
+    sys.exit(0)
 
     for i in range(N): #beginning the iteratitive loop
 
@@ -448,32 +504,36 @@ def main():
 
         rn = np.array([rn0, rn1, rn2, rn3, rn4])
 
-        #print("Proposed parameter vector", rn)
+        print("Proposed parameter vector", rn)
         
         logpn = logpost(rn, wav, flam, ferr)  #evaluating probability of proposal vector
-        #print("Proposed parameter vector log(probability):", logpn)
+        print("Proposed parameter vector log(probability):", logpn)
         dlogL = logpn - logp
         a = np.exp(dlogL)
 
-        #print("Ratio of probabilities at proposed to current position:", a)
+        print("Ratio of probabilities at proposed to current position:", a)
 
         if a >= 1:   #always keep it if probability got higher
-            #print("Will accept point since probability increased.")
+            print("Will accept point since probability increased.")
             logp = logpn
             r = rn
             accept+=1
         
         else:  #only keep it based on acceptance probability
-            #print("Probability decreased. Will decide whether to keep point or not.")
+            print("Probability decreased. Will decide whether to keep point or not.")
             u = np.random.rand()  #random number between 0 and 1
             if u < a:  #only if proposal prob / previous prob is greater than u, then keep new proposed step
                 logp = logpn
                 r = rn
                 accept+=1
-                #print("Point kept.")
+                print("Point kept.")
+
+        sys.exit(0)
 
         samples.append(r)  #update
+
     print("Finished explicit Metropolis-Hastings.")
+
     mh_time = time.time() - mh_start
     mh_min, mh_sec = divmod(mh_time, 60.0)
     mh_hr, mh_min = divmod(mh_min, 60.0)
@@ -501,7 +561,6 @@ def main():
     print("Acceptance Rate:", accept/N)
 
     sys.exit(0)
-    """
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
@@ -526,8 +585,8 @@ def main():
 
     with Pool() as pool:
         
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool)
-        sampler.run_mcmc(pos, 5000, progress=True)
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[comb_wav, comb_flam, comb_ferr], pool=pool)
+        sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
 
