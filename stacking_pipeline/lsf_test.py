@@ -53,11 +53,11 @@ def main():
     """
 
     # Create a dummy spectrum
-    spec = np.zeros(1000)
+    spec = np.zeros(100)
     wav = np.arange(len(spec))
 
     # Superimpose an emission line on the spectrum
-    g = models.Gaussian1D(amplitude=3, mean=300.0, stddev=20.0)
+    g = models.Gaussian1D(amplitude=3, mean=30.0, stddev=10.0)
     gauss_1d_emission = g(wav)
 
     spec = spec + gauss_1d_emission
@@ -73,8 +73,8 @@ def main():
     # in pixels
     # say 1-sigma if it is shaped like a Gaussian
     # will deal with Sersic and other complicated profiles later
-    galaxy_width = 5
-    num_sigma = 1  # e.g., going from -2 to +2 sigma of galaxy width
+    galaxy_width = 10
+    num_sigma = 2  # e.g., going from -2 to +2 sigma of galaxy width
 
     # Assume that each time the spectrum shifts 
     # by some amount epsilon. I'm leaving this param
@@ -84,7 +84,7 @@ def main():
     # the emission line at lambda then the adjacent pixel along
     # the dispersion direction will have the line center at
     # lambda + epsilon
-    epsilon = 10.0
+    epsilon = 1.0
     # BE CAREFUL!! This currently means epsilon steps of wavelength
     # so that if the wavelenght is sampled at 1 A then epsilon is
     # 30 A but if the wavelength array is sampled at 10 A then epsilon
@@ -126,6 +126,12 @@ def main():
     print("Shape of final LSF broadened spectrum:", final_spec_comb.shape)
 
     ax.plot(final_spec_comb, color='k')
+    plt.show()
+
+    # -----------
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    ax1.imshow(final_spec)
     plt.show()
 
     return None
