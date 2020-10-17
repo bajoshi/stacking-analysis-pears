@@ -216,7 +216,11 @@ def model(x, z, age_gyr, tau_gyr, av, lsf_sigma):
 
     # ----------------- Now get the model photometry
     # and combine with the grism model
+    # ------ THIS HAS TO BE THE SAME AS IN THE FUNC get_photometry_data()
+    phot_lam = np.array([3582.0, 4328.2, 5921.1, 7692.4, 9033.1, 12486.0, 13923.0, 15369.0, 
+    35500.0, 44930.0, 57310.0, 78720.0])  # angstroms
 
+    
 
     return comb_model_mod
 
@@ -354,7 +358,6 @@ def get_photometry_data(gal_id, field, survey, grism_lam_obs, grism_flam_obs, cu
     phot_lam = np.array([3582.0, 4328.2, 5921.1, 7692.4, 9033.1, 12486.0, 13923.0, 15369.0, 
     35500.0, 44930.0, 57310.0, 78720.0])  # angstroms
 
-
     return phot_lam, phot_fluxes_arr, phot_errors_arr
 
 def combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr):
@@ -393,7 +396,7 @@ def main():
 
     print("\n* * * *   [WARNING]: the downgraded model is offset by delta_lambda/2 where delta_lambda is the grism wavelength sampling.   * * * *")
     print("\n* * * *   [WARNING]: not interpolating to find matching models in parameter space.   * * * *")
-    print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift.   * * * *")
+    print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift. Change to FlatLambdaCDM astropy.  * * * *")
     print("\n* * * *   [INFO]: check if you can use CANDELS photometry directly instead of 3D-HST   * * * *")
 
     # ---- Load in data
@@ -431,11 +434,6 @@ def main():
 
     # ---- Combine grism and photometry data into one array
     comb_wav, comb_flam, comb_ferr = combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr)
-
-    for c in range(len(comb_wav)):
-        print(comb_wav[c], comb_flam[c], comb_ferr[c])
-
-    sys.exit(0)
 
     # ---- Plot data if you want to check what it looks like
     """
