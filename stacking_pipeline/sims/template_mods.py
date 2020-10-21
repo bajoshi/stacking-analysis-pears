@@ -18,7 +18,7 @@ stacking_utils_dir = stacking_analysis_dir + "util_codes/"
 sys.path.append(stacking_utils_dir)
 sys.path.append(massive_galaxies_dir + "grismz_pipeline/for_hst_cluster_proposal/")
 import proper_and_lum_dist as pl
-from template_sed_plot import get_dust_atten_model
+#from template_sed_plot import get_dust_atten_model
 
 def redshift_spectrum(template_wav, template_llam, redshift):
 

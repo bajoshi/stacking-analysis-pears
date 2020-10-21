@@ -37,23 +37,6 @@ import proper_and_lum_dist as cosmo
 sys.path.append(cluster_codedir)
 import cluster_do_fitting as cf
 
-# Read in all models and parameters
-model_lam_grid = np.load(pears_figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
-model_grid = np.load(pears_figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
-
-log_age_arr = np.load(pears_figs_dir + 'log_age_arr_chab.npy', mmap_mode='r')
-metal_arr = np.load(pears_figs_dir + 'metal_arr_chab.npy', mmap_mode='r')
-tau_gyr_arr = np.load(pears_figs_dir + 'tau_gyr_arr_chab.npy', mmap_mode='r')
-tauv_arr = np.load(pears_figs_dir + 'tauv_arr_chab.npy', mmap_mode='r')
-
-"""
-Array ranges are:
-1. Age: 7.02 to 10.114 (this is log of the age in years)
-2. Metals: 0.0001 to 0.05 (absolute fraction of metals. All CSP models although are fixed at solar = 0.02)
-3. Tau: 0.01 to 63.095 (this is in Gyr. SSP models get -99.0)
-4. TauV: 0.0 to 2.8 (Visual dust extinction in magnitudes. SSP models get -99.0)
-"""
-
 # ------------------------------- Read in photometry catalogs ------------------------------- #
 # GOODS photometry catalogs from 3DHST
 # The photometry and photometric redshifts are given in v4.1 (Skelton et al. 2014)
@@ -398,6 +381,8 @@ def main():
     print("\n* * * *   [WARNING]: not interpolating to find matching models in parameter space.   * * * *")
     print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift. Change to FlatLambdaCDM astropy.  * * * *")
     print("\n* * * *   [INFO]: check if you can use CANDELS photometry directly instead of 3D-HST   * * * *")
+
+    sys.exit(0)
 
     # ---- Load in data
     pears_id = 126769
