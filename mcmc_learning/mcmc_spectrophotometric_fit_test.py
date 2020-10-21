@@ -153,10 +153,10 @@ def get_template(age, tau, tauv, metallicity, \
 
 def loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
     
-    z, ms, age, tau, met, av, lsf_sigma = theta
+    z, ms, age, tau, av, lsf_sigma = theta
 
     # ------- Get model
-    model_mod, all_model_phot = model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, z, ms, age, tau, met, av, lsf_sigma)
+    model_mod, all_model_phot = model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, z, ms, age, tau, av, lsf_sigma)
 
     # ------- Do combining of spectroscopy and photometry
     # For data
@@ -197,7 +197,7 @@ def loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
 
 def logprior(theta):
 
-    z, ms, age, tau, met, av, lsf_sigma = theta
+    z, ms, age, tau, av, lsf_sigma = theta
     
     # Make sure model is not older than the Universe
     # Allowing at least 100 Myr for the first galaxies to form after Big Bang
@@ -208,7 +208,6 @@ def logprior(theta):
          9.0 <= ms <= 12.0 and \
          0.01 <= age <= age_lim and  \
          0.01 <= tau <= 100.0 and  \
-         0.0001 <= met <= 0.05 and \
          0.0 <= av <= 3.0 and \
          1.0 <= lsf_sigma <= 200.0 ):
         return 0.0
@@ -227,7 +226,7 @@ def logpost(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
     return lp + lnL
 
 def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
-    z, ms, age, tau, met, av, lsf_sigma):
+    z, ms, age, tau, av, lsf_sigma):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -241,6 +240,7 @@ def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
     lsf_sigma: in angstroms
     """
 
+    met = 0.02
     model_lam, model_llam = get_bc03_spectrum(age, tau, met, modeldir)
 
     # ------ Apply dust extinction
@@ -589,7 +589,7 @@ def main():
     #*******Metropolis Hastings********************************
     mh_start = time.time()
     print("\nRunning explicit Metropolis-Hastings...")
-    N = 1000   #number of "timesteps"
+    N = 100   #number of "timesteps"
 
     # The parameter vector is (z, ms, age, tau, met, av, lsf_sigma)
     # age in gyr and tau in gyr
@@ -599,7 +599,7 @@ def main():
     # last param is LSF in Angstroms
 
     # Define initial guesses
-    r = np.array([0.1, 10.0, 1.0, 1.0, 0.02, 0.1, 10.0])  # initial position
+    r = np.array([0.1, 10.0, 1.0, 1.0, 0.1, 10.0])  # initial position
     print("Initial parameter vector:", r)
 
     # Array for metallicities
@@ -610,12 +610,12 @@ def main():
     jump_size_ms = 0.02  # in log(ms)
     jump_size_age = 0.1  # in gyr
     jump_size_tau = 0.1  # in gyr
-    jump_size_met = 0.001
     jump_size_av = 0.2  # magnitudes
     jump_size_lsf = 5.0  # angstroms
 
-    label_list = [r'$z$', r'$log(Ms/M_\odot)$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$Z$', r'$A_V [mag]$', r'$LSF [\AA]$']
-
+    label_list = [r'$z$', r'$log(Ms/M_\odot)$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$LSF [\AA]$']
+    
+    """
     logp = logpost(r, wav, flam, ferr, phot_lam, phot_flam, phot_ferr)  # evaluating the probability at the initial guess
     
     print("Initial guess log(probability):", logp)
@@ -637,14 +637,14 @@ def main():
         # While the newer 2016 version has an additional metallicity
         # referred to as "m82", the documentation never specifies the 
         # actual metallicity associated with it. So I'm ignoring that one.
-        rn4 = float(r[4] + jump_size_met * np.random.normal(size=1))
-        metals_idx = np.argmin(abs(rn4 - metals_arr))
-        rn4 = metals_arr[metals_idx]
+        #rn4 = float(r[4] + jump_size_met * np.random.normal(size=1))
+        #metals_idx = np.argmin(abs(rn4 - metals_arr))
+        #rn4 = metals_arr[metals_idx]
 
-        rn5 = float(r[5] + jump_size_av * np.random.normal(size=1))
-        rn6 = float(r[6] + jump_size_lsf * np.random.normal(size=1))
+        rn4 = float(r[4] + jump_size_av * np.random.normal(size=1))
+        rn5 = float(r[5] + jump_size_lsf * np.random.normal(size=1))
 
-        rn = np.array([rn0, rn1, rn2, rn3, rn4, rn5, rn6])
+        rn = np.array([rn0, rn1, rn2, rn3, rn4, rn5])
 
         #print("Proposed parameter vector", rn)
         
@@ -682,16 +682,20 @@ def main():
 
     # Plotting results from explicit MH
     samples = np.array(samples)
+    print(samples)
+    print(samples.shape)
 
     # plot trace
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(samples[:,0], label='z')
-    ax.plot(samples[:,1], label='Age [Gyr]')
-    ax.plot(samples[:,2], label='Tau [Gyr]')
-    ax.plot(samples[:,3], label=r'$A_v [mag]$')
-    ax.plot(samples[:,4], label=r'$LSF [\AA]$')
+    ax.plot(samples[:,0], label=r'$z$')
+    ax.plot(samples[:,1], label=r'$log(M_s/M_\odot)$')
+    ax.plot(samples[:,2], label='Age [Gyr]')
+    ax.plot(samples[:,3], label='Tau [Gyr]')
+    ax.plot(samples[:,4], label=r'$A_v [mag]$')
+    ax.plot(samples[:,5], label=r'$LSF [\AA]$')
     ax.legend(loc=0)
+    plt.show()
 
     # using corner
     corner.corner(samples, bins=30, labels=label_list, \
@@ -701,10 +705,11 @@ def main():
     print("Acceptance Rate:", accept/N)
 
     sys.exit(0)
+    """
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 5, 100  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 6, 50  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -712,12 +717,13 @@ def main():
     for i in range(nwalkers):
 
         rn0 = float(r[0] + jump_size_z * np.random.normal(size=1))
-        rn1 = float(r[1] + jump_size_age * np.random.normal(size=1))
-        rn2 = float(r[2] + jump_size_tau * np.random.normal(size=1))
-        rn3 = float(r[3] + jump_size_av * np.random.normal(size=1))
-        rn4 = float(r[4] + jump_size_lsf * np.random.normal(size=1))
+        rn1 = float(r[1] + jump_size_ms * np.random.normal(size=1))
+        rn2 = float(r[2] + jump_size_age * np.random.normal(size=1))
+        rn3 = float(r[3] + jump_size_tau * np.random.normal(size=1))
+        rn4 = float(r[4] + jump_size_av * np.random.normal(size=1))
+        rn5 = float(r[5] + jump_size_lsf * np.random.normal(size=1))
 
-        rn = np.array([rn0, rn1, rn2, rn3, rn4])
+        rn = np.array([rn0, rn1, rn2, rn3, rn4, rn5])
 
         pos[i] = rn
 
@@ -725,12 +731,14 @@ def main():
 
     with Pool() as pool:
         
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[comb_wav, comb_flam, comb_ferr], pool=pool)
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr, phot_lam, phot_flam, phot_ferr], pool=pool)
         sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
 
+    # Get and save chain
     samples = sampler.get_chain()
+    pickle.dump(sampler, open(pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl', 'wb'))
 
     print("Samples shape:", samples.shape)
 
