@@ -13,6 +13,7 @@ import corner
 import scipy
 from astropy.cosmology import Planck15
 from scipy.interpolate import griddata
+from scipy.integrate import simps
 
 import os
 import sys
@@ -25,15 +26,26 @@ import matplotlib.cm as cm
 import matplotlib.gridspec as gridspec
 
 home = os.getenv('HOME')
+# ---------- Define directories ---------- #
+# ----- Data directories
 pears_figs_dir = datadir = home + '/Documents/pears_figs_data/'
 datadir = home + '/Documents/pears_figs_data/data_spectra_only/'
-stacking_utils = home + '/Documents/GitHub/stacking-analysis-pears/util_codes/'
 threedhst_datadir = home + '/Documents/3dhst_data/'
+
+# ----- Directories for other useful codes
+stacking_utils = home + '/Documents/GitHub/stacking-analysis-pears/util_codes/'
 massive_galaxies_dir = home + '/Documents/GitHub/massive-galaxies/'
 cluster_codedir = massive_galaxies_dir + 'cluster_codes/'
+filter_curve_dir = massive_galaxies_dir + 'grismz_pipeline/'
+
+# ----- Directory to save generated models
+modeldir = home + '/Documents/bc03_output_dir/'
 
 sys.path.append(stacking_utils)
 import proper_and_lum_dist as cosmo
+from dust_utils import get_dust_atten_model
+from bc03_utils import get_bc03_spectrum
+
 sys.path.append(cluster_codedir)
 import cluster_do_fitting as cf
 
@@ -53,6 +65,47 @@ goodss_phot_cat_3dhst = np.genfromtxt(threedhst_datadir + 'goodss_3dhst.v4.1.cat
     dtype=None, names=photometry_names, \
     usecols=(0,3,4, 9,10, 18,19, 30,31, 39,40, 48,49, 54,55, 63,64, 15,16, 75,76, 78,79, 81,82, 84,85, 130,131,132,133), \
     skip_header=3)
+
+# ------------------------------- Read in all photometry filters ------------------------------- #
+# u band is given in transmission percentages
+# all other filters are throughput fractions
+uband_curve = np.genfromtxt(filter_curve_dir + 'kpno_mosaic_u.txt', dtype=None, \
+    names=['wav', 'trans'], skip_header=14)
+uband_curve['trans'] /= 100.0
+
+f435w_filt_curve = np.genfromtxt(filter_curve_dir + 'f435w_filt_curve.txt', \
+    dtype=None, names=['wav', 'trans'])
+f606w_filt_curve = np.genfromtxt(filter_curve_dir + 'f606w_filt_curve.txt', \
+    dtype=None, names=['wav', 'trans'])
+f775w_filt_curve = np.genfromtxt(filter_curve_dir + 'f775w_filt_curve.txt', \
+    dtype=None, names=['wav', 'trans'])
+f850lp_filt_curve = np.genfromtxt(filter_curve_dir + 'f850lp_filt_curve.txt', \
+    dtype=None, names=['wav', 'trans'])
+f125w_filt_curve = np.genfromtxt(filter_curve_dir + 'f125w_filt_curve.txt', \
+    dtype=None, names=['wav', 'trans'])
+f140w_filt_curve = np.genfromtxt(filter_curve_dir + 'f140w_filt_curve.txt', \
+    dtype=None, names=['wav', 'trans'])
+f160w_filt_curve = np.genfromtxt(filter_curve_dir + 'f160w_filt_curve.txt', \
+    dtype=None, names=['wav', 'trans'])
+irac1_curve = np.genfromtxt(filter_curve_dir + 'irac1.txt', dtype=None, \
+    names=['wav', 'trans'], skip_header=3)
+irac2_curve = np.genfromtxt(filter_curve_dir + 'irac2.txt', dtype=None, \
+    names=['wav', 'trans'], skip_header=3)
+irac3_curve = np.genfromtxt(filter_curve_dir + 'irac3.txt', dtype=None, \
+    names=['wav', 'trans'], skip_header=3)
+irac4_curve = np.genfromtxt(filter_curve_dir + 'irac4.txt', dtype=None, \
+    names=['wav', 'trans'], skip_header=3)
+
+# IRAC wavelengths are in mixrons # convert to angstroms
+irac1_curve['wav'] *= 1e4
+irac2_curve['wav'] *= 1e4
+irac3_curve['wav'] *= 1e4
+irac4_curve['wav'] *= 1e4
+
+all_filters = [uband_curve, f435w_filt_curve, f606w_filt_curve, f775w_filt_curve, f850lp_filt_curve, \
+f125w_filt_curve, f140w_filt_curve, f160w_filt_curve, irac1_curve, irac2_curve, irac3_curve, irac4_curve]
+all_filter_names = ['u', 'f435w', 'f606w', 'f775w', 'f850lp', \
+'f125w', 'f140w', 'f160w', 'irac1', 'irac2', 'irac3', 'irac4']
 
 def get_template(age, tau, tauv, metallicity, \
     log_age_arr, metal_arr, tau_gyr_arr, tauv_arr, \
@@ -98,59 +151,83 @@ def get_template(age, tau, tauv, metallicity, \
 
     return model_llam
 
-def apply_redshift(restframe_wav, restframe_lum, redshift):
-
-    dl = cosmo.luminosity_distance(redshift)  # returns dl in Mpc
-    dl = dl * 3.09e24  # convert to cm
-
-    redshifted_wav = restframe_wav * (1 + redshift)
-    redshifted_flux = restframe_lum / (4 * np.pi * dl * dl * (1 + redshift))
-
-    return redshifted_wav, redshifted_flux
-
-def loglike(theta, x, data, err):
+def loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
     
-    z, age, tau, av, lsf_sigma = theta
+    z, ms, age, tau, met, av, lsf_sigma = theta
 
-    y = model(x, z, age, tau, av, lsf_sigma)
+    # ------- Get model
+    model_mod, all_model_phot = model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, z, ms, age, tau, met, av, lsf_sigma)
+
+    # ------- Do combining of spectroscopy and photometry
+    # For data
+    comb_x, comb_data, comb_err = combine_all_data(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err)
+
+    # For model
+    # Dummy arrays for model errors
+    model_moderr = np.zeros(len(model_mod))
+    all_model_photerr = np.zeros(len(phot_x))
+    comb_model_wav, y, comb_model_ferr = combine_all_data(spec_x, model_mod, model_moderr, phot_x, all_model_phot, all_model_photerr)
     #print("Model func result:", y)
 
     # ------- Vertical scaling factor
-    alpha = np.sum(data * y / err**2) / np.sum(y**2 / err**2)
+    alpha = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
     #print("Alpha:", "{:.2e}".format(alpha))
 
     y = y * alpha
 
-    lnLike = -0.5 * np.sum( (y-data)**2/err**2  +  np.log(2 * np.pi * err**2))
+    lnLike = -0.5 * np.sum( (y - comb_data)**2/comb_err**2  +  np.log(2 * np.pi * comb_err**2))
+    
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.plot(spec_x, spec_data, color='k')
+    ax.fill_between(spec_x, spec_data - spec_err, spec_data + spec_err, color='gray', alpha=0.5)
+    ax.errorbar(phot_x, phot_data, yerr=phot_err, ms=5.0, fmt='o', \
+        color='k', ecolor='k')
+
+    ax.plot(spec_x, alpha * model_mod, color='firebrick')
+    ax.scatter(phot_x, alpha * all_model_phot, s=15, color='firebrick')
+
+    ax.set_xscale('log')
+    plt.show()
+    """
     
     return lnLike
 
 def logprior(theta):
 
-    z, age, tau, av, lsf_sigma = theta
+    z, ms, age, tau, met, av, lsf_sigma = theta
     
     # Make sure model is not older than the Universe
     # Allowing at least 100 Myr for the first galaxies to form after Big Bang
     age_at_z = Planck15.age(z).value  # in Gyr
     age_lim = age_at_z - 0.1  # in Gyr
 
-    if ( 0.01 <= z <= 6.0  and  0.01 <= age <= age_lim  and  0.01 <= tau <= 100.0  and  0.0 <= av <= 3.0  and  10.0 <= lsf_sigma <= 180.0  ):
+    if ( 0.01 <= z <= 6.0 and \
+         9.0 <= ms <= 12.0 and \
+         0.01 <= age <= age_lim and  \
+         0.01 <= tau <= 100.0 and  \
+         0.0001 <= met <= 0.05 and \
+         0.0 <= av <= 3.0 and \
+         1.0 <= lsf_sigma <= 200.0 ):
         return 0.0
     
     return -np.inf
 
-def logpost(theta, x, data, err):
+def logpost(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
 
     lp = logprior(theta)
     
     if not np.isfinite(lp):
         return -np.inf
     
-    lnL = loglike(theta, x, data, err)
+    lnL = loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err)
     
     return lp + lnL
 
-def model(x, z, age_gyr, tau_gyr, av, lsf_sigma):
+def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
+    z, ms, age, tau, met, av, lsf_sigma):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -164,48 +241,83 @@ def model(x, z, age_gyr, tau_gyr, av, lsf_sigma):
     lsf_sigma: in angstroms
     """
 
-    current_age = np.log10(age_gyr * 1e9)  # because the saved age parameter is the log(age[yr])
-    current_tau = tau_gyr  # because the saved tau is in Gyr
-    tauv = av / 1.086
-    current_tauv = tauv
-    current_metallicity = 0.02  # Force it to only choose from the solar metallicity CSP models
+    model_lam, model_llam = get_bc03_spectrum(age, tau, met, modeldir)
 
-    model_llam = get_template(current_age, current_tau, current_tauv, current_metallicity, \
-        log_age_arr, metal_arr, tau_gyr_arr, tauv_arr, model_lam_grid, model_grid)
+    # ------ Apply dust extinction
+    model_dusty_llam = get_dust_atten_model(model_lam, model_llam, av)
+
+    # ------ Multiply luminosity by stellar mass
+    model_dusty_llam = model_dusty_llam * 10**ms
 
     # ------ Apply redshift
-    model_lam_z, model_flam_z = apply_redshift(model_lam_grid, model_llam, z)
+    model_lam_z, model_flam_z = cosmo.apply_redshift(model_lam, model_dusty_llam, z)
 
     # ------ Apply LSF
     model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_flam_z, sigma=lsf_sigma)
 
     # ------ Downgrade to grism resolution
-    model_mod = np.zeros(len(x))
+    model_mod = np.zeros(len(spec_x))
 
     ### Zeroth element
-    lam_step = x[1] - x[0]
-    idx = np.where((model_lam_z >= x[0] - lam_step) & (model_lam_z < x[0] + lam_step))[0]
+    lam_step = spec_x[1] - spec_x[0]
+    idx = np.where((model_lam_z >= spec_x[0] - lam_step) & (model_lam_z < spec_x[0] + lam_step))[0]
     model_mod[0] = np.mean(model_lsfconv[idx])
 
     ### all elements in between
-    for j in range(1, len(x) - 1):
-        idx = np.where((model_lam_z >= x[j-1]) & (model_lam_z < x[j+1]))[0]
+    for j in range(1, len(spec_x) - 1):
+        idx = np.where((model_lam_z >= spec_x[j-1]) & (model_lam_z < spec_x[j+1]))[0]
         model_mod[j] = np.mean(model_lsfconv[idx])
     
     ### Last element
-    lam_step = x[-1] - x[-2]
-    idx = np.where((model_lam_z >= x[-1] - lam_step) & (model_lam_z < x[-1] + lam_step))[0]
+    lam_step = spec_x[-1] - spec_x[-2]
+    idx = np.where((model_lam_z >= spec_x[-1] - lam_step) & (model_lam_z < spec_x[-1] + lam_step))[0]
     model_mod[-1] = np.mean(model_lsfconv[idx])
 
     # ----------------- Now get the model photometry
     # and combine with the grism model
     # ------ THIS HAS TO BE THE SAME AS IN THE FUNC get_photometry_data()
-    phot_lam = np.array([3582.0, 4328.2, 5921.1, 7692.4, 9033.1, 12486.0, 13923.0, 15369.0, 
-    35500.0, 44930.0, 57310.0, 78720.0])  # angstroms
+    # ------ AND MUST BE in ascending order
+    phot_lam = phot_x  # angstroms
 
-    
+    all_model_phot = np.zeros(len(phot_lam))
 
-    return comb_model_mod
+    # Loop over all filters
+    for i in range(len(phot_lam)):
+
+        # Interpolate the filter wavelengths to the model wavelength grid
+        filt = all_filters[i]
+        filt_interp = griddata(points=filt['wav'], values=filt['trans'], xi=model_lam_z, \
+            method='linear')
+
+        ## Set nan values in interpolated filter to 0.0
+        filt_nan_idx = np.where(np.isnan(filt_interp))[0]
+        filt_interp[filt_nan_idx] = 0.0
+
+        """
+        fig =  plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(filt['wav'], filt['trans'], lw=3.0, zorder=1, label=all_filter_names[i])
+        ax.plot(model_lam_z, filt_interp, lw=1.0, zorder=2)
+        ax.set_xlim(filt['wav'][0], filt['wav'][-1])
+        ax.legend(loc=0)
+        plt.show()
+        plt.clf()
+        plt.cla()
+        plt.close()
+        """
+
+        dl = cosmo.luminosity_distance(z)
+        dl = dl * 3.09e24  # convert to cm
+
+        # multiply model spectrum to filter curve
+        den = simps(y=filt_interp, x=model_lam_z)
+        num = simps(y=model_flam_z * filt_interp, x=model_lam_z)
+        filt_flam_model = num / den
+
+        # now save to the list 
+        all_model_phot[i] = filt_flam_model
+
+    return model_mod, all_model_phot
 
 def get_photometry_data(gal_id, field, survey, grism_lam_obs, grism_flam_obs, current_ra, current_dec):
 
@@ -378,11 +490,8 @@ def main():
     print("Starting at:", datetime.datetime.now())
 
     print("\n* * * *   [WARNING]: the downgraded model is offset by delta_lambda/2 where delta_lambda is the grism wavelength sampling.   * * * *")
-    print("\n* * * *   [WARNING]: not interpolating to find matching models in parameter space.   * * * *")
     print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift. Change to FlatLambdaCDM astropy.  * * * *")
     print("\n* * * *   [INFO]: check if you can use CANDELS photometry directly instead of 3D-HST   * * * *")
-
-    sys.exit(0)
 
     # ---- Load in data
     pears_id = 126769
@@ -417,9 +526,6 @@ def main():
     phot_lam, phot_flam, phot_ferr = get_photometry_data(pears_id, pears_field, 'PEARS', \
         wav, flam, gal_ra, gal_dec)
 
-    # ---- Combine grism and photometry data into one array
-    comb_wav, comb_flam, comb_ferr = combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr)
-
     # ---- Plot data if you want to check what it looks like
     """
     #print("Photometry and errors:")
@@ -448,13 +554,13 @@ def main():
 
     # ----------------------- Using numpy polyfitting ----------------------- #
     # -------- The best-fit will be used to set the initial position for the MCMC walkers.
+    """
     pfit = np.ma.polyfit(wav, flam, deg=3)
     np_polynomial = np.poly1d(pfit)
-
     bestarr = pfit
-
     print("Numpy polynomial fit:")
     print(np_polynomial)
+    """
 
     # Plotting fit and residuals
     """
@@ -483,70 +589,86 @@ def main():
     #*******Metropolis Hastings********************************
     mh_start = time.time()
     print("\nRunning explicit Metropolis-Hastings...")
-    N = 50000   #number of "timesteps"
+    N = 1000   #number of "timesteps"
 
-    # The parameter vector is (redshift, age, tau, av)
+    # The parameter vector is (z, ms, age, tau, met, av, lsf_sigma)
     # age in gyr and tau in gyr
+    # stellar mass is log(stellarmass/solarmass)
+    # metallicity is absolute fraction
     # dust parameter is av not tauv
     # last param is LSF in Angstroms
-    r = np.array([0.1, 1.0, 1.0, 1.0, 10.0])  # initial position
+
+    # Define initial guesses
+    r = np.array([0.1, 10.0, 1.0, 1.0, 0.02, 0.1, 10.0])  # initial position
     print("Initial parameter vector:", r)
+
+    # Array for metallicities
+    metals_arr = np.array([0.0001, 0.0004, 0.004, 0.008, 0.02, 0.05])
 
     # Set jump sizes
     jump_size_z = 0.01  
+    jump_size_ms = 0.02  # in log(ms)
     jump_size_age = 0.1  # in gyr
     jump_size_tau = 0.1  # in gyr
+    jump_size_met = 0.001
     jump_size_av = 0.2  # magnitudes
     jump_size_lsf = 5.0  # angstroms
 
-    label_list = [r'$z$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$LSF [\AA]$']
+    label_list = [r'$z$', r'$log(Ms/M_\odot)$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$Z$', r'$A_V [mag]$', r'$LSF [\AA]$']
 
-    logp = logpost(r, comb_wav, comb_flam, comb_ferr)  # evaluating the probability at the initial guess
+    logp = logpost(r, wav, flam, ferr, phot_lam, phot_flam, phot_ferr)  # evaluating the probability at the initial guess
     
     print("Initial guess log(probability):", logp)
 
     samples = []  #creating array to hold parameter vector with time
     accept = 0.
 
-    sys.exit(0)
-
     for i in range(N): #beginning the iteratitive loop
 
         print("MH Iteration", i, end='\r')
 
         rn0 = float(r[0] + jump_size_z * np.random.normal(size=1))  #creating proposal vecotr ("Y" or X_t+1)
-        rn1 = float(r[1] + jump_size_age * np.random.normal(size=1))
-        rn2 = float(r[2] + jump_size_tau * np.random.normal(size=1))
-        rn3 = float(r[3] + jump_size_av * np.random.normal(size=1))
-        rn4 = float(r[4] + jump_size_lsf * np.random.normal(size=1))
+        rn1 = float(r[1] + jump_size_ms * np.random.normal(size=1))
+        rn2 = float(r[2] + jump_size_age * np.random.normal(size=1))
+        rn3 = float(r[3] + jump_size_tau * np.random.normal(size=1))
 
-        rn = np.array([rn0, rn1, rn2, rn3, rn4])
+        # Metallicity is very discrete in BC03 models 
+        # so doing it this way
+        # While the newer 2016 version has an additional metallicity
+        # referred to as "m82", the documentation never specifies the 
+        # actual metallicity associated with it. So I'm ignoring that one.
+        rn4 = float(r[4] + jump_size_met * np.random.normal(size=1))
+        metals_idx = np.argmin(abs(rn4 - metals_arr))
+        rn4 = metals_arr[metals_idx]
 
-        print("Proposed parameter vector", rn)
+        rn5 = float(r[5] + jump_size_av * np.random.normal(size=1))
+        rn6 = float(r[6] + jump_size_lsf * np.random.normal(size=1))
+
+        rn = np.array([rn0, rn1, rn2, rn3, rn4, rn5, rn6])
+
+        #print("Proposed parameter vector", rn)
         
-        logpn = logpost(rn, wav, flam, ferr)  #evaluating probability of proposal vector
-        print("Proposed parameter vector log(probability):", logpn)
+        logpn = logpost(rn, wav, flam, ferr, phot_lam, phot_flam, phot_ferr)  #evaluating probability of proposal vector
+        #print("Proposed parameter vector log(probability):", logpn)
         dlogL = logpn - logp
         a = np.exp(dlogL)
 
-        print("Ratio of probabilities at proposed to current position:", a)
+        #print("Ratio of probabilities at proposed to current position:", a)
 
         if a >= 1:   #always keep it if probability got higher
-            print("Will accept point since probability increased.")
+            #print("Will accept point since probability increased.")
             logp = logpn
             r = rn
             accept+=1
         
         else:  #only keep it based on acceptance probability
-            print("Probability decreased. Will decide whether to keep point or not.")
+            #print("Probability decreased. Will decide whether to keep point or not.")
             u = np.random.rand()  #random number between 0 and 1
             if u < a:  #only if proposal prob / previous prob is greater than u, then keep new proposed step
                 logp = logpn
                 r = rn
                 accept+=1
-                print("Point kept.")
-
-        sys.exit(0)
+                #print("Point kept.")
 
         samples.append(r)  #update
 
