@@ -273,7 +273,7 @@ def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
     model_dusty_llam = get_dust_atten_model(model_lam, model_llam, av)
 
     # ------ Multiply luminosity by stellar mass
-    model_dusty_llam = model_dusty_llam * 10**ms
+    #model_dusty_llam = model_dusty_llam * 10**ms
 
     # ------ Apply redshift
     model_lam_z, model_flam_z = cosmo.apply_redshift(model_lam, model_dusty_llam, z)
