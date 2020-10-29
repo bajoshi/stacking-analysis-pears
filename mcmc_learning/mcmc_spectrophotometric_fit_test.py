@@ -552,6 +552,10 @@ def main():
     phot_lam, phot_flam, phot_ferr = get_photometry_data(pears_id, pears_field, 'PEARS', \
         wav, flam, gal_ra, gal_dec)
 
+    # multiply photomtery errors by a factor
+    # I suspect these are underestimates so they need some padding
+    phot_ferr *= 2.5
+
     # ---- Plot data if you want to check what it looks like
     """
     #print("Photometry and errors:")
@@ -569,7 +573,7 @@ def main():
     ax.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5)
 
     ax.errorbar(phot_lam, phot_flam, yerr=phot_ferr, ms=5.0, fmt='o', \
-        color='k', ecolor='k')
+        color='k', ecolor='r')
 
     ax.set_xscale('log')
 
@@ -765,9 +769,11 @@ def main():
     print("Finished running emcee.")
 
     # Get and save chain
-    samples = sampler.get_chain()
+    pkl_path = pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl'
     pickle.dump(sampler, open(pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl', 'wb'))
+    #sampler = pickle.load(open(pkl_path, 'rb'))
 
+    samples = sampler.get_chain()
     print("Samples shape:", samples.shape)
 
     # plot trace
@@ -834,11 +840,30 @@ def main():
     ax3.plot(wav, flam, color='k')
     ax3.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5, zorder=3)
 
+    ax3.errorbar(phot_lam, phot_flam, yerr=phot_ferr, ms=5.0, fmt='o', \
+        color='k', ecolor='k')
+
+    # ------- Do combining of spectroscopy and photometry
+    # For data
+    comb_x, comb_data, comb_err = combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr)
+
     for ind in inds:
         sample = flat_samples[ind]
-        m = model(wav, sample[0], sample[1], sample[2], sample[3], sample[4]) 
-        a = np.sum(flam * m / ferr**2) / np.sum(m**2 / ferr**2)
+        m, mp = model(wav, flam, ferr, phot_lam, phot_flam, phot_ferr, \
+            sample[0], sample[1], sample[2], sample[3], sample[4]) 
+
+        # Combine for model
+        # Dummy arrays for model errors
+        model_moderr = np.zeros(len(m))
+        all_model_photerr = np.zeros(len(phot_lam))
+        comb_model_wav, y, comb_model_ferr = combine_all_data(wav, m, model_moderr, phot_lam, mp, all_model_photerr)
+
+        # ------- Vertical scaling factor
+        a = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
+
         ax3.plot(wav, a * m, color='tab:red', alpha=0.2, zorder=2)
+
+    ax3.set_xscale('log')
 
     plt.show()
 
