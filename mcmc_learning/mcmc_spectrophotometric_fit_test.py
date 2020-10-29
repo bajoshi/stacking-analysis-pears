@@ -107,6 +107,23 @@ f125w_filt_curve, f140w_filt_curve, f160w_filt_curve, irac1_curve, irac2_curve, 
 all_filter_names = ['u', 'f435w', 'f606w', 'f775w', 'f850lp', \
 'f125w', 'f140w', 'f160w', 'irac1', 'irac2', 'irac3', 'irac4']
 
+# Read in all models and parameters
+model_lam_grid = np.load(pears_figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
+model_grid = np.load(pears_figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
+
+log_age_arr = np.load(pears_figs_dir + 'log_age_arr_chab.npy', mmap_mode='r')
+metal_arr = np.load(pears_figs_dir + 'metal_arr_chab.npy', mmap_mode='r')
+tau_gyr_arr = np.load(pears_figs_dir + 'tau_gyr_arr_chab.npy', mmap_mode='r')
+tauv_arr = np.load(pears_figs_dir + 'tauv_arr_chab.npy', mmap_mode='r')
+
+"""
+Array ranges are:
+1. Age: 7.02 to 10.114 (this is log of the age in years)
+2. Metals: 0.0001 to 0.05 (absolute fraction of metals. All CSP models although are fixed at solar = 0.02)
+3. Tau: 0.01 to 63.095 (this is in Gyr. SSP models get -99.0)
+4. TauV: 0.0 to 2.8 (Visual dust extinction in magnitudes. SSP models get -99.0)
+"""
+
 def get_template(age, tau, tauv, metallicity, \
     log_age_arr, metal_arr, tau_gyr_arr, tauv_arr, \
     model_lam_grid_withlines_mmap, model_comp_spec_withlines_mmap):
@@ -153,10 +170,10 @@ def get_template(age, tau, tauv, metallicity, \
 
 def loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
     
-    z, ms, age, tau, av, lsf_sigma = theta
+    z, age, tau, av, lsf_sigma = theta
 
     # ------- Get model
-    model_mod, all_model_phot = model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, z, ms, age, tau, av, lsf_sigma)
+    model_mod, all_model_phot = model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, z, age, tau, av, lsf_sigma)
 
     # ------- Do combining of spectroscopy and photometry
     # For data
@@ -197,19 +214,18 @@ def loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
 
 def logprior(theta):
 
-    z, ms, age, tau, av, lsf_sigma = theta
+    z, age, tau, av, lsf_sigma = theta
     
     # Make sure model is not older than the Universe
     # Allowing at least 100 Myr for the first galaxies to form after Big Bang
     age_at_z = Planck15.age(z).value  # in Gyr
     age_lim = age_at_z - 0.1  # in Gyr
 
-    if ( 0.01 <= z <= 6.0 and \
-         9.0 <= ms <= 12.0 and \
-         0.01 <= age <= age_lim and  \
-         0.01 <= tau <= 100.0 and  \
-         0.0 <= av <= 3.0 and \
-         1.0 <= lsf_sigma <= 200.0 ):
+    if (0.01 <= z <= 6.0 and \
+        0.01 <= age <= age_lim and  \
+        0.01 <= tau <= 100.0 and  \
+        0.0 <= av <= 3.0 and \
+        1.0 <= lsf_sigma <= 200.0):
         return 0.0
     
     return -np.inf
@@ -226,7 +242,7 @@ def logpost(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
     return lp + lnL
 
 def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
-    z, ms, age, tau, av, lsf_sigma):
+    z, age, tau, av, lsf_sigma):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -240,8 +256,18 @@ def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
     lsf_sigma: in angstroms
     """
 
-    met = 0.02
-    model_lam, model_llam = get_bc03_spectrum(age, tau, met, modeldir)
+    #met = 0.02
+    #model_lam, model_llam = get_bc03_spectrum(age, tau, met, modeldir)
+
+    tauv = 0.0
+    metallicity = 0.02
+    model_llam = get_template(np.log10(age * 1e9), tau, tauv, metallicity, \
+        log_age_arr, metal_arr, tau_gyr_arr, tauv_arr, \
+        model_lam_grid, model_grid)
+
+    model_lam = model_lam_grid
+
+    #model_lam, model_llam = remove_emission_lines(model_lam, model_llam)
 
     # ------ Apply dust extinction
     model_dusty_llam = get_dust_atten_model(model_lam, model_llam, av)
@@ -494,8 +520,8 @@ def main():
     print("\n* * * *   [INFO]: check if you can use CANDELS photometry directly instead of 3D-HST   * * * *")
 
     # ---- Load in data
-    pears_id = 126769
-    pears_field = 'GOODS-S'
+    pears_id = 48189
+    pears_field = 'GOODS-N'
 
     print("\nWorking on:", pears_field, pears_id)
 
@@ -551,7 +577,6 @@ def main():
     sys.exit(0)
     """
 
-
     # ----------------------- Using numpy polyfitting ----------------------- #
     # -------- The best-fit will be used to set the initial position for the MCMC walkers.
     """
@@ -593,17 +618,19 @@ def main():
 
     # The parameter vector is (z, ms, age, tau, met, av, lsf_sigma)
     # age in gyr and tau in gyr
-    # stellar mass is log(stellarmass/solarmass)
+    # stellar mass is log(stellarmass/solarmass) --- not included anymore. will get ms from vertical scaling factor.
     # metallicity is absolute fraction
     # dust parameter is av not tauv
     # last param is LSF in Angstroms
 
     # Define initial guesses
-    r = np.array([0.1, 10.0, 1.0, 1.0, 0.1, 10.0])  # initial position
+    r = np.array([0.1, 1.0, 1.0, 0.1, 10.0])  # initial position
+    #Initial position should be from min_chi2
+    # get_optimal_fit()
     print("Initial parameter vector:", r)
 
     # Array for metallicities
-    metals_arr = np.array([0.0001, 0.0004, 0.004, 0.008, 0.02, 0.05])
+    #metals_arr = np.array([0.0001, 0.0004, 0.004, 0.008, 0.02, 0.05])
 
     # Set jump sizes
     jump_size_z = 0.01  
@@ -613,7 +640,7 @@ def main():
     jump_size_av = 0.2  # magnitudes
     jump_size_lsf = 5.0  # angstroms
 
-    label_list = [r'$z$', r'$log(Ms/M_\odot)$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$LSF [\AA]$']
+    label_list = [r'$z$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$LSF [\AA]$']
     
     """
     logp = logpost(r, wav, flam, ferr, phot_lam, phot_flam, phot_ferr)  # evaluating the probability at the initial guess
@@ -709,7 +736,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 6, 50  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 50  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -717,17 +744,18 @@ def main():
     for i in range(nwalkers):
 
         rn0 = float(r[0] + jump_size_z * np.random.normal(size=1))
-        rn1 = float(r[1] + jump_size_ms * np.random.normal(size=1))
-        rn2 = float(r[2] + jump_size_age * np.random.normal(size=1))
-        rn3 = float(r[3] + jump_size_tau * np.random.normal(size=1))
-        rn4 = float(r[4] + jump_size_av * np.random.normal(size=1))
-        rn5 = float(r[5] + jump_size_lsf * np.random.normal(size=1))
+        #rn1 = float(r[1] + jump_size_ms * np.random.normal(size=1))
+        rn1 = float(r[1] + jump_size_age * np.random.normal(size=1))
+        rn2 = float(r[2] + jump_size_tau * np.random.normal(size=1))
+        rn3 = float(r[3] + jump_size_av * np.random.normal(size=1))
+        rn4 = float(r[4] + jump_size_lsf * np.random.normal(size=1))
 
-        rn = np.array([rn0, rn1, rn2, rn3, rn4, rn5])
+        rn = np.array([rn0, rn1, rn2, rn3, rn4])
 
         pos[i] = rn
 
     from multiprocessing import Pool
+    import pickle
 
     with Pool() as pool:
         
