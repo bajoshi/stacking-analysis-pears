@@ -1,6 +1,6 @@
 import numpy as np
 from astropy.io import fits
-import array
+#import array
 
 import subprocess
 import os
@@ -9,17 +9,18 @@ import shutil
 
 home = os.getenv('HOME')
 
-def read_current_filepos(filehandle, dtype='i', number=1):
+def read_current_filepos(filehandle, dt='i', number=1):
     """
         This function reads the given number of binary data which is of the supplied type
         from the specified filehandle. The default number of elements to extract is one
         and the default type is an integer.
     """
 
-    arr = array.array(dtype)
-    arr.fromfile(filehandle, number)
+    #arr = array.array(dtype)
+    #arr.fromfile(filehandle, number)
+    arr = np.fromfile(filehandle, dtype=dt, count=number)
 
-    return np.asarray(arr)
+    return arr
 
 def get_stuff_from_ised(modelfile):
     """
@@ -47,6 +48,7 @@ def get_stuff_from_ised(modelfile):
     # int = i = 4 bytes
     # float = f = 4 bytes
     # byte = b = 1 byte
+    # NOT the same as int, float OR np.int or np.float
 
     ignore = read_current_filepos(fh) # this is the number 1208 for SSPs and depends on Tcut for CSPs
     totalages = read_current_filepos(fh)[0] # this should be 221 for the SSP models
@@ -65,7 +67,7 @@ def get_stuff_from_ised(modelfile):
         For now I have kept Tcut at 13.8 Gyr.
     """
     
-    allages = read_current_filepos(fh, dtype='f', number=totalages) # in years
+    allages = read_current_filepos(fh, dt='f', number=totalages) # in years
     
     # Going past some junk now
     if 'salp' in modelfile:
@@ -84,29 +86,34 @@ def get_stuff_from_ised(modelfile):
         junk = read_current_filepos(fh, number=2)
         iseg = read_current_filepos(fh, number=1)
         if iseg > 0: 
-           junk = read_current_filepos(fh, dtype='f', number=6*iseg)
-        junk = read_current_filepos(fh, dtype='f', number=3)
+           junk = read_current_filepos(fh, dt='f', number=6*iseg)
+        junk = read_current_filepos(fh, dt='f', number=3)
         junk = read_current_filepos(fh)
-        junk = read_current_filepos(fh, dtype='f')
-        junk = read_current_filepos(fh, dtype='b', number=80)
-        junk = read_current_filepos(fh, dtype='f', number=4)
-        junk = read_current_filepos(fh, dtype='b', number=160)
+        junk = read_current_filepos(fh, dt='f')
+        junk = read_current_filepos(fh, dt='b', number=80)
+        junk = read_current_filepos(fh, dt='f', number=4)
+        junk = read_current_filepos(fh, dt='b', number=160)
         junk = read_current_filepos(fh)
         junk = read_current_filepos(fh, number=3)
 
     totalwavelengths = read_current_filepos(fh)[0]
-    allwavelengths = read_current_filepos(fh, dtype='f', number=totalwavelengths)
+    allwavelengths = read_current_filepos(fh, dt='f', number=totalwavelengths)
     
     allseds = np.zeros((totalages, totalwavelengths), dtype=np.float32)
     
     for i in range(totalages):
         ignore = read_current_filepos(fh, number=2)
         nlam = read_current_filepos(fh)
-    
-        allseds[i] = read_current_filepos(fh, dtype='f', number=totalwavelengths)
+
+        temp = read_current_filepos(fh, dt='f', number=totalwavelengths)
+        if not temp.size:
+            print("Iteration:", i, "    nlam:", nlam, "    age:", allages[i], \
+                  "    SED array shape and size from fromfile:", temp.shape, temp.size)
+            temp = np.zeros(totalwavelengths)
+        allseds[i] = temp
         
         num = int(read_current_filepos(fh))
-        ignore = read_current_filepos(fh, dtype='f', number=num)
+        ignore = read_current_filepos(fh, dt='f', number=num)
 
     fh.close()
 
@@ -150,6 +157,16 @@ def get_age_spec_from_ised(modelfile, age):
     age_idx = np.argmin(abs(allages - age))
 
     llam = allseds[age_idx]
+
+    # Check for the weird bc03 error from above
+    # i.e., when it returns all zeros
+    if np.allclose(llam, np.zeros(len(llam))):
+        # if the array at this age is all zeros then
+        # return a spectrum that averages the two ages 
+        # on either side of this age.
+        l1 = allseds[age_idx - 1]
+        l2 = allseds[age_idx + 1]
+        llam = (l1+l2)/2
 
     # Scale to correct luminosity units
     L_sun = 3.84e33  # in erg per sec
