@@ -19,9 +19,6 @@ def get_klambda(wav):
 
     return klam
 
-def get_ebv(av):
-    return av / 4.05
-
 def get_dust_atten_model(model_wav_arr, model_flux_arr, av):
     """
     This function will apply the Calzetti dust extinction law 
@@ -33,10 +30,10 @@ def get_dust_atten_model(model_wav_arr, model_flux_arr, av):
     It returns the dust-attenuated flux array at the same wavelengths as before.
     """
 
-    ebv = get_ebv(av)
+    ebv = av / 4.05
         
     # Now loop over the dust-free SED and generate a new dust-attenuated SED
-    dust_atten_model_flux = np.zeros(len(model_wav_arr), dtype=np.float64)
+    dust_atten_model_flux = np.zeros(len(model_wav_arr), dtype=np.float32)
     for i in range(len(model_wav_arr)):
 
         current_wav = model_wav_arr[i] / 1e4  # because this has to be in microns

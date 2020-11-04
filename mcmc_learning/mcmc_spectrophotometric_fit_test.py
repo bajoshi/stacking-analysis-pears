@@ -44,7 +44,7 @@ modeldir = home + '/Documents/bc03_output_dir/'
 sys.path.append(stacking_utils)
 import proper_and_lum_dist as cosmo
 from dust_utils import get_dust_atten_model
-from bc03_utils import get_bc03_spectrum
+from bc03_utils import get_age_spec_from_ised
 
 sys.path.append(cluster_codedir)
 import cluster_do_fitting as cf
@@ -761,7 +761,8 @@ def main():
     from multiprocessing import Pool
     import pickle
 
-    with Pool() as pool:
+    ncores = 4
+    with Pool(ncores) as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr, phot_lam, phot_flam, phot_ferr], pool=pool)
         sampler.run_mcmc(pos, 1000, progress=True)

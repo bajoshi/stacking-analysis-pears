@@ -2,21 +2,19 @@ import scipy.integrate as spint
 import numpy as np
 
 # -------- Define cosmology -------- # 
-# Planck 2018
-H0 = 67.4  # km/s/Mpc
-omega_m0 = 0.315
-omega_r0 = 8.24e-5
-omega_lam0 = 1.0 - omega_m0 - omega_r0
+# Flat Lambda CDM
+H0 = 70.0  # km/s/Mpc
+omega_m0 = 0.3
+omega_lam0 = 1.0 - omega_m0
 
 speed_of_light_kms = 299792.458  # km per s
 
 def print_info():
 
-    print("Plank 2018 cosmology assumed.")
+    print("Flat Lambda CDM cosmology assumed.")
     print("H0: ", H0, "km/s/Mpc")
     print("Omega_m:", omega_m0)
     print("Omega_lambda:", "{:.3f}".format(omega_lam0))
-    print("Omega_r:", omega_r0)
 
     return None
 
@@ -29,7 +27,7 @@ def proper_distance(redshift):
     """
     ae = 1 / (1 + redshift)
 
-    p = lambda a: 1/(a*a*H0*np.sqrt((omega_m0/a**3) + (omega_r0/a**4) + omega_lam0 + ((1 - omega_m0 - omega_r0 - omega_lam0)/a**2)))
+    p = lambda a: 1/(a*a*H0*np.sqrt((omega_m0/a**3) + omega_lam0 + ((1 - omega_m0 - omega_lam0)/a**2)))
     dp = spint.quadrature(p, ae, 1.0)
 
     dp = dp[0] * speed_of_light_kms

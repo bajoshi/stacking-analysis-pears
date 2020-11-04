@@ -1,11 +1,12 @@
 import numpy as np
 from astropy.io import fits
-#import array
+import array
 
 import subprocess
 import os
 import sys
 import shutil
+import time
 
 home = os.getenv('HOME')
 
@@ -16,9 +17,11 @@ def read_current_filepos(filehandle, dt='i', number=1):
         and the default type is an integer.
     """
 
-    #arr = array.array(dtype)
-    #arr.fromfile(filehandle, number)
-    arr = np.fromfile(filehandle, dtype=dt, count=number)
+    arr = array.array(dt)
+    arr.fromfile(filehandle, number)
+    arr = np.asarray(arr)
+
+    #arr = np.fromfile(filehandle, dtype=dt, count=number)
 
     return arr
 
@@ -42,8 +45,9 @@ def get_stuff_from_ised(modelfile):
         and also refer to Mancone & Gonzalez 2012, PASP, 124, 606.
     """
 
+    #t1=time.time()
     fh = open(modelfile, 'rb')
-    
+
     # dtype for this file
     # int = i = 4 bytes
     # float = f = 4 bytes
@@ -96,26 +100,36 @@ def get_stuff_from_ised(modelfile):
         junk = read_current_filepos(fh)
         junk = read_current_filepos(fh, number=3)
 
+    #t2=time.time()
+    #print("Finished prep for looping over seds. Time taken:", "{:.3f}".format(t2-t1), "seconds.")
+
     totalwavelengths = read_current_filepos(fh)[0]
     allwavelengths = read_current_filepos(fh, dt='f', number=totalwavelengths)
     
     allseds = np.zeros((totalages, totalwavelengths), dtype=np.float32)
-    
+
+    #t3 = time.time()
+    #print("Starting to loop over seds. Time taken:", "{:.3f}".format(t3-t2), "seconds.")
+
     for i in range(totalages):
         ignore = read_current_filepos(fh, number=2)
         nlam = read_current_filepos(fh)
 
-        temp = read_current_filepos(fh, dt='f', number=totalwavelengths)
-        if not temp.size:
-            print("Iteration:", i, "    nlam:", nlam, "    age:", allages[i], \
-                  "    SED array shape and size from fromfile:", temp.shape, temp.size)
-            temp = np.zeros(totalwavelengths)
-        allseds[i] = temp
+        #temp = read_current_filepos(fh, dt='f', number=totalwavelengths)
+        #if not temp.size:
+        #    print("Working with isedfile:", modelfile)
+        #    print("Iteration:", i, "    nlam:", nlam, "    age:", allages[i], \
+        #          "    SED array shape and size from fromfile:", temp.shape, temp.size)
+        #    temp = np.zeros(totalwavelengths)
+        allseds[i] = read_current_filepos(fh, dt='f', number=totalwavelengths)
         
-        num = int(read_current_filepos(fh))
+        num = read_current_filepos(fh)[0]
         ignore = read_current_filepos(fh, dt='f', number=num)
 
     fh.close()
+    #t4 = time.time()
+    #print("Done. Time taken:", "{:.3f}".format(t4-t3), "seconds.")
+
 
     return allwavelengths, allages, allseds
 
@@ -135,7 +149,7 @@ def ised2fits(modelfile, del_modelfile=False):
     hdulist.append(fits.ImageHDU(allwavelengths))
     hdulist.append(fits.ImageHDU(allages))
 
-    for i in range(totalages):
+    for i in range(len(allages)):
         hdulist.append(fits.ImageHDU(allseds[i]))
 
     hdulist.writeto(modelfile.replace('.ised','.fits'), overwrite=True)
@@ -147,30 +161,35 @@ def ised2fits(modelfile, del_modelfile=False):
 
     return None
 
-def get_age_spec_from_ised(modelfile, age):
+def get_age_spec(modelfile, age):
 
-    allwavelengths, allages, allseds = get_stuff_from_ised(modelfile)
+    h = fits.open(modelfile)
+
+    allwavelengths = h[1].data
+    allages = h[2].data
 
     # the ages in the fits files are in years
     age *= 1e9  # convert the given age in Gyr to years
 
     age_idx = np.argmin(abs(allages - age))
 
-    llam = allseds[age_idx]
+    llam = h[age_idx+3].data
 
     # Check for the weird bc03 error from above
     # i.e., when it returns all zeros
-    if np.allclose(llam, np.zeros(len(llam))):
-        # if the array at this age is all zeros then
-        # return a spectrum that averages the two ages 
-        # on either side of this age.
-        l1 = allseds[age_idx - 1]
-        l2 = allseds[age_idx + 1]
-        llam = (l1+l2)/2
+    #if np.allclose(llam, np.zeros(len(llam))):
+    #    # if the array at this age is all zeros then
+    #    # return a spectrum that averages the two ages 
+    #    # on either side of this age.
+    #    l1 = allseds[age_idx - 1]
+    #    l2 = allseds[age_idx + 1]
+    #    llam = (l1+l2)/2
 
     # Scale to correct luminosity units
     L_sun = 3.84e33  # in erg per sec
     llam *= L_sun  # this is now in ergs / s / A
+
+    h.close()
 
     return allwavelengths, llam
 
@@ -255,7 +274,7 @@ def call_cspgalaxev(isedfile, tau, output, dust='N', z='0', sfh='1', recycle='N'
 
     return None
 
-def get_bc03_spectrum(age, tau, metals, outdir_ised, save2ascii=True):
+def gen_bc03_spectrum(tau, metals, outdir_ised):
 
     # Get the isedfile and the metallicity in the format that BC03 needs
     if metals == 0.0001:
@@ -290,8 +309,11 @@ def get_bc03_spectrum(age, tau, metals, outdir_ised, save2ascii=True):
     # Checking for the fits files because the ised files usually get deleted
     if not os.path.isfile(output + '.ised'):
         
+        t1 = time.time()
         # Now call csp_galaxev
         call_cspgalaxev(isedfile, tau, output)
+        t2 = time.time()
+        print("Time taken to finish modelling:", "{:.3f}".format(t2-t1), "seconds.")
 
         # now read in the output generated by csp_galaxev and 
         # get the spectrum for the age required.
@@ -326,11 +348,11 @@ def get_bc03_spectrum(age, tau, metals, outdir_ised, save2ascii=True):
         os.remove(output + '.wfpc2_johnson_color')
         """
 
+    ised2fits(output + '.ised', del_modelfile=False)    
+
     #else:
     #    print("\nOutput fits file exists. Moving on to age extraction.")
 
-    lam, llam = get_age_spec_from_ised(output + '.ised', age)
-
-    return lam, llam
+    return None
 
 
