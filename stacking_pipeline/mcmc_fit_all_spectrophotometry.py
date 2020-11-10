@@ -3,6 +3,7 @@ from astropy.io import fits
 import emcee
 import corner
 import scipy
+from scipy.integrate import simps
 from scipy.interpolate import griddata
 from astropy.cosmology import FlatLambdaCDM
 import astropy.units as u
@@ -42,7 +43,7 @@ home = os.getenv('HOME')
 # ---------- Define directories ---------- #
 # ----- Data directories
 pears_figs_dir = home + '/Desktop/FIGS/'
-datadir = home + '/Documents/PEARS/data_spectra_only/'
+datadir = home + '/Documents/PEARS/data_spectra_only/PAcomb_spectra/'
 threedhst_datadir = home + '/Desktop/3dhst_data/'
 
 # ----- Directories for other useful codes
@@ -403,7 +404,7 @@ def logprior(theta):
     
     # Make sure model is not older than the Universe
     # Allowing at least 100 Myr for the first galaxies to form after Big Bang
-    age_at_z = Planck15.age(z).value  # in Gyr
+    age_at_z = astropy_cosmo.age(z).value  # in Gyr
     age_lim = age_at_z - 0.1  # in Gyr
 
     if (0.01 <= z <= 6.0 and \
