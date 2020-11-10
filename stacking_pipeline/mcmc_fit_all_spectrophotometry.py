@@ -20,17 +20,35 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.gridspec as gridspec
 
+
+# This class came from stackoverflow
+# SEE: https://stackoverflow.com/questions/287871/how-to-print-colored-text-in-python
+class bcolors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+print(f"{bcolors.WARNING}")
+print("* * * *  [WARNING]: this code can ONLY RUN ON FIRSTLIGHT.  * * * *")
+print(f"{bcolors.ENDC}")
+
 home = os.getenv('HOME')
 # ---------- Define directories ---------- #
 # ----- Data directories
-pears_figs_dir = datadir = home + '/Documents/pears_figs_data/'
-datadir = home + '/Documents/pears_figs_data/data_spectra_only/'
-threedhst_datadir = home + '/Documents/3dhst_data/'
+pears_figs_dir = home + '/Desktop/FIGS/'
+datadir = home + '/Documents/PEARS/data_spectra_only/'
+threedhst_datadir = home + '/Desktop/3dhst_data/'
 
 # ----- Directories for other useful codes
-stacking_analysis_dir = home + '/Documents/GitHub/stacking-analysis-pears/'
+stacking_analysis_dir = pears_figs_dir + 'stacking-analysis-pears/'
 stacking_utils = stacking_analysis_dir + 'util_codes/'
-massive_galaxies_dir = home + '/Documents/GitHub/massive-galaxies/'
+massive_galaxies_dir = pears_figs_dir + 'massive-galaxies/'
 cluster_codedir = massive_galaxies_dir + 'cluster_codes/'
 filter_curve_dir = massive_galaxies_dir + 'grismz_pipeline/'
 
@@ -119,20 +137,6 @@ Array ranges are:
 3. Tau: 0.01 to 63.095 (this is in Gyr. SSP models get -99.0)
 4. TauV: 0.0 to 2.8 (Visual dust extinction in magnitudes. SSP models get -99.0)
 """
-
-
-# This class came from stackoverflow
-# SEE: https://stackoverflow.com/questions/287871/how-to-print-colored-text-in-python
-class bcolors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
 
 def get_photometry_data(gal_id, field, survey, grism_lam_obs, grism_flam_obs, current_ra, current_dec):
