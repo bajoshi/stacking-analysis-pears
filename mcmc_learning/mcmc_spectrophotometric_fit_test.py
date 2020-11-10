@@ -1,9 +1,6 @@
 """
 These MCMC codes are based on those from Mike Line's astrostatistics 
 class. I'm using this to learn more about MCMC and fitting spectral data.
-
-This particular code is used to see if I can fit a polynomial to one of
-the grism spectra from the stacking project. 
 """
 
 import numpy as np
@@ -44,7 +41,7 @@ modeldir = home + '/Documents/bc03_output_dir/'
 sys.path.append(stacking_utils)
 import proper_and_lum_dist as cosmo
 from dust_utils import get_dust_atten_model
-from bc03_utils import get_age_spec_from_ised
+from bc03_utils import get_age_spec
 
 sys.path.append(cluster_codedir)
 import cluster_do_fitting as cf
@@ -628,7 +625,7 @@ def main():
     # last param is LSF in Angstroms
 
     # Define initial guesses
-    r = np.array([0.1, 1.0, 1.0, 0.1, 10.0])  # initial position
+    r = np.array([0.9, 1.0, 1.0, 0.1, 10.0])  # initial position
     #Initial position should be from min_chi2
     # get_optimal_fit()
     print("Initial parameter vector:", r)
@@ -748,7 +745,6 @@ def main():
     for i in range(nwalkers):
 
         rn0 = float(r[0] + jump_size_z * np.random.normal(size=1))
-        #rn1 = float(r[1] + jump_size_ms * np.random.normal(size=1))
         rn1 = float(r[1] + jump_size_age * np.random.normal(size=1))
         rn2 = float(r[2] + jump_size_tau * np.random.normal(size=1))
         rn3 = float(r[3] + jump_size_av * np.random.normal(size=1))
@@ -758,21 +754,23 @@ def main():
 
         pos[i] = rn
 
-    from multiprocessing import Pool
+    #from multiprocessing import Pool
     import pickle
 
-    ncores = 4
-    with Pool(ncores) as pool:
+    """
+    ncores = 2
+    with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr, phot_lam, phot_flam, phot_ferr], pool=pool)
         sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
+    """
 
     # Get and save chain
     pkl_path = pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl'
-    pickle.dump(sampler, open(pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl', 'wb'))
-    #sampler = pickle.load(open(pkl_path, 'rb'))
+    #pickle.dump(sampler, open(pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl', 'wb'))
+    sampler = pickle.load(open(pkl_path, 'rb'))
 
     samples = sampler.get_chain()
     print("Samples shape:", samples.shape)
@@ -791,7 +789,7 @@ def main():
 
     # Get autocorrelation time
     try:
-        tau = sampler.get_autocorr_time()
+        tau = sampler.get_autocorr_time(tol=0)
     except emcee.autocorr.AutocorrError as errmsg:
         print(errmsg)
         print("\n")
@@ -817,10 +815,10 @@ def main():
     print("Autocorrelation time (i.e., steps that walkers take in each dimension before they forget where they started):", tau)
 
     # Discard burn-in. You do not want to consider the burn in the corner plots/estimation.
-    burn_in = int(3 * tau[0])
+    burn_in = int(2 * np.max(tau))
     print("Burn-in:", burn_in)
 
-    thinning_steps = int(0.5 * tau[0])
+    thinning_steps = int(0.5 * np.min(tau))
     print("Thinning steps:", thinning_steps)
 
     flat_samples = sampler.get_chain(discard=burn_in, thin=thinning_steps, flat=True)
@@ -863,6 +861,8 @@ def main():
         a = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
 
         ax3.plot(wav, a * m, color='tab:red', alpha=0.2, zorder=2)
+
+        ax3.scatter(phot_lam, a * mp, s=5.0, color='tab:red', alpha=0.5, zorder=2)
 
     ax3.set_xscale('log')
 
