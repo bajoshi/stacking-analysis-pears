@@ -401,18 +401,20 @@ def loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
 def logprior(theta):
 
     z, age, tau, av, lsf_sigma = theta
-    
-    # Make sure model is not older than the Universe
-    # Allowing at least 100 Myr for the first galaxies to form after Big Bang
-    age_at_z = astropy_cosmo.age(z).value  # in Gyr
-    age_lim = age_at_z - 0.1  # in Gyr
 
-    if (0.01 <= z <= 6.0 and \
-        0.01 <= age <= age_lim and  \
-        0.01 <= tau <= 100.0 and  \
-        0.0 <= av <= 3.0 and \
-        1.0 <= lsf_sigma <= 200.0):
-        return 0.0
+    if (0.01 <= z <= 6.0):
+
+        # Make sure model is not older than the Universe
+        # Allowing at least 100 Myr for the first galaxies to form after Big Bang
+        age_at_z = astropy_cosmo.age(z).value  # in Gyr
+        age_lim = age_at_z - 0.1  # in Gyr
+
+        if (0.01 <= age <= age_lim) and  \
+           (0.01 <= tau <= 100.0) and  \
+           (0.0 <= av <= 3.0) and \
+           (1.0 <= lsf_sigma <= 200.0):
+
+            return 0.0
     
     return -np.inf
 
@@ -534,7 +536,7 @@ def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
     return model_mod, all_model_phot
 
 
-def run_emcee_fitting(pears_id, pears_field):
+def run_emcee_fitting(pears_id, pears_field, zprior):
 
     # Read in grism spectrum
     print("\nWorking on:", pears_id, pears_field)
@@ -569,7 +571,7 @@ def run_emcee_fitting(pears_id, pears_field):
 
     # --------------- Prep emcee
     # Define initial guesses
-    r = np.array([0.6, 1.0, 1.0, 0.1, 10.0])  # initial position
+    r = np.array([zprior, 2.0, 0.5, 0.1, 10.0])  # initial position
     #Initial position should be from min_chi2
     # get_optimal_fit()
     print("Initial parameter vector:", r)
@@ -757,6 +759,7 @@ def main():
 
     all_ids_tofit = cat['PearsID'][ms_idx]
     all_fields_tofit = cat['Field'][ms_idx]
+    all_zprior = cat['zp'][ms_idx]
 
     # New catalog to save MCMC results
     fh = open(stacking_analysis_dir + 'massive_mcmc_fitting_results.txt', 'w')
@@ -771,9 +774,17 @@ def main():
     # Loop over all galaxies
     for i in range(len(all_ids_tofit)):
 
+        # Get prior on redshift
+        zprior = all_zprior[i]
+
+        if not np.isfinite(zprior):
+            zprior = 0.8
+
+        print("Working on:", all_ids_tofit[i], all_fields_tofit[i], "with photo-z of", zprior)
+
         # Prep data and run emcee
         # this function will return a dict with the fitting results
-        emcee_res = run_emcee_fitting(all_ids_tofit[i], all_fields_tofit[i])
+        emcee_res = run_emcee_fitting(all_ids_tofit[i], all_fields_tofit[i], zprior)
 
         s = str(cat[ms_idx[i]])
         s = s.lstrip('(')
