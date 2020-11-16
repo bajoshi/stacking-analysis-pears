@@ -54,7 +54,7 @@ cluster_codedir = massive_galaxies_dir + 'cluster_codes/'
 filter_curve_dir = massive_galaxies_dir + 'grismz_pipeline/'
 
 # ----- Dir to save emcee results and plots to
-emcee_diagnostics_dir = stacking_analysis_dir + 'emcee_diagnostics/'
+emcee_diagnostics_dir = home + '/Documents/stacking_emcee_diagnostics/'
 
 sys.path.append(stacking_utils)
 import proper_and_lum_dist as cosmo
@@ -579,13 +579,13 @@ def run_emcee_fitting(pears_id, pears_field):
     jump_size_age = 0.1  # in gyr
     jump_size_tau = 0.1  # in gyr
     jump_size_av = 0.2  # magnitudes
-    jump_size_lsf = 2.0  # angstroms
+    jump_size_lsf = 2.0
 
-    label_list = [r'$z$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$LSF [\AA]$']
+    label_list = [r'$z$', r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$\mathrm{LSF}$']  # r'$\mathrm{log(M_s/M_\odot)}$',
 
     # SEt up initial positions
     print("\nRunning emcee...")
-    ndim, nwalkers = 5, 50  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 300  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -603,7 +603,7 @@ def run_emcee_fitting(pears_id, pears_field):
         pos[i] = rn
 
     # Some more setup
-    emcee_steps = 2000
+    emcee_steps = 1000
 
     # Set up the HDF5 file to incrementally save progress to
     emcee_savefile = emcee_diagnostics_dir + pears_field + '_' + str(pears_id) + '_emcee_sampler.h5'
@@ -701,11 +701,34 @@ def run_emcee_fitting(pears_id, pears_field):
         dpi=200, bbox_inches='tight')
 
     # Prepare results dictionary
-    corner_quantiles = corner.quantile(x=flat_samples, q=[0.16, 0.5, 0.84])
+    cq_z = corner.quantile(x=flat_samples[:, 0], q=[0.16, 0.5, 0.84])
+    #cq_ms = corner.quantile(x=flat_samples[:, 1], q=[0.16, 0.5, 0.84])
+    cq_age = corner.quantile(x=flat_samples[:, 1], q=[0.16, 0.5, 0.84])
+    cq_tau = corner.quantile(x=flat_samples[:, 2], q=[0.16, 0.5, 0.84])
+    cq_av = corner.quantile(x=flat_samples[:, 3], q=[0.16, 0.5, 0.84])
+    cq_lsf = corner.quantile(x=flat_samples[:, 4], q=[0.16, 0.5, 0.84])
 
-    print(type(corner_quantiles))
-    print(corner_quantiles)
-    print(corner_quantiles.shape)
+    fit_dict = {}
+
+    fit_dict['z'] = cq_z[1]
+    fit_dict['z16'] = cq_z[0]
+    fit_dict['z84'] = cq_z[2]
+
+    fit_dict['age'] = cq_age[1]
+    fit_dict['age16'] = cq_age[0]
+    fit_dict['age84'] = cq_age[2]
+
+    fit_dict['tau'] = cq_tau[1]
+    fit_dict['tau16'] = cq_tau[0]
+    fit_dict['tau84'] = cq_tau[2]
+
+    fit_dict['av'] = cq_av[1]
+    fit_dict['av16'] = cq_av[0]
+    fit_dict['av84'] = cq_av[2]
+
+    fit_dict['lsf'] = cq_lsf[1]
+    fit_dict['lsf16'] = cq_lsf[0]
+    fit_dict['lsf84'] = cq_lsf[2]
 
     return fit_dict
 
@@ -759,6 +782,8 @@ def main():
         fh.write(s + ',')
         fh.write(emcee_res)
         fh.write('\n')
+
+        break
 
     fh.close()
 

@@ -57,7 +57,7 @@ def model(v, v0, T0):
 def main():
 
     # ---- Load in data
-    datadir = home + '/Documents/astro-statistics/mcmc_learning/'
+    datadir = home + '/Documents/GitHub/stacking-analysis-pears/mcmc_learning/'
     dat = np.genfromtxt(datadir + 'data.txt', dtype=None, names=['channel', 'flux'], skip_header=1, encoding='ascii')
 
     wav = dat['channel']
