@@ -353,32 +353,52 @@ def get_template(age, tau, tauv, metallicity, \
     return model_llam
 
 
-def loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
+def loglike(theta, emcee_args):
     
-    z, age, tau, av, lsf_sigma = theta
+    #z, age, tau, av, lsf_sigma = theta
 
     # ------- Get model
-    model_mod, all_model_phot = model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, z, age, tau, av, lsf_sigma)
+    broadband = emcee_args[-1]
 
-    # ------- Do combining of spectroscopy and photometry
-    # For data
-    comb_x, comb_data, comb_err = combine_all_data(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err)
+    if broadband:
 
-    # For model
-    # Dummy arrays for model errors
-    model_moderr = np.zeros(len(model_mod))
-    all_model_photerr = np.zeros(len(phot_x))
-    comb_model_wav, y, comb_model_ferr = combine_all_data(spec_x, model_mod, model_moderr, phot_x, all_model_phot, all_model_photerr)
-    #print("Model func result:", y)
+        model_mod, all_model_phot = model(theta, emcee_args)
 
-    # ------- Vertical scaling factor
-    alpha = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
-    #print("Alpha:", "{:.2e}".format(alpha))
+        # ------- Do combining of spectroscopy and photometry
+        # expand arguments 
+        spec_x, spec_data, spec_err, phot_x, phot_data, phot_err = emcee_args[:-1]
 
-    y = y * alpha
+        # For data
+        comb_x, comb_data, comb_err = combine_all_data(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err)
 
-    lnLike = -0.5 * np.sum( (y - comb_data)**2/comb_err**2  +  np.log(2 * np.pi * comb_err**2))
+        # For model
+        # Dummy arrays for model errors
+        model_moderr = np.zeros(len(model_mod))
+        all_model_photerr = np.zeros(len(phot_x))
+        comb_model_wav, y, comb_model_ferr = combine_all_data(spec_x, model_mod, model_moderr, phot_x, all_model_phot, all_model_photerr)
+        #print("Model func result:", y)
+
+        # ------- Vertical scaling factor
+        alpha = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
+        #print("Alpha:", "{:.2e}".format(alpha))
+        y = y * alpha
+
+        lnLike = -0.5 * np.sum( (y - comb_data)**2/comb_err**2  +  np.log(2 * np.pi * comb_err**2) )
     
+    else:
+
+        y = model(theta, emcee_args)
+
+        # expand arguments 
+        spec_x, spec_data, spec_err = emcee_args[:-1]
+
+        # ------- Vertical scaling factor
+        alpha = np.sum(spec_data * y / spec_err**2) / np.sum(y**2 / spec_err**2)
+        #print("Alpha:", "{:.2e}".format(alpha))
+        y = y * alpha
+
+        lnLike = -0.5 * np.sum( (y - spec_data)**2/spec_err**2  +  np.log(2 * np.pi * spec_err**2))
+
     """
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -419,20 +439,19 @@ def logprior(theta):
     return -np.inf
 
 
-def logpost(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err):
+def logpost(theta, emcee_args):
 
     lp = logprior(theta)
     
     if not np.isfinite(lp):
         return -np.inf
     
-    lnL = loglike(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err)
+    lnL = loglike(theta, emcee_args)
     
     return lp + lnL
 
 
-def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
-    z, age, tau, av, lsf_sigma):
+def model(theta, emcee_args):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -445,6 +464,14 @@ def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
     av: visual dust extinction
     lsf_sigma: in angstroms
     """
+
+    z, age, tau, av, lsf_sigma = theta
+
+    broadband = emcee_args[-1]
+    if broadband:
+        spec_x, spec_data, spec_err, phot_x, phot_data, phot_err = emcee_args[:-1]
+    else:
+        spec_x, spec_data, spec_err = emcee_args[:-1]
 
     #met = 0.02
     #model_lam, model_llam = get_bc03_spectrum(age, tau, met, modeldir)
@@ -489,54 +516,57 @@ def model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, \
     idx = np.where((model_lam_z >= spec_x[-1] - lam_step) & (model_lam_z < spec_x[-1] + lam_step))[0]
     model_mod[-1] = np.mean(model_lsfconv[idx])
 
-    # ----------------- Now get the model photometry
-    # and combine with the grism model
-    # ------ THIS HAS TO BE THE SAME AS IN THE FUNC get_photometry_data()
-    # ------ AND MUST BE in ascending order
-    phot_lam = phot_x  # angstroms
+    if broadband:
+        # ----------------- Now get the model photometry
+        # and combine with the grism model
+        # ------ THIS HAS TO BE THE SAME AS IN THE FUNC get_photometry_data()
+        # ------ AND MUST BE in ascending order
+        phot_lam = phot_x  # angstroms
 
-    all_model_phot = np.zeros(len(phot_lam))
+        all_model_phot = np.zeros(len(phot_lam))
 
-    # Loop over all filters
-    for i in range(len(phot_lam)):
+        # Loop over all filters
+        for i in range(len(phot_lam)):
 
-        # Interpolate the filter wavelengths to the model wavelength grid
-        filt = all_filters[i]
-        filt_interp = griddata(points=filt['wav'], values=filt['trans'], xi=model_lam_z, \
-            method='linear')
+            # Interpolate the filter wavelengths to the model wavelength grid
+            filt = all_filters[i]
+            filt_interp = griddata(points=filt['wav'], values=filt['trans'], xi=model_lam_z, \
+                method='linear')
 
-        ## Set nan values in interpolated filter to 0.0
-        filt_nan_idx = np.where(np.isnan(filt_interp))[0]
-        filt_interp[filt_nan_idx] = 0.0
+            ## Set nan values in interpolated filter to 0.0
+            filt_nan_idx = np.where(np.isnan(filt_interp))[0]
+            filt_interp[filt_nan_idx] = 0.0
 
-        """
-        fig =  plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(filt['wav'], filt['trans'], lw=3.0, zorder=1, label=all_filter_names[i])
-        ax.plot(model_lam_z, filt_interp, lw=1.0, zorder=2)
-        ax.set_xlim(filt['wav'][0], filt['wav'][-1])
-        ax.legend(loc=0)
-        plt.show()
-        plt.clf()
-        plt.cla()
-        plt.close()
-        """
+            """
+            fig =  plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(filt['wav'], filt['trans'], lw=3.0, zorder=1, label=all_filter_names[i])
+            ax.plot(model_lam_z, filt_interp, lw=1.0, zorder=2)
+            ax.set_xlim(filt['wav'][0], filt['wav'][-1])
+            ax.legend(loc=0)
+            plt.show()
+            plt.clf()
+            plt.cla()
+            plt.close()
+            """
 
-        dl = cosmo.luminosity_distance(z)
-        dl = dl * 3.09e24  # convert to cm
+            dl = cosmo.luminosity_distance(z)
+            dl = dl * 3.09e24  # convert to cm
 
-        # multiply model spectrum to filter curve
-        den = simps(y=filt_interp, x=model_lam_z)
-        num = simps(y=model_flam_z * filt_interp, x=model_lam_z)
-        filt_flam_model = num / den
+            # multiply model spectrum to filter curve
+            den = simps(y=filt_interp, x=model_lam_z)
+            num = simps(y=model_flam_z * filt_interp, x=model_lam_z)
+            filt_flam_model = num / den
 
-        # now save to the list 
-        all_model_phot[i] = filt_flam_model
+            # now save to the list 
+            all_model_phot[i] = filt_flam_model
 
-    return model_mod, all_model_phot
+        return model_mod, all_model_phot
+    else:
+        return model_mod
 
 
-def run_emcee_fitting(pears_id, pears_field, zprior):
+def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
 
     # Read in grism spectrum
     print("\nWorking on:", pears_id, pears_field)
@@ -556,18 +586,24 @@ def run_emcee_fitting(pears_id, pears_field, zprior):
     flam = flam[arg_low:arg_high+1]
     ferr = ferr[arg_low:arg_high+1]
 
-    # ---- Get photometry as well
-    # Get coordinates for matching with photometry
-    gal_ra = spec_hdu[2].header['RA']
-    gal_dec = spec_hdu[2].header['DEC']
+    if broadband:
+        # ---- Get photometry as well
+        # Get coordinates for matching with photometry
+        gal_ra = spec_hdu[2].header['RA']
+        gal_dec = spec_hdu[2].header['DEC']
 
-    phot_lam, phot_flam, phot_ferr = get_photometry_data(pears_id, pears_field, 'PEARS', \
-        wav, flam, gal_ra, gal_dec)
+        phot_lam, phot_flam, phot_ferr = get_photometry_data(pears_id, pears_field, 'PEARS', \
+            wav, flam, gal_ra, gal_dec)
 
-    # multiply photomtery errors by a factor
-    # I suspect these are underestimates so they need some padding
-    phot_ferr *= 2.0
+        # multiply photomtery errors by a factor
+        # I suspect these are underestimates so they need some padding
+        phot_ferr *= 2.0
 
+        # SEt up emcee arguments
+        emcee_args = [wav, flam, ferr, phot_lam, phot_flam, phot_ferr, broadband]
+
+    else:
+        emcee_args = [wav, flam, ferr, broadband]
 
     # --------------- Prep emcee
     # Define initial guesses
@@ -616,7 +652,7 @@ def run_emcee_fitting(pears_id, pears_field, zprior):
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, \
-            args=[wav, flam, ferr, phot_lam, phot_flam, phot_ferr], \
+            args=emcee_args, \
             pool=pool, \
             backend=backend)
         sampler.run_mcmc(pos, emcee_steps, progress=True)
@@ -784,7 +820,7 @@ def main():
 
         # Prep data and run emcee
         # this function will return a dict with the fitting results
-        emcee_res = run_emcee_fitting(all_ids_tofit[i], all_fields_tofit[i], zprior)
+        emcee_res = run_emcee_fitting(all_ids_tofit[i], all_fields_tofit[i], zprior, broadband=False)
 
         s = str(cat[ms_idx[i]])
         s = s.lstrip('(')
