@@ -839,7 +839,8 @@ def main():
 
         # Prep data and run emcee
         # this function will return a dict with the fitting results
-        emcee_res = run_emcee_fitting(all_ids_tofit[i], all_fields_tofit[i], zprior, broadband=False)
+        #emcee_res = run_emcee_fitting(all_ids_tofit[i], all_fields_tofit[i], zprior, broadband=False)
+        emcee_res = run_emcee_fitting(48189, 'GOODS-N', 0.98, broadband=False)
 
         s = str(cat[ms_idx[i]])
         s = s.lstrip('(')
