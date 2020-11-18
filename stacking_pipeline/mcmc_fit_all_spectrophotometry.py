@@ -715,8 +715,10 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
     print("Average tau:", np.mean(tau))
     burn_in = int(2 * np.max(tau))
     print("Burn-in:", burn_in)
+    thinning_steps = int(0.5 * np.min(tau))
+    print("Thinning steps:", thinning_steps)
 
-    flat_samples = sampler.get_chain(discard=burn_in, flat=True)
+    flat_samples = sampler.get_chain(discard=burn_in, thin=thinning_steps, flat=True)
     print("Flat samples shape:", flat_samples.shape)
 
     # plot corner plot
@@ -854,7 +856,7 @@ def main():
         # Prep data and run emcee
         # this function will return a dict with the fitting results
         #emcee_res = run_emcee_fitting(all_ids_tofit[i], all_fields_tofit[i], zprior, broadband=False)
-        emcee_res = run_emcee_fitting(48189, 'GOODS-N', 0.98, broadband=False)
+        emcee_res = run_emcee_fitting(48189, 'GOODS-N', 0.98, broadband=True)
 
         s = str(cat[ms_idx[i]])
         s = s.lstrip('(')
