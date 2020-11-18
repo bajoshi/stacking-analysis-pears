@@ -583,7 +583,7 @@ def model(*emcee_args, theta=None):
 def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
 
     # Read in grism spectrum
-    print("\nWorking on:", pears_id, pears_field)
+    print("\nWorking on:", pears_id, pears_field, "with photo-z prior of", zprior)
     fname = pears_field + '_' + str(pears_id) + '_' + 'PAcomb.fits'
     spec_hdu = fits.open(datadir + fname)
 
@@ -663,26 +663,29 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
     backend.reset(nwalkers, ndim)
 
     # --------------- Now run emcee
-    if broadband:
-        logpost = logpost_broadband
+    if not os.path.isfile(emcee_savefile):
+        if broadband:
+            logpost = logpost_broadband
+        else:
+            logpost = logpost_no_broadband
+
+        with Pool() as pool:
+            
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, \
+                args=emcee_args, \
+                pool=pool, \
+                backend=backend)
+            sampler.run_mcmc(pos, emcee_steps, progress=True)
+
+        print("Finished running emcee on", pears_id, pears_field)
+
+        # Save sampler
+        pkl_path = emcee_diagnostics_dir + pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl'
+        pickle.dump(sampler, open(pkl_path, 'wb'))
+
     else:
-        logpost = logpost_no_broadband
-
-    with Pool() as pool:
-        
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, \
-            args=emcee_args, \
-            pool=pool, \
-            backend=backend)
-        sampler.run_mcmc(pos, emcee_steps, progress=True)
-
-    print("Finished running emcee on", pears_id, pears_field)
-
-    # Save sampler
-    pkl_path = emcee_diagnostics_dir + pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl'
-    pickle.dump(sampler, open(pkl_path, 'wb'))
-
-
+        print("Reading previously generated pickled sampler. Rerun to get new sampler.")
+        sampler = pickle.load(open(pkl_path, 'rb'))
 
     # Make plots and put emcee results in a dict and return
     # Get chain first
@@ -723,34 +726,45 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
     # Plot 100 random models from the parameter space
     inds = np.random.randint(len(flat_samples), size=100)
 
-    fig3 = plt.figure()
+    fig3 = plt.figure(figsize=(9,5))
     ax3 = fig3.add_subplot(111)
 
     ax3.plot(wav, flam, color='k')
     ax3.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5, zorder=3)
-    ax3.errorbar(phot_lam, phot_flam, yerr=phot_ferr, ms=5.0, fmt='o', \
-        color='k', ecolor='k')
+    if broadband:
+        ax3.errorbar(phot_lam, phot_flam, yerr=phot_ferr, ms=5.0, fmt='o', \
+            color='k', ecolor='k')
 
-    # ------- Do combining of spectroscopy and photometry
-    # For data
-    comb_x, comb_data, comb_err = combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr)
+        # ------- Do combining of spectroscopy and photometry
+        # For data
+        comb_x, comb_data, comb_err = combine_all_data(wav, flam, ferr, phot_lam, phot_flam, phot_ferr)
 
-    for ind in inds:
-        sample = flat_samples[ind]
-        m, mp = model(wav, flam, ferr, phot_lam, phot_flam, phot_ferr, \
-            sample[0], sample[1], sample[2], sample[3], sample[4]) 
+        for ind in inds:
+            sample = flat_samples[ind]
+            m, mp = model(wav, flam, ferr, phot_lam, phot_flam, phot_ferr, \
+                sample[0], sample[1], sample[2], sample[3], sample[4]) 
 
-        # Combine for model
-        # Dummy arrays for model errors
-        model_moderr = np.zeros(len(m))
-        all_model_photerr = np.zeros(len(phot_lam))
-        comb_model_wav, y, comb_model_ferr = combine_all_data(wav, m, model_moderr, phot_lam, mp, all_model_photerr)
+            # Combine for model
+            # Dummy arrays for model errors
+            model_moderr = np.zeros(len(m))
+            all_model_photerr = np.zeros(len(phot_lam))
+            comb_model_wav, y, comb_model_ferr = combine_all_data(wav, m, model_moderr, phot_lam, mp, all_model_photerr)
 
-        # ------- Vertical scaling factor
-        a = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
+            # ------- Vertical scaling factor
+            a = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
 
-        ax3.plot(wav, a * m, color='tab:red', alpha=0.2, zorder=2)
-        ax3.scatter(phot_lam, a * mp, s=5.0, color='tab:red', alpha=0.5, zorder=2)
+            #ax3.plot(wav, a * m, color='tab:red', alpha=0.2, zorder=2)
+            #ax3.scatter(phot_lam, a * mp, s=5.0, color='tab:red', alpha=0.5, zorder=2)
+            ax3.plot(wav, a * y, color='tab:red', alpha=0.2, zorder=2)
+
+    else:
+        for ind in inds:
+            sample = flat_samples[ind]
+            y = model(wav, flam, ferr, False, sample)
+            # ------- Vertical scaling factor
+            a = np.sum(flam * y / ferr**2) / np.sum(y**2 / ferr**2)
+
+            ax3.plot(wav, a * y, color='tab:red', alpha=0.2, zorder=2)
 
     ax3.set_xscale('log')
 
@@ -834,8 +848,6 @@ def main():
 
         if not np.isfinite(zprior):
             zprior = 0.8
-
-        print("Working on:", all_ids_tofit[i], all_fields_tofit[i], "with photo-z of", zprior)
 
         # Prep data and run emcee
         # this function will return a dict with the fitting results
