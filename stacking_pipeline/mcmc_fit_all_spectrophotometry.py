@@ -659,15 +659,17 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
 
     # Set up the HDF5 file to incrementally save progress to
     emcee_savefile = emcee_diagnostics_dir + pears_field + '_' + str(pears_id) + '_emcee_sampler.h5'
-    backend = emcee.backends.HDFBackend(emcee_savefile)
-    backend.reset(nwalkers, ndim)
 
     # --------------- Now run emcee
     if not os.path.isfile(emcee_savefile):
+
         if broadband:
             logpost = logpost_broadband
         else:
             logpost = logpost_no_broadband
+
+        backend = emcee.backends.HDFBackend(emcee_savefile)
+        backend.reset(nwalkers, ndim)
 
         with Pool() as pool:
             
@@ -675,17 +677,18 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
                 args=emcee_args, \
                 pool=pool, \
                 backend=backend)
-            sampler.run_mcmc(pos, emcee_steps, progress=True)
+            sampler.run_mcmc(pos, emcee_steps, progress=True, store=True)
 
         print("Finished running emcee on", pears_id, pears_field)
 
         # Save sampler
-        pkl_path = emcee_diagnostics_dir + pears_field + '_' + str(pears_id) + '_emcee_sampler.pkl'
+        pkl_path = emcee_savefile.replace('.h5', '.pkl')
         pickle.dump(sampler, open(pkl_path, 'wb'))
 
     else:
         print("Reading previously generated pickled sampler. Rerun to get new sampler.")
-        sampler = pickle.load(open(pkl_path, 'rb'))
+        print("Read from file:", emcee_savefile)
+        sampler = pickle.load(open(emcee_savefile.replace('.h5', '.pkl'), 'rb'))#emcee.backends.HDFBackend(emcee_savefile)
 
     # Make plots and put emcee results in a dict and return
     # Get chain first
@@ -741,8 +744,7 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
 
         for ind in inds:
             sample = flat_samples[ind]
-            m, mp = model(wav, flam, ferr, phot_lam, phot_flam, phot_ferr, \
-                sample[0], sample[1], sample[2], sample[3], sample[4]) 
+            m, mp = model(wav, flam, ferr, phot_lam, phot_flam, phot_ferr, broadband, theta=sample) 
 
             # Combine for model
             # Dummy arrays for model errors
@@ -760,7 +762,7 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
     else:
         for ind in inds:
             sample = flat_samples[ind]
-            y = model(wav, flam, ferr, False, sample)
+            y = model(wav, flam, ferr, broadband, theta=sample)
             # ------- Vertical scaling factor
             a = np.sum(flam * y / ferr**2) / np.sum(y**2 / ferr**2)
 
