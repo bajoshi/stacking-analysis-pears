@@ -353,7 +353,7 @@ def get_template(age, tau, tauv, metallicity, \
     return model_llam
 
 
-def loglike(theta, emcee_args):
+def loglike(*emcee_args, theta=None):
     
     #z, age, tau, av, lsf_sigma = theta
 
@@ -362,12 +362,13 @@ def loglike(theta, emcee_args):
 
     if broadband:
 
-        model_mod, all_model_phot = model(theta, emcee_args)
-
-        # ------- Do combining of spectroscopy and photometry
-        # expand arguments 
+        # expand arguments
         spec_x, spec_data, spec_err, phot_x, phot_data, phot_err = emcee_args[:-1]
 
+        # get model
+        model_mod, all_model_phot = model(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, broadband, theta=theta)
+
+        # ------- Do combining of spectroscopy and photometry
         # For data
         comb_x, comb_data, comb_err = combine_all_data(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err)
 
@@ -387,17 +388,18 @@ def loglike(theta, emcee_args):
     
     else:
 
-        y = model(theta, emcee_args)
-
         # expand arguments 
         spec_x, spec_data, spec_err = emcee_args[:-1]
+
+        # get model
+        y = model(spec_x, spec_data, spec_err, broadband, theta=theta)
 
         # ------- Vertical scaling factor
         alpha = np.sum(spec_data * y / spec_err**2) / np.sum(y**2 / spec_err**2)
         #print("Alpha:", "{:.2e}".format(alpha))
         y = y * alpha
 
-        lnLike = -0.5 * np.sum( (y - spec_data)**2/spec_err**2  +  np.log(2 * np.pi * spec_err**2))
+        lnLike = -0.5 * np.sum( (y - spec_data)**2/spec_err**2  +  np.log(2 * np.pi * spec_err**2) )
 
     """
     fig = plt.figure()
@@ -439,19 +441,31 @@ def logprior(theta):
     return -np.inf
 
 
-def logpost(theta, emcee_args):
+def logpost_broadband(theta, spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, broadband):
 
     lp = logprior(theta)
     
     if not np.isfinite(lp):
         return -np.inf
     
-    lnL = loglike(theta, emcee_args)
+    lnL = loglike(spec_x, spec_data, spec_err, phot_x, phot_data, phot_err, broadband, theta=theta)
     
     return lp + lnL
 
 
-def model(theta, emcee_args):
+def logpost_no_broadband(theta, spec_x, spec_data, spec_err, broadband):
+
+    lp = logprior(theta)
+    
+    if not np.isfinite(lp):
+        return -np.inf
+    
+    lnL = loglike(spec_x, spec_data, spec_err, broadband, theta=theta)
+    
+    return lp + lnL
+
+
+def model(*emcee_args, theta=None):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -649,6 +663,11 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
     backend.reset(nwalkers, ndim)
 
     # --------------- Now run emcee
+    if broadband:
+        logpost = logpost_broadband
+    else:
+        logpost = logpost_no_broadband
+
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, \
