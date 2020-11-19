@@ -713,9 +713,14 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
     # First flatten samples and discard burn-in
     tau = sampler.get_autocorr_time(tol=0)
     print("Average tau:", np.mean(tau))
-    burn_in = int(2 * np.max(tau))
+    if not np.isfinite(np.mean(tau)):
+        burn_in = 200
+        thinning_steps = 30
+    else:
+        burn_in = int(2 * np.max(tau))
+        thinning_steps = int(0.5 * np.min(tau))
+
     print("Burn-in:", burn_in)
-    thinning_steps = int(0.5 * np.min(tau))
     print("Thinning steps:", thinning_steps)
 
     flat_samples = sampler.get_chain(discard=burn_in, thin=thinning_steps, flat=True)
@@ -757,9 +762,8 @@ def run_emcee_fitting(pears_id, pears_field, zprior, broadband=False):
             # ------- Vertical scaling factor
             a = np.sum(comb_data * y / comb_err**2) / np.sum(y**2 / comb_err**2)
 
-            #ax3.plot(wav, a * m, color='tab:red', alpha=0.2, zorder=2)
-            #ax3.scatter(phot_lam, a * mp, s=5.0, color='tab:red', alpha=0.5, zorder=2)
-            ax3.plot(wav, a * y, color='tab:red', alpha=0.2, zorder=2)
+            ax3.plot(wav, a * m, color='tab:red', alpha=0.2, zorder=2)
+            ax3.scatter(phot_lam, a * mp, s=5.0, color='tab:red', alpha=0.5, zorder=2)
 
     else:
         for ind in inds:
