@@ -9,6 +9,7 @@ from astropy.modeling import models, fitting
 from scipy.optimize import curve_fit
 from scipy import interpolate
 from scipy.interpolate import CubicSpline
+from scipy.interpolate import splev, splrep
 
 import os
 import sys
@@ -43,6 +44,71 @@ mstar_step = 1.0
 
 numcol = int((col_high - col_low)/col_step)
 nummass = int((mstar_high - mstar_low)/mstar_step)
+
+def gen_balmer_lines():
+
+    # Check the latest Rydberg constant data here
+    # https://physics.nist.gov/cgi-bin/cuu/Value?ryd|search_for=Rydberg
+    # short list here for quick reference: https://physics.nist.gov/cuu/pdf/wall_2018.pdf
+    rydberg_const = 10973731.568  # in m^-1
+
+    balmer_line_wav_list = []
+
+    for lvl in range(3, 15):
+
+        energy_levels_term = (1/4) - (1/lvl**2)
+        lam_vac = (1/rydberg_const) * (1/energy_levels_term)
+
+        lam_vac_ang = lam_vac*1e10  # meters to angstroms # since the rydberg const above is in (1/m)
+
+        #print("Transition:", lvl, "--> 2,       wavelength in vacuum [Angstroms]:", "{:.3f}".format(lam_vac_ang))
+
+        balmer_line_wav_list.append(lam_vac_ang)
+
+    return balmer_line_wav_list
+
+def get_mask_indices(obs_wav, redshift):
+
+    # Define rest-frame wavelengths in vacuum
+    # Emission or absorption doesn't matter
+    gband = 4300
+    #hbeta = 4862.72
+    oiii4959 = 4960.295
+    oiii5007 = 5008.239
+    mg2_mgb = 5175
+    fe5270 = 5270
+    fe5335 = 5335
+    fe5406 = 5406
+    nad = 5890
+    #halpha = 6564.614
+
+    all_balmer_lines = gen_balmer_lines()
+
+    all_lines = [gband, oiii4959, oiii5007, mg2_mgb, fe5270, fe5335, fe5406, nad]
+    all_lines = all_lines + all_balmer_lines
+
+    # Set up empty array for masking indices
+    mask_indices = []
+
+    # Loop over all lines and get masking indices
+    for line in all_lines:
+
+        obs_line_wav = (1 + redshift) * line
+        if (obs_line_wav >= obs_wav[0]) and (obs_line_wav <= obs_wav[-1]):
+            closest_obs_wav_idx = np.argmin(abs(obs_wav - obs_line_wav))
+
+            #print(line, "  ", redshift, "  ", obs_line_wav, "  ", closest_obs_wav_idx)
+
+            mask_indices.append(np.arange(closest_obs_wav_idx-3, closest_obs_wav_idx+4))
+
+    # Convert to numpy array
+    mask_indices = np.asarray(mask_indices)
+    mask_indices = mask_indices.ravel()
+
+    # Make sure the returned indices are unique and sorted
+    mask_indices = np.unique(mask_indices)
+
+    return mask_indices
 
 def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr, num_points, num_galaxies, lam_grid, lam_step):
     
@@ -1023,11 +1089,11 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #figs_num_galaxies = np.zeros(len(lam_grid))
 
     # Rejected galaxies list
-    galaxies_to_reject = [(95761, 'GOODS-N'), (70857, 'GOODS-N'), (114677, 'GOODS-S'), \
-    (63307, 'GOODS-S'), (77558, 'GOODS-S'), (123736, 'GOODS-N'), (43381, 'GOODS-S'), \
-    (111206, 'GOODS-S'), (123255, 'GOODS-N'), (70407, 'GOODS-S'), (90998, 'GOODS-S'), \
-    (24439, 'GOODS-N'), (119621, 'GOODS-N'), (89237, 'GOODS-N'), (18862, 'GOODS-S'), \
-    (106130, 'GOODS-S'), (16496, 'GOODS-S')]
+    galaxies_to_reject = []# [(95761, 'GOODS-N'), (70857, 'GOODS-N'), (114677, 'GOODS-S'), \
+    #(63307, 'GOODS-S'), (77558, 'GOODS-S'), (123736, 'GOODS-N'), (43381, 'GOODS-S'), \
+    #(111206, 'GOODS-S'), (123255, 'GOODS-N'), (70407, 'GOODS-S'), (90998, 'GOODS-S'), \
+    #(24439, 'GOODS-N'), (119621, 'GOODS-N'), (89237, 'GOODS-N'), (18862, 'GOODS-S'), \
+    #(106130, 'GOODS-S'), (16496, 'GOODS-S')]
 
     to_reject_but_might_be_okay_with_masking = [(94867, 'GOODS-N')]
 
@@ -1039,8 +1105,8 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # well on the rest.
 
     # Create figure
-    #fig = plt.figure(figsize=(10,6))
-    #ax = fig.add_subplot(111)
+    fig = plt.figure(figsize=(10,6))
+    ax = fig.add_subplot(111)
 
     # Loop over all spectra and coadd them
     for u in range(len(pears_id[indices])):
@@ -1069,7 +1135,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         print("PEARS object:", current_pears_id, current_pears_field)
 
         # Apply cut on redshift error
-        redshift_err_tol = 0.02
+        redshift_err_tol = 0.05
         current_spec_redshift = zs[indices][u]
         zerr = abs(current_redshift - current_spec_redshift) / (1 + current_spec_redshift)
         print("Spec-z, photo-z, and redshift error for this galaxy:", current_spec_redshift, current_redshift, zerr)
@@ -1091,29 +1157,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #current_figs_id = figs_id[indices][u]
         #current_figs_field = figs_field[indices][u]
 
-        # plot data and fit
-        # ----------------------------- Get data ----------------------------- #
-        # PEARS PA combined data
-        grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
-        # FIGS data
-        #g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
-
-        # Deredshift the observed data 
-        zidx = np.argmin(abs(z_arr - current_redshift))
-        # Make sure that the z_arr here is the same array that was 
-        # used to generate the dl lookup table.
-        dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
-
-        pears_lam_em = grism_lam_obs / (1 + current_redshift)
-        pears_llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-        pears_lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-
-        #figs_lam_em = g102_lam_obs / (1 + current_redshift)
-        #figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-        #figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
-                
         # Subtract continuum by fitting a third degree polynomial
         # Continuum fitted with potential emission line areas masked
+        """
         p_init = models.Polynomial1D(degree=3)
         fit_p = fitting.LinearLSQFitter()
 
@@ -1149,6 +1195,39 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         rebin_fit = np.ma.polyfit(rebin_grid, pears_llam_em_rebinned, deg=3)
         rebin_polynomial = np.poly1d(rebin_fit)
+        """
+
+        # plot data and fit
+        # ----------------------------- Get data ----------------------------- #
+        # PEARS PA combined data
+        grism_lam_obs, grism_flam_obs, grism_ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
+        # FIGS data
+        #g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
+
+        # Normalize flux levels to approx 1.0
+        grism_flam_norm = grism_flam_obs / np.mean(grism_flam_obs)
+        grism_ferr_norm = grism_ferr_obs / np.mean(grism_flam_obs)
+
+        # Mask lines
+        mask_indices = get_mask_indices(grism_lam_obs, current_redshift)
+
+        # Make sure masking indices are consistent with array to be masked
+        remove_mask_idx = np.where(mask_indices >= len(grism_lam_obs))[0]
+        mask_indices = np.delete(arr=mask_indices, obj=remove_mask_idx)
+
+        weights = np.ones(len(grism_lam_obs))
+        weights[mask_indices] = 0
+
+        #print("\n Masking the following indices:", mask_indices)
+
+        # SciPy smoothing spline fit
+        spl = splrep(x=grism_lam_obs, y=grism_flam_norm, k=3, s=5.0)
+        wav_plt = np.arange(grism_lam_obs[0], grism_lam_obs[-1], 1.0)
+        spl_eval = splev(wav_plt, spl)
+
+        # Divide the given flux by the smooth spline fit
+        cont_div_flux = grism_flam_norm / splev(grism_lam_obs, spl)
+        cont_div_err  = grism_ferr_norm / splev(grism_lam_obs, spl)
 
         # Plotting
         fig1 = plt.figure(figsize=(9,5))
@@ -1158,21 +1237,29 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         ax1 = fig1.add_subplot(gs[:4,:])
         ax2 = fig1.add_subplot(gs[4:,:])
 
-        ax1.plot(pears_lam_em, pears_llam_em, 'o-', markersize=3.0, color='turquoise', linewidth=1.5, label='PEARS obs data')
+        ax1.plot(grism_lam_obs, grism_flam_norm, 'o-', markersize=3.0, color='k', linewidth=1.5, label='PEARS obs data')
+        ax1.fill_between(grism_lam_obs, grism_flam_norm - grism_ferr_norm, grism_flam_norm + grism_ferr_norm, \
+        color='gray', alpha=0.5, zorder=5)
+        ax1.plot(wav_plt, spl_eval, color='crimson', lw=3.0, label='SciPy smooth spline fit')
+
         #ax1.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5, label='FIGS obs data')
 
-        ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal', zorder=1.0, label='AstroPy polynomial fit')
+        #ax1.plot(pears_lam_em, p_pears(pears_lam_em), color='teal', zorder=1.0, label='AstroPy polynomial fit')
         #ax1.plot(figs_lam_em,  p_figs(figs_lam_em), color='brown', label='FIGS obs data')
-        ax1.plot(pears_lam_em, np_polynomial(pears_lam_em), color='crimson', zorder=1.0, label='NumPy polynomial fit')
-        ax1.plot(pears_lam_em, rebin_polynomial(pears_lam_em), lw=3.0, zorder=2.0, color='tab:brown', label='NumPy rebin polynomial fit')
+        #ax1.plot(pears_lam_em, np_polynomial(pears_lam_em), color='crimson', zorder=1.0, label='NumPy polynomial fit')
+        #ax1.plot(pears_lam_em, rebin_polynomial(pears_lam_em), lw=3.0, zorder=2.0, color='tab:brown', label='NumPy rebin polynomial fit')
 
         # Show mask as shaded region
+        """
         all_lines, all_line_labels = get_all_line_wav()
+        all_lines = np.asarray(all_lines)
+        all_lines = all_lines * (1 + current_redshift)
         for l in range(len(all_lines)):
 
             current_line_wav = all_lines[l]
-            current_line_idx = np.argmin(abs(pears_lam_em - current_line_wav))
-            lam_em_formaskplot = pears_lam_em
+            current_line_idx = np.argmin(abs(grism_lam_obs - current_line_wav))
+
+            lam_em_formaskplot = grism_lam_obs
             # if current_line_wav < pears_lam_em[-1]:
             #     current_line_idx = np.argmin(abs(pears_lam_em - current_line_wav))
             #     lam_em_formaskplot = pears_lam_em
@@ -1189,22 +1276,23 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
             line_start = lam_em_formaskplot[ls_idx]
             line_end = lam_em_formaskplot[le_idx]
 
-            ax1.axvspan(line_start, line_end, alpha=0.5, color='gray')
-            xlab_line = (lam_em_formaskplot[current_line_idx] - lam_grid_low) / (lam_grid_high - lam_grid_low)
-            ylab_line = 0.2 + np.power(-1,l)*0.1
-            ax1.text(x=xlab_line, y=ylab_line, s=all_line_labels[l], color='k', size=9, \
-            verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes)
+            ax1.axvspan(line_start, line_end, alpha=0.25, color='gray')
+            #xlab_line = (lam_em_formaskplot[current_line_idx] - lam_grid_low) / (lam_grid_high - lam_grid_low)
+            #ylab_line = 0.2 + np.power(-1,l)*0.1
+            #ax1.text(x=xlab_line, y=ylab_line, s=all_line_labels[l], color='k', size=9, \
+            #verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes)
+        """
 
         # Compute a chi2
         # use the masked array and the fit because the fitting was done on the masked array
-        pears_chi2 = compute_chi2(pears_lam_em, pears_llam_em, pears_lerr, p_pears)
+        #pears_chi2 = compute_chi2(grism_lam_obs, grism_flam_norm, grism_ferr_norm, p_pears)
         #figs_chi2 = compute_chi2(figs_lam_em, figs_llam_em, figs_lerr, p_figs)
 
         # Add galaxy info to plot
-        ax1.text(x=0.05, y=0.8, s=str(current_pears_id) + "  " + current_pears_field, \
+        ax1.text(x=0.05, y=0.7, s=str(current_pears_id) + "  " + current_pears_field, \
             verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
-        ax1.text(x=0.05, y=0.9, s=r"$\chi^2_{PEARS} = $" + "{:.2e}".format(pears_chi2), \
-            verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
+        #ax1.text(x=0.05, y=0.9, s=r"$\chi^2_{PEARS} = $" + "{:.2e}".format(pears_chi2), \
+        #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
         #ax1.text(x=0.05, y=0.8, s=r"$\chi^2_{FIGS} = $" + "{:.2e}".format(figs_chi2), \
         #    verticalalignment='top', horizontalalignment='left', transform=ax1.transAxes, color='k', size=12)
 
@@ -1222,42 +1310,57 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #pears_lerr = pears_lerr / np_polynomial(pears_lam_em)
 
         # Using fits on rebinned data
-        pears_llam_em = pears_llam_em / rebin_polynomial(pears_lam_em)
-        pears_lerr = pears_lerr / rebin_polynomial(pears_lam_em)
+        #pears_llam_em = pears_llam_em / rebin_polynomial(pears_lam_em)
+        #pears_lerr = pears_lerr / rebin_polynomial(pears_lam_em)
 
         # Plot "pure emission/absorption" spectrum
-        ax2.axhline(y=1.0, ls='--', color='black', lw=1.5, zorder=1)
-
-        ax2.plot(pears_lam_em, pears_llam_em, color='turquoise', linewidth=1.5, zorder=2)
-        #ax2.plot(figs_lam_em, figs_llam_em, color='gold', linewidth=1.5, zorder=2)
+        ax2.plot(grism_lam_obs, cont_div_flux, color='teal', lw=2.0, label='Continuum divided flux')
+        ax2.axhline(y=1.0, ls='--', color='k', lw=1.8)
 
         # Limits 
-        ax1.set_xlim(lam_grid_low, lam_grid_high)
-        ax2.set_xlim(lam_grid_low, lam_grid_high)
+        #ax1.set_xlim(lam_grid_low, lam_grid_high)
+        #ax2.set_xlim(lam_grid_low, lam_grid_high)
 
         ax1.minorticks_on()
         ax2.minorticks_on()
 
-        ax1.legend(loc=1)
+        ax1.legend(loc=0)
 
-        plt.show()
+        #plt.show()
         plt.cla()
         plt.clf()
         plt.close()
 
+        # Deredshift the observed data 
+        zidx = np.argmin(abs(z_arr - current_redshift))
+        # Make sure that the z_arr here is the same array that was 
+        # used to generate the dl lookup table.
+        dl = dl_tbl['dl_cm'][zidx]  # has to be in cm
+
+        pears_lam_em = grism_lam_obs / (1 + current_redshift)
+        #pears_llam_em = grism_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+        #pears_lerr = grism_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+
+        #figs_lam_em = g102_lam_obs / (1 + current_redshift)
+        #figs_llam_em = g102_flam_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+        #figs_lerr = g102_ferr_obs * (1 + current_redshift) * (4 * np.pi * dl * dl)
+
+        # Shift it to force stack value ~1.0 at ~4600A
+        shift_idx = np.where((pears_lam_em >= 4600) & (pears_lam_em <= 4700))[0]
+        scaling_fac = np.mean(cont_div_flux[shift_idx])
+        cont_div_flux /= scaling_fac
+
         # add the continuum subtracted spectrum
         pears_old_llam, pears_old_llamerr, pears_num_points, pears_num_galaxies = \
-        add_spec(pears_lam_em, pears_llam_em, pears_lerr, pears_old_llam, pears_old_llamerr, \
+        add_spec(pears_lam_em, cont_div_flux, cont_div_err, pears_old_llam, pears_old_llamerr, \
             pears_num_points, pears_num_galaxies, lam_grid, lam_step)
 
         #figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
         #add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
         #    figs_num_points, figs_num_galaxies, lam_grid, lam_step)
 
-        #ax.plot(pears_lam_em, pears_llam_em, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
+        ax.plot(pears_lam_em, cont_div_flux, ls='-', color='turquoise', linewidth=0.5, alpha=0.4)
         #ax.plot(figs_lam_em, figs_llam_em, ls='-', color='bisque', linewidth=1.0)
-
-    sys.exit(0)
 
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
@@ -1268,11 +1371,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     pears_old_llamerr = np.asarray(pears_old_llamerr)
     #figs_old_llam = np.asarray(figs_old_llam)
     #figs_old_llamerr = np.asarray(figs_old_llamerr)
-
-    # Shift it to force stack value ~1.0 at ~4600A
-    shift_idx = np.where((lam_grid >= 4500) & (lam_grid <= 4700))[0]
-    scaling_fac = np.mean(pears_old_llam[shift_idx])
-    pears_old_llam /= scaling_fac
 
     # Plot stacks
     ax.plot(lam_grid, pears_old_llam, '.-', color='mediumblue', linewidth=1.5, \
@@ -1298,7 +1396,6 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #            elinewidth=1.0, ecolor='r', markeredgecolor='darkorange', capsize=0, markersize=4.0, zorder=5)
 
     ax.set_xlim(lam_grid_low, lam_grid_high)
-    # ax.set_ylim(-1.8e39, 1.8e39)
     ax.set_ylim(0.9, 1.1)  # if dividing by the continuum instead of subtracting
     ax.axhline(y=1.0, ls='--', color='k')
     ax.minorticks_on()
@@ -1327,13 +1424,13 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     #        transform=ax.transAxes, color='darkorange', size=20)
 
     # Measure Mg/Fe
-    mg2fe = fit_gauss_mgfe_astropy(lam_grid, pears_old_llam, num_massive, z_low, z_high, ms_lim_low, ms_lim_high)
+    #mg2fe = fit_gauss_mgfe_astropy(lam_grid, pears_old_llam, num_massive, z_low, z_high, ms_lim_low, ms_lim_high)
 
     figname = stacking_figures_dir + 'massive_stack_' + str(z_low).replace('.','p') \
     + '_' + str(z_high).replace('.','p') + '.pdf'
     fig.savefig(figname, dpi=300, bbox_inches='tight')
 
-    #plt.show()
+    plt.show()
     plt.clf()
     plt.cla()
     plt.close()
@@ -1351,24 +1448,24 @@ def add_line_labels(ax, label_flag='all'):
         ax.axvline(x=3729.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
         ax.text(3695.0, 1.03, r'$\mathrm{[OII]}\lambda\lambda 3727,3729$', \
             verticalalignment='top', horizontalalignment='left', \
-            transform=ax.transData, color='firebrick', size=11)
+            transform=ax.transData, color='firebrick', size=12)
 
         # Ca H & K
-        ax.text(3920.0, 0.94, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\ &\ K}$', \
+        ax.text(3920.0, 0.935, r'$\mathrm{Ca}$' + '\n' + r'$\mathrm{H\ \&\ K}$', \
             verticalalignment='center', horizontalalignment='center', \
-            transform=ax.transData, color='firebrick', size=11)
+            transform=ax.transData, color='firebrick', size=12)
 
         # TiO
-        ax.text(6230.0, 0.97, r'$\mathrm{TiO}$', \
+        ax.text(6230.0, 0.975, r'$\mathrm{TiO}$', \
             verticalalignment='center', horizontalalignment='center', \
-            transform=ax.transData, color='firebrick', size=11)
+            transform=ax.transData, color='firebrick', size=12)
 
     # These remaining features below will always be marked
     # Mgb
     ax.axvline(x=5175.0, ls='--', ymin=0.18, ymax=0.27, color='firebrick')
     ax.text(5165.0, 0.925, r'$\mathrm{Mg_2 + Mgb}$', \
         verticalalignment='top', horizontalalignment='right', \
-        transform=ax.transData, color='firebrick', size=11)
+        transform=ax.transData, color='firebrick', size=12)
     # FeII
     ax.axvline(x=5270.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
     ax.axvline(x=5335.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
@@ -1376,30 +1473,30 @@ def add_line_labels(ax, label_flag='all'):
     fe_str = r'$\mathrm{Fe}\lambda 5270$' + '+ \n' + r'$\mathrm{Fe}\lambda 5335$' + '+' + r'$\mathrm{Fe}\lambda 5406$'
     ax.text(5270, 0.935, fe_str, \
         verticalalignment='top', horizontalalignment='left', \
-        transform=ax.transData, color='firebrick', size=11)
+        transform=ax.transData, color='firebrick', size=12)
 
     # Hbeta
     ax.axvline(x=4861.0, ls='--', ymin=0.3, ymax=0.38, color='firebrick')
     ax.text(4861.0, 0.955, r'$\mathrm{H}\beta$', \
         verticalalignment='top', horizontalalignment='right', \
-        transform=ax.transData, color='firebrick', size=11)
+        transform=ax.transData, color='firebrick', size=12)
 
     # [OIII]
     ax.axvline(x=4959.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
     ax.axvline(x=5007.0, ls='--', ymin=0.53, ymax=0.6, color='firebrick')
     ax.text(4980.0, 1.03, r'$\mathrm{[OIII]}\lambda\lambda 4959,5007$', \
         verticalalignment='top', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=11)
+        transform=ax.transData, color='firebrick', size=12)
 
     # Gband
-    ax.text(4300.0, 0.97, 'G-band', \
+    ax.text(4300.0, 0.965, 'G-band', \
         verticalalignment='center', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=11)
+        transform=ax.transData, color='firebrick', size=12)
 
     # NaD + TiO
     ax.text(5890.0, 0.97, r'$\mathrm{NaD}$' + '+ \n' + r'$\mathrm{TiO}$', \
         verticalalignment='center', horizontalalignment='center', \
-        transform=ax.transData, color='firebrick', size=11)
+        transform=ax.transData, color='firebrick', size=12)
 
     return None
 
@@ -1844,8 +1941,8 @@ def main():
     # Get z intervals and their indices
     zp = cat['zp_minchi2']
 
-    all_z_low  = np.array([0.16,0.16,0.60,0.16])
-    all_z_high = np.array([0.96,0.60,0.96,1.42])
+    all_z_low  = np.array([0.16]) #([0.16,0.16,0.60,0.16])
+    all_z_high = np.array([0.96]) #([0.96,0.60,0.96,1.42])
 
     # Separate grid stack for each redshift interval
     # This function will create and save the stacks in a fits file
@@ -1859,8 +1956,6 @@ def main():
         #create_stacks(cat, urcol, z_low, z_high, z_indices, start)
         #plot_stacks(cat, urcol, z_low, z_high, z_indices, start)
         stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start)
-
-        sys.exit(0)
 
     # Total time taken
     print("Total time taken for all stacks --", "{:.2f}".format((time.time() - start)/60.0), "minutes.")
