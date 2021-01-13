@@ -8,18 +8,26 @@ from astropy.io import fits
 import emcee
 import corner
 import scipy
-from astropy.cosmology import Planck15
+from scipy.interpolate import griddata
+from scipy.interpolate import splev, splrep
+
+from astropy.cosmology import FlatLambdaCDM
+import astropy.units as u
+astropy_cosmo = FlatLambdaCDM(H0=70 * u.km / u.s / u.Mpc, Tcmb0=2.725 * u.K, Om0=0.3)
 
 import os
 import sys
 from functools import reduce
 import time
 import datetime
+import socket
+from multiprocessing import Pool
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.gridspec as gridspec
 
+# assign directories and custom imports
 home = os.getenv('HOME')
 pears_figs_dir = datadir = home + '/Documents/pears_figs_data/'
 datadir = home + '/Documents/pears_figs_data/data_spectra_only/'
@@ -28,106 +36,97 @@ stacking_analysis_dir = home + '/Documents/GitHub/stacking-analysis-pears/'
 stacking_figures_dir = home + "/Documents/stacking_figures/"
 
 sys.path.append(stacking_utils)
-import proper_and_lum_dist as cosmo
+from dust_utils import get_dust_atten_model
 
-# Read in all models and parameters
-model_lam_grid = np.load(pears_figs_dir + 'model_lam_grid_withlines_chabrier.npy', mmap_mode='r')
-model_grid = np.load(pears_figs_dir + 'model_comp_spec_llam_withlines_chabrier.npy', mmap_mode='r')
+# Load in all models
+# ------ THIS HAS TO BE GLOBAL!
 
-log_age_arr = np.load(pears_figs_dir + 'log_age_arr_chab.npy', mmap_mode='r')
-metal_arr = np.load(pears_figs_dir + 'metal_arr_chab.npy', mmap_mode='r')
-tau_gyr_arr = np.load(pears_figs_dir + 'tau_gyr_arr_chab.npy', mmap_mode='r')
-tauv_arr = np.load(pears_figs_dir + 'tauv_arr_chab.npy', mmap_mode='r')
+start = time.time()
 
-"""
-Array ranges are:
-1. Age: 7.02 to 10.114 (this is log of the age in years)
-2. Metals: 0.0001 to 0.05 (absolute fraction of metals. All CSP models although are fixed at solar = 0.02)
-3. Tau: 0.01 to 63.095 (this is in Gyr. SSP models get -99.0)
-4. TauV: 0.0 to 2.8 (Visual dust extinction in magnitudes. SSP models get -99.0)
-"""
+if 'plffsn2' in socket.gethostname():
+    extdir = '/astro/ffsn/Joshi/'
+    modeldir = extdir + 'bc03_output_dir/'
+else:
+    extdir = '/Volumes/Joshi_external_HDD/Roman/'
+    modeldir = extdir + 'bc03_output_dir/m62/'
 
-def get_template(age, tau, tauv, metallicity, \
-    log_age_arr, metal_arr, tau_gyr_arr, tauv_arr, \
-    model_lam_grid_withlines_mmap, model_comp_spec_withlines_mmap):
+assert os.path.isdir(modeldir)
 
-    """
-    print("\nFinding closest model to --")
-    print("Age [Gyr]:", 10**age / 1e9)
-    print("Tau [Gyr]:", tau)
-    print("Tau_v:", tauv)
-    print("Metallicity [abs. frac.]:", metallicity)
-    """
+model_lam = np.load(extdir + "bc03_output_dir/bc03_models_wavelengths.npy", mmap_mode='r')
+model_ages = np.load(extdir + "bc03_output_dir/bc03_models_ages.npy", mmap_mode='r')
 
-    # First find closest values and then indices corresponding to them
-    # It has to be done this way because you typically wont find an exact match
-    closest_age_idx = np.argmin(abs(log_age_arr - age))
-    closest_tau_idx = np.argmin(abs(tau_gyr_arr - tau))
-    closest_tauv_idx = np.argmin(abs(tauv_arr - tauv))
+all_m62_models = []
+tau_low = 0
+tau_high = 20
+for t in range(tau_low, tau_high, 1):
+    tau_str = "{:.3f}".format(t).replace('.', 'p')
+    a = np.load(modeldir + 'bc03_all_tau' + tau_str + '_m62_chab.npy', mmap_mode='r')
+    all_m62_models.append(a)
+    del a
 
-    # Now get indices
-    age_idx = np.where(log_age_arr == log_age_arr[closest_age_idx])[0]
-    tau_idx = np.where(tau_gyr_arr == tau_gyr_arr[closest_tau_idx])[0]
-    tauv_idx = np.where(tauv_arr   ==    tauv_arr[closest_tauv_idx])[0]
-    metal_idx = np.where(metal_arr == metallicity)[0]
+# load models with large tau separately
+all_m62_models.append(np.load(modeldir + 'bc03_all_tau20p000_m62_chab.npy', mmap_mode='r'))
 
-    model_idx = int(reduce(np.intersect1d, (age_idx, tau_idx, tauv_idx, metal_idx)))
+print("Done loading all models. Time taken:", "{:.3f}".format(time.time()-start), "seconds.")
 
-    model_llam = model_comp_spec_withlines_mmap[model_idx]
-
-    chosen_age = 10**log_age_arr[model_idx] / 1e9
-    chosen_tau = tau_gyr_arr[model_idx]
-    chosen_av = 1.086 * tauv_arr[model_idx]
-    chosen_metallicity = metal_arr[model_idx]
-
-    """
-    print("\nChosen model index:", model_idx)
-    print("Chosen model parameters -- ")
-    print("Age [Gyr]:", chosen_age)
-    print("Tau [Gyr]:", chosen_tau)
-    print("A_v:", chosen_av)
-    print("Metallicity [abs. frac.]:", chosen_metallicity)
-    """
-
-    return model_llam
-
-def apply_redshift(restframe_wav, restframe_lum, redshift):
-
-    dl = cosmo.luminosity_distance(redshift)  # returns dl in Mpc
-    dl = dl * 3.09e24  # convert to cm
-
-    redshifted_wav = restframe_wav * (1 + redshift)
-    redshifted_flux = restframe_lum / (4 * np.pi * dl * dl * (1 + redshift))
-
-    return redshifted_wav, redshifted_flux
+# This class came from stackoverflow
+# SEE: https://stackoverflow.com/questions/287871/how-to-print-colored-text-in-python
+class bcolors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 def loglike(theta, x, data, err):
     
-    age, tau, av, lsf_sigma = theta
+    age, tau, av = theta
 
-    y = model(x, age, tau, av, lsf_sigma)
-    #print("Model func result:", y)
+    y = model(x, age, tau, av)
 
-    # ------- Vertical scaling factor
-    alpha = np.nansum(data * y / err**2) / np.nansum(y**2 / err**2)
-    #print("Alpha:", "{:.2e}".format(alpha))
+    # ------- Clip all arrays to where the stack is believable
+    # then get the log likelihood
+    x0 = np.where( (x >= 3500) & (x <= 6400) )[0]
 
-    y = y * alpha
+    y = y[x0]
+    data = data[x0]
+    err = err[x0]
+    x = x[x0]
 
     lnLike = -0.5 * np.nansum((y-data)**2/err**2)
+
+    #print("Pure chi2 term:", np.nansum( (y-data)**2/err**2 ))
+    #print("log likelihood:", lnLike)
     
+    """
+    fig = plt.figure(figsize=(10,5))
+    ax = fig.add_subplot(111)
+    ax.set_xlabel(r'$\lambda\, [\mathrm{\AA}]$', fontsize=14)
+    ax.set_ylabel(r'$L_\lambda\, [\mathrm{continuum\ divided}]$', fontsize=14)
+
+    ax.plot(x, data, color='k')
+    ax.fill_between(x, data - err, data + err, color='gray', alpha=0.5)
+
+    ax.plot(x, y, color='firebrick')
+
+    ax.set_xscale('log')
+    ax.minorticks_on()
+    plt.show()
+    #sys.exit(0)
+    """
+
     return lnLike
 
 def logprior(theta):
 
-    age, tau, av, lsf_sigma = theta
-    
-    # Make sure model is not older than the Universe
-    # Allowing at least 100 Myr for the first galaxies to form after Big Bang
-    #age_at_z = Planck15.age(z).value  # in Gyr
-    #age_lim = age_at_z - 0.1  # in Gyr
+    age, tau, av = theta
 
-    if ( 0.01 <= age <= 12.0  and  0.01 <= tau <= 100.0  and  0.0 <= av <= 3.0  and  10.0 <= lsf_sigma <= 300.0  ):
+    if ( 0.01 <= age <= 13.0  and  0.01 <= tau <= 100.0  and  0.0 <= av <= 5.0):
+        #and  10.0 <= lsf_sigma <= 300.0  ):
         return 0.0
     
     return -np.inf
@@ -143,7 +142,7 @@ def logpost(theta, x, data, err):
     
     return lp + lnL
 
-def model(x, age_gyr, tau_gyr, av, lsf_sigma):
+def model(x, age, logtau, av):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -151,24 +150,52 @@ def model(x, age_gyr, tau_gyr, av, lsf_sigma):
     Expects to get the following arguments
     x: observed wavelength grid
     age: age of SED in Gyr
-    tau: exponential SFH timescale in Gyr
+    logtau: log of exponential SFH timescale in Gyr
     av: visual dust extinction
-    lsf_sigma: in angstroms
     """
 
-    current_age = np.log10(age_gyr * 1e9)  # because the saved age parameter is the log(age[yr])
-    current_tau = tau_gyr  # because the saved tau is in Gyr
-    tauv = av / 1.086
-    current_tauv = tauv
-    current_metallicity = 0.02  # Force it to only choose from the solar metallicity CSP models
+    tau = 10**logtau  # logtau is log of tau in gyr
 
-    model_llam = get_template(current_age, current_tau, current_tauv, current_metallicity, \
-        log_age_arr, metal_arr, tau_gyr_arr, tauv_arr, model_lam_grid, model_grid)
+    if tau < 20.0:
+
+        tau_int_idx = int((tau - int(np.floor(tau))) * 1e3)
+        age_idx = np.argmin(abs(model_ages - age*1e9))
+        model_idx = tau_int_idx * len(model_ages)  +  age_idx
+
+        models_taurange_idx = np.argmin(abs(np.arange(tau_low, tau_high, 1) - int(np.floor(tau))))
+        models_arr = all_m62_models[models_taurange_idx]
+
+        #print("Tau int and age index:", tau_int_idx, age_idx)
+        #print("Tau and age from index:", models_taurange_idx+tau_int_idx/1e3, model_ages[age_idx]/1e9)
+        #print("Model tau range index:", models_taurange_idx)
+
+    elif tau >= 20.0:
+        
+        logtau_arr = np.arange(1.30, 2.01, 0.01)
+        logtau_idx = np.argmin(abs(logtau_arr - logtau))
+
+        age_idx = np.argmin(abs(model_ages - age*1e9))
+        model_idx = logtau_idx * len(model_ages) + age_idx
+
+        models_arr = all_m62_models[-1]
+
+        #print("logtau and age index:", logtau_idx, age_idx)
+        #print("Tau and age from index:", 10**(logtau_arr[logtau_idx]), model_ages[age_idx]/1e9)
+
+    #print("Model index:", model_idx)
+
+    model_llam = models_arr[model_idx]
+
+    # ------ Apply dust extinction
+    model_dusty_llam = get_dust_atten_model(model_lam, model_llam, av)
 
     # ------ Apply LSF
-    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_llam, sigma=lsf_sigma)
+    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_dusty_llam, sigma=50.0)
 
     # ------ Downgrade to grism resolution
+    model_mod = griddata(points=model_lam, values=model_lsfconv, xi=x)
+
+    """
     model_mod = np.zeros(len(x))
 
     ### Zeroth element
@@ -185,23 +212,76 @@ def model(x, age_gyr, tau_gyr, av, lsf_sigma):
     lam_step = x[-1] - x[-2]
     idx = np.where((model_lam_grid >= x[-1] - lam_step) & (model_lam_grid < x[-1] + lam_step))[0]
     model_mod[-1] = np.mean(model_lsfconv[idx])
+    """
 
-    # ----------------------- Using numpy polyfitting ----------------------- #
-    # -------- The best-fit will be used to set the initial position for the MCMC walkers.
-    pfit = np.ma.polyfit(x, model_mod, deg=3)
-    np_polynomial = np.poly1d(pfit)
+    # ----------------------- Using scipy spline fitting ----------------------- #
+    model_err = np.zeros(len(x))
+    model_cont_norm, model_err_cont_norm = divcont(x, model_mod, model_err)
 
-    model_div_polyfit = model_mod / np_polynomial(x)
+    return model_cont_norm
 
-    return model_div_polyfit
+def divcont(wav, flux, ferr, showplot=False):
+
+    # Normalize flux levels to approx 1.0
+    flux_norm = flux / np.mean(flux)
+    ferr_norm = ferr / np.mean(flux)
+
+    # Mask lines
+    #mask_indices = get_mask_indices(wav, zprior)
+
+    # Make sure masking indices are consistent with array to be masked
+    #remove_mask_idx = np.where(mask_indices >= len(wav))[0]
+    #mask_indices = np.delete(arr=mask_indices, obj=remove_mask_idx)
+
+    #weights = np.ones(len(wav))
+    #mask_indices = np.array([483, 484, 485, 486, 487, 488, 489])
+    # the above indices are manually done as a test for masking H-beta
+    #weights[mask_indices] = 0
+
+    # SciPy smoothing spline fit
+    spl = splrep(x=wav, y=flux_norm, k=3, s=0.1)
+    wav_plt = np.arange(wav[0], wav[-1], 1.0)
+    spl_eval = splev(wav_plt, spl)
+
+    # Divide the given flux by the smooth spline fit and return
+    cont_div_flux = flux_norm / splev(wav, spl)
+    cont_div_err  = ferr_norm / splev(wav, spl)
+
+    # Test figure showing fits
+    if showplot:
+        fig = plt.figure(figsize=(10,6))
+        gs = gridspec.GridSpec(5,1)
+        gs.update(left=0.06, right=0.95, bottom=0.1, top=0.9, wspace=0.00, hspace=0.5)
+
+        ax1 = fig.add_subplot(gs[:3,:])
+        ax2 = fig.add_subplot(gs[3:,:])
+
+        ax1.set_ylabel(r'$\mathrm{Flux\ [normalized]}$', fontsize=15)
+        ax2.set_ylabel(r'$\mathrm{Continuum\ divided\ flux}$', fontsize=15)
+        ax2.set_xlabel(r'$\mathrm{Wavelength\ [\AA]}$', fontsize=15)
+
+        ax1.plot(wav, flux_norm, color='k')
+        ax1.fill_between(wav, flux_norm - ferr_norm, flux_norm + ferr_norm, color='gray', alpha=0.5)
+        ax1.plot(wav_plt, spl_eval, color='crimson', lw=3.0, label='SciPy smooth spline fit')
+
+        ax2.plot(wav, cont_div_flux, color='teal', lw=2.0, label='Continuum divided flux')
+        ax2.axhline(y=1.0, ls='--', color='k', lw=1.8)
+
+        # Tick label sizes
+        ax1.tick_params(which='both', labelsize=14)
+        ax2.tick_params(which='both', labelsize=14)
+
+        plt.show()
+
+    return cont_div_flux, cont_div_err
 
 def main():
 
     print("Starting at:", datetime.datetime.now())
 
+    print(f"{bcolors.WARNING}")
     print("\n* * * *   [WARNING]: the downgraded model is offset by delta_lambda/2 where delta_lambda is the grism wavelength sampling.   * * * *\n")
-    print("\n* * * *   [WARNING]: not interpolating to find matching models in parameter space.   * * * *\n")
-    print("\n* * * *   [WARNING]: using two different cosmologies for dl and Universe age at a redshift.   * * * *\n")
+    print(f"{bcolors.ENDC}")
 
     # ---- Load in data
     # Define redshift range 
@@ -217,23 +297,23 @@ def main():
 
     # ----------------------- Using explicit MCMC with Metropolis-Hastings ----------------------- #
     #*******Metropolis Hastings********************************
-    mh_start = time.time()
-    print("\nRunning explicit Metropolis-Hastings...")
-    N = 10000   #number of "timesteps"
+    #mh_start = time.time()
+    #print("\nRunning explicit Metropolis-Hastings...")
+    #N = 10000   #number of "timesteps"
 
     # The parameter vector is (redshift, age, tau, av)
     # age in gyr and tau in gyr
     # last parameter is av not tauv
-    r = np.array([1.0, 1.0, 0.5, 10.0])  # initial position
+    r = np.array([4.0, 1.0, 0.5])  # initial position
     print("Initial parameter vector:", r)
 
     # Set jump sizes
     jump_size_age = 0.1  # in gyr
     jump_size_tau = 0.1  # in gyr
     jump_size_av = 0.2  # magnitudes
-    jump_size_lsf = 5.0  # angstroms
+    #jump_size_lsf = 5.0  # angstroms
 
-    label_list = [r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$', r'$LSF [\AA]$']
+    label_list = [r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$']#, r'$LSF [\AA]$']
 
     """
     logp = logpost(r, wav, flam, ferr)  # evaluating the probability at the initial guess
@@ -310,7 +390,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 4, 100  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 3, 300  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -320,46 +400,127 @@ def main():
         rn1 = float(r[0] + jump_size_age * np.random.normal(size=1))
         rn2 = float(r[1] + jump_size_tau * np.random.normal(size=1))
         rn3 = float(r[2] + jump_size_av * np.random.normal(size=1))
-        rn4 = float(r[3] + jump_size_lsf * np.random.normal(size=1))
+        #rn4 = float(r[3] + jump_size_lsf * np.random.normal(size=1))
 
-        rn = np.array([rn1, rn2, rn3, rn4])
+        rn = np.array([rn1, rn2, rn3])
 
         pos[i] = rn
+    
+    print("logpost at starting position:", logpost(r, wav, flam, ferr))
 
+    # ----------- Set up the HDF5 file to incrementally save progress to
+    emcee_savefile = stacking_analysis_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
+    backend = emcee.backends.HDFBackend(emcee_savefile)
+    backend.reset(nwalkers, ndim)
 
-    from multiprocessing import Pool
     with Pool() as pool:
         
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool)
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
         sampler.run_mcmc(pos, 2000, progress=True)
 
-    chains = sampler.chain
     print("Finished running emcee.")
+    print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
+
+    # -------------------------------------------------------- # 
+    # --------------------- plotting ------------------------- #
+    sampler = emcee.backends.HDFBackend(emcee_savefile)
+
+    samples = sampler.get_chain()
+    print(f"{bcolors.CYAN}\nRead in sampler:", emcee_savefile, f"{bcolors.ENDC}")
+    print("Samples shape:", samples.shape)
 
     # plot trace
-    fig1 = plt.figure()
-    ax1 = fig1.add_subplot(111)
+    fig1, axes1 = plt.subplots(ndim, figsize=(10, 6), sharex=True)
 
-    for i in range(nwalkers):
-        for j in range(ndim):
-            ax1.plot(chains[i,:,j], label=label_list[j], alpha=0.1)
+    for i in range(ndim):
+        ax1 = axes1[i]
+        ax1.plot(samples[:, :, i], "k", alpha=0.05)
+        ax1.set_xlim(0, len(samples))
+        ax1.set_ylabel(label_list[i])
+        ax1.yaxis.set_label_coords(-0.1, 0.5)
 
-    fig1.savefig(stacking_figures_dir + 'mcmc_stackfit_trace.pdf', dpi=300, bbox_inches='tight')
+    axes1[-1].set_xlabel("Step number")
 
-    ax1.set_yscale('log')
+    fig1.savefig(stacking_figures_dir + 'mcmc_stackfit_trace.pdf', dpi=200, bbox_inches='tight')
 
-    plt.clf()
-    plt.cla()
-    plt.close()
+    # Corner plot 
+    # First get autocorrelation time and other stuff
+    tau = sampler.get_autocorr_time(tol=0)
+    burn_in = int(2 * np.max(tau))
+    thinning_steps = int(0.5 * np.min(tau))
+
+    print(f"{bcolors.CYAN}")
+    print("Average Tau:", np.mean(tau))
+    print("Burn-in:", burn_in)
+    print("Thinning steps:", thinning_steps)
+    print(f"{bcolors.ENDC}")
 
     # Discard burn-in. You do not want to consider the burn in the corner plots/estimation.
-    burn_in = 400
-    samples = sampler.chain[:, burn_in:, :].reshape((-1, ndim))
+    # Create flat samples
+    flat_samples = sampler.get_chain(discard=burn_in, thin=thinning_steps, flat=True)
+    print("\nFlat samples shape:", flat_samples.shape)
 
-    # plot corner plot
-    fig = corner.corner(samples, bins=30, plot_contours='True', labels=label_list, label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14})
-    fig.savefig(stacking_figures_dir + 'mcmc_stackfit_corner.pdf', dpi=300, bbox_inches='tight')
-    plt.show()
+    fig = corner.corner(flat_samples, quantiles=[0.16, 0.5, 0.84], labels=label_list, \
+        label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14}, truths=truth_arr, \
+        verbose=True, truth_color='tab:red', smooth=0.8, smooth1d=0.8)
+
+
+    fig.savefig(stacking_figures_dir + 'mcmc_stackfit_corner.pdf', dpi=200, bbox_inches='tight')
+
+    # Print corner estimates to screen 
+    cq_age = corner.quantile(x=flat_samples[:, 0], q=[0.16, 0.5, 0.84])
+    cq_tau = corner.quantile(x=flat_samples[:, 1], q=[0.16, 0.5, 0.84])
+    cq_av = corner.quantile(x=flat_samples[:, 2], q=[0.16, 0.5, 0.84])
+
+    # print parameter estimates
+    print(f"{bcolors.CYAN}")
+    print("Parameter estimates:")
+    print("Age [Gyr]: ", cq_age)
+    print("log SFH Timescale [Gyr]:", cq_tau)
+    print("Visual extinction [mag]:", cq_av)
+    print(f"{bcolors.ENDC}")
+
+    # Plot 100 random models from the parameter space within +-1sigma of corner estimates
+    fig3 = plt.figure(figsize=(10,5))
+    ax3 = fig3.add_subplot(111)
+
+    ax3.set_xlabel(r'$\mathrm{\lambda\ [\AA]}$', fontsize=15)
+    ax3.set_ylabel(r'$\mathrm{L_\lambda\ [continuum\ divided]}$', fontsize=15)
+
+    model_count = 0
+    ind_list = []
+
+    while model_count <= 100:
+
+        ind = int(np.random.randint(len(flat_samples), size=1))
+        ind_list.append(ind)
+
+        sample = flat_samples[ind]
+        sample = sample.reshape(3)
+
+        # Get the parameters of the sample
+        model_age = sample[0]
+        model_tau = sample[1]
+        model_av = sample[2]
+
+        # Check that the model is within +-1 sigma
+        # of value inferred by corner contours
+        if (model_age >= cq_age[0]) and (model_age <= cq_age[2]) and \
+           (model_tau >= cq_tau[0]) and (model_tau <= cq_tau[2]) and \
+           (model_av >= cq_av[0]) and (model_av <= cq_av[2]):
+
+            m = model(wav, sample[0], sample[1], sample[2])
+
+            ax3.plot(wav, m, color='royalblue', lw=1.8, alpha=0.05, zorder=2)
+
+            model_count += 1
+
+    print("\nList of randomly chosen indices:", ind_list)
+
+    ax3.plot(wav, flam, color='k', lw=2.2, zorder=1)
+    ax3.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5, zorder=1)
+
+    fig3.savefig(stacking_figures_dir + 'mcmc_stackfit_overplot.pdf', dpi=200, bbox_inches='tight')
 
     return None
 

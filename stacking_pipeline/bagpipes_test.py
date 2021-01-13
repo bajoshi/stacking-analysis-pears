@@ -170,7 +170,27 @@ def get_photometry_data(gal_id, field, survey, grism_lam_obs, grism_flam_obs, cu
     phot_lam = np.array([4328.2, 5921.1, 7692.4, 9033.1, 12486.0, 13923.0, 15369.0, 
     35500.0, 44930.0, 57310.0, 78720.0])  # angstroms
 
-    return phot_lam, phot_fluxes_arr, phot_errors_arr
+    # From Adam Carnall's Github notebooks on bagpipes
+    photometry = np.c_[phot_fluxes_arr, phot_errors_arr]
+
+    # blow up the errors associated with any missing fluxes.
+    for i in range(len(photometry)):
+        if (photometry[i, 0] == 0.) or (photometry[i, 1] <= 0):
+            photometry[i,:] = [0., 9.9*10**99.]
+            
+    # Enforce a maximum SNR of 20, or 10 in the IRAC channels.
+    # we need this in our case too since we're using the same data
+    for i in range(len(photometry)):
+        if i < 7:  # in our case here, the first 7 channels are HST photometry
+            max_snr = 20.
+            
+        else:
+            max_snr = 10.
+        
+        if photometry[i, 0]/photometry[i, 1] > max_snr:
+            photometry[i, 1] = photometry[i, 0]/max_snr
+
+    return photometry
 
 def load_data(pearsid_str):
 
@@ -203,9 +223,7 @@ def load_data(pearsid_str):
     current_ra = spec_hdu[2].header['RA']
     current_dec = spec_hdu[2].header['DEC']
 
-    phot_lam, phot_fluxes, phot_errors = get_photometry_data(pears_id, field, 'PEARS', wav, flam, current_ra, current_dec)
-
-    photometry = np.c_[phot_fluxes, phot_errors]
+    photometry = get_photometry_data(pears_id, field, 'PEARS', wav, flam, current_ra, current_dec)
 
     return spectrum, photometry
 
