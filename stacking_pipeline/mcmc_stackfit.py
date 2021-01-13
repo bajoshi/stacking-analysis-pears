@@ -33,7 +33,9 @@ pears_figs_dir = datadir = home + '/Documents/pears_figs_data/'
 datadir = home + '/Documents/pears_figs_data/data_spectra_only/'
 stacking_utils = home + '/Documents/GitHub/stacking-analysis-pears/util_codes/'
 stacking_analysis_dir = home + '/Documents/GitHub/stacking-analysis-pears/'
-stacking_figures_dir = home + "/Documents/stacking_figures/"
+stacking_figures_dir = home + '/Documents/stacking_figures/'
+
+emcee_diagnostics_dir = home + '/Documents/emcee_runs/emcee_diagnostics_stacking/'
 
 sys.path.append(stacking_utils)
 from dust_utils import get_dust_atten_model
@@ -409,14 +411,14 @@ def main():
     print("logpost at starting position:", logpost(r, wav, flam, ferr))
 
     # ----------- Set up the HDF5 file to incrementally save progress to
-    emcee_savefile = stacking_analysis_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
+    emcee_savefile = emcee_diagnostics_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
     backend = emcee.backends.HDFBackend(emcee_savefile)
     backend.reset(nwalkers, ndim)
 
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 2000, progress=True)
+        sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
     print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
@@ -441,7 +443,7 @@ def main():
 
     axes1[-1].set_xlabel("Step number")
 
-    fig1.savefig(stacking_figures_dir + 'mcmc_stackfit_trace.pdf', dpi=200, bbox_inches='tight')
+    fig1.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_trace.pdf', dpi=200, bbox_inches='tight')
 
     # Corner plot 
     # First get autocorrelation time and other stuff
@@ -465,7 +467,7 @@ def main():
         verbose=True, truth_color='tab:red', smooth=0.8, smooth1d=0.8)
 
 
-    fig.savefig(stacking_figures_dir + 'mcmc_stackfit_corner.pdf', dpi=200, bbox_inches='tight')
+    fig.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_corner.pdf', dpi=200, bbox_inches='tight')
 
     # Print corner estimates to screen 
     cq_age = corner.quantile(x=flat_samples[:, 0], q=[0.16, 0.5, 0.84])
@@ -520,7 +522,7 @@ def main():
     ax3.plot(wav, flam, color='k', lw=2.2, zorder=1)
     ax3.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5, zorder=1)
 
-    fig3.savefig(stacking_figures_dir + 'mcmc_stackfit_overplot.pdf', dpi=200, bbox_inches='tight')
+    fig3.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_overplot.pdf', dpi=200, bbox_inches='tight')
 
     return None
 
