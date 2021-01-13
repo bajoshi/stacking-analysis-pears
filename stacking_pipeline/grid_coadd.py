@@ -1221,7 +1221,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #print("\n Masking the following indices:", mask_indices)
 
         # SciPy smoothing spline fit
-        spl = splrep(x=grism_lam_obs, y=grism_flam_norm, k=3, s=5.0)
+        spl = splrep(x=grism_lam_obs, y=grism_flam_norm, k=3, s=0.1)
         wav_plt = np.arange(grism_lam_obs[0], grism_lam_obs[-1], 1.0)
         spl_eval = splev(wav_plt, spl)
 

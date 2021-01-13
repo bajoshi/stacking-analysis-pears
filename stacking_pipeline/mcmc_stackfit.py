@@ -86,9 +86,9 @@ class bcolors:
 
 def loglike(theta, x, data, err):
     
-    age, tau, av = theta
+    age, logtau, av = theta
 
-    y = model(x, age, tau, av)
+    y = model(x, age, logtau, av)
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
@@ -125,9 +125,9 @@ def loglike(theta, x, data, err):
 
 def logprior(theta):
 
-    age, tau, av = theta
+    age, logtau, av = theta
 
-    if ( 0.01 <= age <= 13.0  and  0.01 <= tau <= 100.0  and  0.0 <= av <= 5.0):
+    if ( 0.01 <= age <= 13.0  and  0.01 <= logtau < 2.0  and  0.0 <= av <= 5.0):
         #and  10.0 <= lsf_sigma <= 300.0  ):
         return 0.0
     
@@ -192,7 +192,7 @@ def model(x, age, logtau, av):
     model_dusty_llam = get_dust_atten_model(model_lam, model_llam, av)
 
     # ------ Apply LSF
-    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_dusty_llam, sigma=50.0)
+    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_dusty_llam, sigma=100.0)
 
     # ------ Downgrade to grism resolution
     model_mod = griddata(points=model_lam, values=model_lsfconv, xi=x)
@@ -306,16 +306,16 @@ def main():
     # The parameter vector is (redshift, age, tau, av)
     # age in gyr and tau in gyr
     # last parameter is av not tauv
-    r = np.array([4.0, 1.0, 0.5])  # initial position
+    r = np.array([4.0, 0.1, 0.5])  # initial position
     print("Initial parameter vector:", r)
 
     # Set jump sizes
     jump_size_age = 0.1  # in gyr
-    jump_size_tau = 0.1  # in gyr
+    jump_size_logtau = 0.01  # in gyr
     jump_size_av = 0.2  # magnitudes
     #jump_size_lsf = 5.0  # angstroms
 
-    label_list = [r'$Age [Gyr]$', r'$\tau [Gyr]$', r'$A_V [mag]$']#, r'$LSF [\AA]$']
+    label_list = [r'$\mathrm{Age\ [Gyr]}$', r'$\mathrm{log(\tau\ [Gyr])}$', r'$\mathrm{A_V\ [mag]}$']#, r'$LSF [\AA]$']
 
     """
     logp = logpost(r, wav, flam, ferr)  # evaluating the probability at the initial guess
@@ -400,7 +400,7 @@ def main():
     for i in range(nwalkers):
 
         rn1 = float(r[0] + jump_size_age * np.random.normal(size=1))
-        rn2 = float(r[1] + jump_size_tau * np.random.normal(size=1))
+        rn2 = float(r[1] + jump_size_logtau * np.random.normal(size=1))
         rn3 = float(r[2] + jump_size_av * np.random.normal(size=1))
         #rn4 = float(r[3] + jump_size_lsf * np.random.normal(size=1))
 
@@ -463,9 +463,9 @@ def main():
     print("\nFlat samples shape:", flat_samples.shape)
 
     fig = corner.corner(flat_samples, quantiles=[0.16, 0.5, 0.84], labels=label_list, \
-        label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14}, truths=truth_arr, \
-        verbose=True, truth_color='tab:red', smooth=0.8, smooth1d=0.8)
-
+        label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14}, \
+        verbose=True, truth_color='tab:red', smooth=0.8, smooth1d=0.8)#, \
+    #range=[(2.5, 10.0), (-0.5, 2.0), (0.0, 0.02)])
 
     fig.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_corner.pdf', dpi=200, bbox_inches='tight')
 
@@ -513,14 +513,16 @@ def main():
 
             m = model(wav, sample[0], sample[1], sample[2])
 
-            ax3.plot(wav, m, color='royalblue', lw=1.8, alpha=0.05, zorder=2)
+            ax3.plot(wav, m, color='firebrick', lw=1.8, alpha=0.05, zorder=2)
 
             model_count += 1
 
     print("\nList of randomly chosen indices:", ind_list)
 
-    ax3.plot(wav, flam, color='k', lw=2.2, zorder=1)
+    ax3.plot(wav, flam, color='mediumblue', lw=2.2, zorder=1)
     ax3.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5, zorder=1)
+
+    ax3.axhline(y=1.0, ls='--', color='k')
 
     fig3.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_overplot.pdf', dpi=200, bbox_inches='tight')
 
