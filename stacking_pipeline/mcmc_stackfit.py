@@ -127,7 +127,7 @@ def logprior(theta):
 
     age, logtau, av = theta
 
-    if ( 0.01 <= age <= 13.0  and  0.01 <= logtau < 2.0  and  0.0 <= av <= 5.0):
+    if ( 0.01 <= age <= 13.0  and  -3.0 <= logtau <= 2.0  and  0.0 <= av <= 5.0):
         #and  10.0 <= lsf_sigma <= 300.0  ):
         return 0.0
     
