@@ -86,9 +86,9 @@ class bcolors:
 
 def loglike(theta, x, data, err):
     
-    age, logtau, av = theta
+    age, logtau, av, lsf_sigma = theta
 
-    y = model(x, age, logtau, av)
+    y = model(x, age, logtau, av, lsf_sigma)
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
@@ -125,10 +125,10 @@ def loglike(theta, x, data, err):
 
 def logprior(theta):
 
-    age, logtau, av = theta
+    age, logtau, av, lsf_sigma = theta
 
-    if ( 0.01 <= age <= 13.0  and  -3.0 <= logtau <= 2.0  and  0.0 <= av <= 5.0):
-        #and  70.0 <= lsf_sigma <= 300.0  ):
+    if ( 0.01 <= age <= 13.0  and  -3.0 <= logtau <= 2.0  and  0.0 <= av <= 5.0 \
+        and  70.0 <= lsf_sigma <= 140.0  ):
         return 0.0
     
     return -np.inf
@@ -144,7 +144,7 @@ def logpost(theta, x, data, err):
     
     return lp + lnL
 
-def model(x, age, logtau, av):
+def model(x, age, logtau, av, lsf_sigma):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -192,7 +192,7 @@ def model(x, age, logtau, av):
     model_dusty_llam = get_dust_atten_model(model_lam, model_llam, av)
 
     # ------ Apply LSF
-    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_dusty_llam, sigma=120.0)
+    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_dusty_llam, sigma=lsf_sigma)
 
     # ------ Downgrade to grism resolution
     model_mod = griddata(points=model_lam, values=model_lsfconv, xi=x)
@@ -306,14 +306,14 @@ def main():
     # The parameter vector is (redshift, age, tau, av)
     # age in gyr and tau in gyr
     # last parameter is av not tauv
-    r = np.array([4.0, 0.1, 0.5])  # initial position
+    r = np.array([6.0, 0.1, 0.5, 95.0])  # initial position
     print("Initial parameter vector:", r)
 
     # Set jump sizes
     jump_size_age = 0.1  # in gyr
     jump_size_logtau = 0.01  # in gyr
     jump_size_av = 0.2  # magnitudes
-    #jump_size_lsf = 5.0  # angstroms
+    jump_size_lsf = 5.0  # angstroms
 
     label_list = [r'$\mathrm{Age\ [Gyr]}$', r'$\mathrm{log(\tau\ [Gyr])}$', r'$\mathrm{A_V\ [mag]}$']#, r'$LSF [\AA]$']
 
@@ -392,7 +392,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 3, 300  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 4, 300  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -402,9 +402,9 @@ def main():
         rn1 = float(r[0] + jump_size_age * np.random.normal(size=1))
         rn2 = float(r[1] + jump_size_logtau * np.random.normal(size=1))
         rn3 = float(r[2] + jump_size_av * np.random.normal(size=1))
-        #rn4 = float(r[3] + jump_size_lsf * np.random.normal(size=1))
+        rn4 = float(r[3] + jump_size_lsf * np.random.normal(size=1))
 
-        rn = np.array([rn1, rn2, rn3])
+        rn = np.array([rn1, rn2, rn3, rn4])
 
         pos[i] = rn
     
@@ -418,7 +418,7 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 1000, progress=True)
+        sampler.run_mcmc(pos, 2000, progress=True)
 
     print("Finished running emcee.")
     print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
@@ -465,7 +465,7 @@ def main():
     fig = corner.corner(flat_samples, quantiles=[0.16, 0.5, 0.84], labels=label_list, \
         label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14}, \
         verbose=True, truth_color='tab:red', smooth=1.0, smooth1d=1.0)#, \
-    #range=[(2.0, 4.6), (-0.5, 0.1), (0.0, 0.15)])
+    #range=[(2.5, 7.0), (-0.3, 0.2), (0.0, 0.15)])
 
     fig.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_corner.pdf', dpi=200, bbox_inches='tight')
 
