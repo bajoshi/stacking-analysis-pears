@@ -92,7 +92,7 @@ def loglike(theta, x, data, err):
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
-    x0 = np.where( (x >= 3500) & (x <= 6400) )[0]
+    x0 = np.where( (x >= 3600) & (x <= 6200) )[0]
 
     y = y[x0]
     data = data[x0]
@@ -128,7 +128,7 @@ def logprior(theta):
     age, logtau, av = theta
 
     if ( 0.01 <= age <= 13.0  and  -3.0 <= logtau <= 2.0  and  0.0 <= av <= 5.0):
-        #and  10.0 <= lsf_sigma <= 300.0  ):
+        #and  70.0 <= lsf_sigma <= 300.0  ):
         return 0.0
     
     return -np.inf
@@ -192,7 +192,7 @@ def model(x, age, logtau, av):
     model_dusty_llam = get_dust_atten_model(model_lam, model_llam, av)
 
     # ------ Apply LSF
-    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_dusty_llam, sigma=100.0)
+    model_lsfconv = scipy.ndimage.gaussian_filter1d(input=model_dusty_llam, sigma=120.0)
 
     # ------ Downgrade to grism resolution
     model_mod = griddata(points=model_lam, values=model_lsfconv, xi=x)
@@ -464,8 +464,8 @@ def main():
 
     fig = corner.corner(flat_samples, quantiles=[0.16, 0.5, 0.84], labels=label_list, \
         label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14}, \
-        verbose=True, truth_color='tab:red', smooth=0.8, smooth1d=0.8)#, \
-    #range=[(2.5, 10.0), (-0.5, 2.0), (0.0, 0.02)])
+        verbose=True, truth_color='tab:red', smooth=1.0, smooth1d=1.0)#, \
+    #range=[(2.0, 4.6), (-0.5, 0.1), (0.0, 0.15)])
 
     fig.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_corner.pdf', dpi=200, bbox_inches='tight')
 
