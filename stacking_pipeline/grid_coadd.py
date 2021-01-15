@@ -1054,11 +1054,14 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.16 < z < 0.96
 
-    ms_lim_low = 10.5
-    ms_lim_high = 12.0
+    # color 1.5 to 2.4 for lower  mass range 9.0  to 10.5
+    # color 1.8 to 3.0 for higher mass range 10.5 to 12.0
+
+    ms_lim_low = 9.0
+    ms_lim_high = 10.5
 
     # Find the indices (corresponding to massive galaxies)
-    indices = np.where((ur_color >= 1.8) & (ur_color < 3.0) &\
+    indices = np.where((ur_color >= 1.5) & (ur_color < 2.4) &\
                     (stellar_mass >= ms_lim_low) & (stellar_mass < ms_lim_high))[0]
   
     num_massive = int(len(pears_id[indices]))
@@ -1204,6 +1207,12 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         # FIGS data
         #g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
 
+        if np.any(~np.isfinite(grism_ferr_obs)):
+            print(grism_flam_obs)
+            print(grism_ferr_obs)
+            print("Skipping due to blank data array.")
+            continue
+
         # Normalize flux levels to approx 1.0
         grism_flam_norm = grism_flam_obs / np.mean(grism_flam_obs)
         grism_ferr_norm = grism_ferr_obs / np.mean(grism_flam_obs)
@@ -1221,7 +1230,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         #print("\n Masking the following indices:", mask_indices)
 
         # SciPy smoothing spline fit
-        spl = splrep(x=grism_lam_obs, y=grism_flam_norm, k=3, s=0.1)
+        spl = splrep(x=grism_lam_obs, y=grism_flam_norm, k=3, s=0.2)
         wav_plt = np.arange(grism_lam_obs[0], grism_lam_obs[-1], 1.0)
         spl_eval = splev(wav_plt, spl)
 
@@ -1326,7 +1335,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
         ax1.legend(loc=0)
 
-        #plt.show()
+        snr = grism_flam_obs / grism_ferr_obs
+        if np.any(snr <= 0.1):
+            plt.show()
+            sys.exit(0)
         plt.cla()
         plt.clf()
         plt.close()
@@ -1379,7 +1391,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
         color='gray', alpha=0.5, zorder=5)
 
     # Save stack as plain text file
-    fh = open(stacking_analysis_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '.txt', 'w')
+    stack_filename = stacking_analysis_dir + 'massive_stack_pears_' \
+    + str(ms_lim_low).replace('.','p') + '_Ms_' + str(ms_lim_high).replace('.','p') \
+    + '_' + str(z_low).replace('.','p') + '_z_' + str(z_high).replace('.','p') + '.txt'
+    fh = open(stack_filename, 'w')
     fh.write("# lam flam flam_err")
     fh.write("\n")
     for q in range(len(lam_grid)):
@@ -1426,8 +1441,9 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     # Measure Mg/Fe
     #mg2fe = fit_gauss_mgfe_astropy(lam_grid, pears_old_llam, num_massive, z_low, z_high, ms_lim_low, ms_lim_high)
 
-    figname = stacking_figures_dir + 'massive_stack_' + str(z_low).replace('.','p') \
-    + '_' + str(z_high).replace('.','p') + '.pdf'
+    figname = stacking_figures_dir + 'massive_stack_' \
+    + str(ms_lim_low).replace('.','p') + '_Ms_' + str(ms_lim_high).replace('.','p') \
+    + '_' + str(z_low).replace('.','p') + '_z_' + str(z_high).replace('.','p') + '.pdf'
     fig.savefig(figname, dpi=300, bbox_inches='tight')
 
     plt.show()

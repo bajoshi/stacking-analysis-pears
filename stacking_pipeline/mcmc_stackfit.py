@@ -290,8 +290,15 @@ def main():
     z_low = 0.16
     z_high = 0.96
 
-    stack = np.genfromtxt(stacking_analysis_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '.txt', \
-                          dtype=None, names=['lam', 'flam', 'flam_err'], encoding='ascii')
+    # Define mass range
+    ms_lim_low = 10.5
+    ms_lim_high = 12.0
+
+    stack_filename = stacking_analysis_dir + 'massive_stack_pears_' \
+    + str(ms_lim_low).replace('.','p') + '_Ms_' + str(ms_lim_high).replace('.','p') \
+    + '_' + str(z_low).replace('.','p') + '_z_' + str(z_high).replace('.','p') + '.txt'
+
+    stack = np.genfromtxt(stack_filename, dtype=None, names=['lam', 'flam', 'flam_err'], encoding='ascii')
 
     wav = stack['lam']
     flam = stack['flam']
@@ -315,7 +322,7 @@ def main():
     jump_size_av = 0.2  # magnitudes
     jump_size_lsf = 5.0  # angstroms
 
-    label_list = [r'$\mathrm{Age\ [Gyr]}$', r'$\mathrm{log(\tau\ [Gyr])}$', r'$\mathrm{A_V\ [mag]}$']#, r'$LSF [\AA]$']
+    label_list = [r'$\mathrm{Age\ [Gyr]}$', r'$\mathrm{log(\tau\ [Gyr])}$', r'$\mathrm{A_V\ [mag]}$', r'$LSF [\AA]$']
 
     """
     logp = logpost(r, wav, flam, ferr)  # evaluating the probability at the initial guess
@@ -412,16 +419,16 @@ def main():
 
     # ----------- Set up the HDF5 file to incrementally save progress to
     emcee_savefile = emcee_diagnostics_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
-    backend = emcee.backends.HDFBackend(emcee_savefile)
-    backend.reset(nwalkers, ndim)
+    #backend = emcee.backends.HDFBackend(emcee_savefile)
+    #backend.reset(nwalkers, ndim)
 
-    with Pool() as pool:
-        
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 2000, progress=True)
+    #with Pool() as pool:
+    #    
+    #    sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
+    #    sampler.run_mcmc(pos, 2000, progress=True)
 
-    print("Finished running emcee.")
-    print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
+    #print("Finished running emcee.")
+    #print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
 
     # -------------------------------------------------------- # 
     # --------------------- plotting ------------------------- #
@@ -473,6 +480,7 @@ def main():
     cq_age = corner.quantile(x=flat_samples[:, 0], q=[0.16, 0.5, 0.84])
     cq_tau = corner.quantile(x=flat_samples[:, 1], q=[0.16, 0.5, 0.84])
     cq_av = corner.quantile(x=flat_samples[:, 2], q=[0.16, 0.5, 0.84])
+    cq_lsf = corner.quantile(x=flat_samples[:, 3], q=[0.16, 0.5, 0.84])
 
     # print parameter estimates
     print(f"{bcolors.CYAN}")
@@ -480,6 +488,7 @@ def main():
     print("Age [Gyr]: ", cq_age)
     print("log SFH Timescale [Gyr]:", cq_tau)
     print("Visual extinction [mag]:", cq_av)
+    print("LSF [Angstroms]:", cq_lsf)
     print(f"{bcolors.ENDC}")
 
     # Plot 100 random models from the parameter space within +-1sigma of corner estimates
@@ -498,20 +507,22 @@ def main():
         ind_list.append(ind)
 
         sample = flat_samples[ind]
-        sample = sample.reshape(3)
+        sample = sample.reshape(ndim)
 
         # Get the parameters of the sample
         model_age = sample[0]
         model_tau = sample[1]
         model_av = sample[2]
+        model_lsf = sample[3]
 
         # Check that the model is within +-1 sigma
         # of value inferred by corner contours
         if (model_age >= cq_age[0]) and (model_age <= cq_age[2]) and \
            (model_tau >= cq_tau[0]) and (model_tau <= cq_tau[2]) and \
-           (model_av >= cq_av[0]) and (model_av <= cq_av[2]):
+           (model_av >= cq_av[0]) and (model_av <= cq_av[2]) and \
+           (model_lsf >= cq_lsf[0]) and (model_lsf <= cq_lsf[2]):
 
-            m = model(wav, sample[0], sample[1], sample[2])
+            m = model(wav, sample[0], sample[1], sample[2], sample[3])
 
             ax3.plot(wav, m, color='firebrick', lw=1.8, alpha=0.05, zorder=2)
 
@@ -523,6 +534,8 @@ def main():
     ax3.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5, zorder=1)
 
     ax3.axhline(y=1.0, ls='--', color='k')
+
+    ax3.set_ylim(0.9, 1.1)
 
     fig3.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_overplot.pdf', dpi=200, bbox_inches='tight')
 
