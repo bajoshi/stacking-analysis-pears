@@ -39,6 +39,7 @@ emcee_diagnostics_dir = home + '/Documents/emcee_runs/emcee_diagnostics_stacking
 
 sys.path.append(stacking_utils)
 from dust_utils import get_dust_atten_model
+import grid_coadd as gd
 
 # Load in all models
 # ------ THIS HAS TO BE GLOBAL!
@@ -86,9 +87,9 @@ class bcolors:
 
 def loglike(theta, x, data, err):
     
-    age, logtau, av, lsf_sigma = theta
+    age, logtau, av, lsf_sigma, zscatter = theta
 
-    y = model(x, age, logtau, av, lsf_sigma)
+    y = model(x, age, logtau, av, lsf_sigma, zscatter)
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
@@ -125,10 +126,10 @@ def loglike(theta, x, data, err):
 
 def logprior(theta):
 
-    age, logtau, av, lsf_sigma = theta
+    age, logtau, av, lsf_sigma, zscatter = theta
 
     if ( 0.01 <= age <= 13.0  and  -3.0 <= logtau <= 2.0  and  0.0 <= av <= 5.0 \
-        and  70.0 <= lsf_sigma <= 140.0  ):
+        and  70.0 <= lsf_sigma <= 140.0  and 0.00 <= zscatter <= 0.08):
         return 0.0
     
     return -np.inf
@@ -144,7 +145,7 @@ def logpost(theta, x, data, err):
     
     return lp + lnL
 
-def model(x, age, logtau, av, lsf_sigma):
+def model(x, age, logtau, av, lsf_sigma, zscatter):
     """
     This function will return the closest BC03 template 
     from a large grid of pre-generated templates.
@@ -220,7 +221,67 @@ def model(x, age, logtau, av, lsf_sigma):
     model_err = np.zeros(len(x))
     model_cont_norm, model_err_cont_norm = divcont(x, model_mod, model_err)
 
-    return model_cont_norm
+    # ----------------------- Restack the same model using scatter in redshift ----------------------- #
+    model_stack = gen_model_stack(x, model_cont_norm, zscatter)
+
+    return model_stack
+
+def gen_model_stack(w, m, zs):
+
+    nstack = 150  # this needs to be globalized later
+
+    # Generate a random array of redshifts
+    zs_arr = np.random.normal(loc=0.0, scale=zs, size=nstack)
+
+    # Now stack the same model at all the redshifts given
+    # Code same as the one in grid_coadd. make sure wavelength step and grid is the same
+
+    lam_step = 25.0
+    # Set the ends of the lambda grid
+    # This is dependent on the redshift range being considered
+    lam_grid_low = 3000
+    lam_grid_high = 7600
+
+    lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
+
+    # Set up arrays to save stacks
+    stack_ll = np.zeros(len(lam_grid))
+    stack_le = np.zeros(len(lam_grid))
+    # also convert to lists
+    stack_ll = stack_ll.tolist()
+    stack_le = stack_le.tolist()
+
+    stack_numpoints = np.zeros(len(lam_grid))
+    stack_numgalaxies = np.zeros(len(lam_grid))
+
+    for i in range(len(zs_arr)):
+
+        # This step should only be done on the first iteration within a grid cell
+        # This converts every element (which are all 0 to begin with) 
+        # in the flux and flux error arrays to an empty list
+        # This is done so that function add_spec() can now append to every element
+        if i == 0:
+            for x in range(len(lam_grid)):
+                stack_ll[x] = []
+                stack_le[x] = []
+
+        # Now scatter the model in redshift 
+        # This only involves a shift in wavelength because 
+        # it is the same model being stacked with itself
+        current_w = w * (1 + zs_arr[i])
+
+        # Add to stack
+        stack_ll, stack_le, stack_numpoints, stack_numgalaxies = \
+        gd.add_spec(current_w, m, np.zeros(len(m)), stack_ll, stack_le, \
+            stack_numpoints, stack_numgalaxies, lam_grid, lam_step)
+
+    # Now finalize the stack by computing medians
+    stack_ll, stack_le = gd.take_median(stack_ll, stack_le, lam_grid)
+
+    # convert to numpy array and return
+    stack_ll = np.asarray(stack_ll)
+
+    return stack_ll
 
 def divcont(wav, flux, ferr, showplot=False):
 
@@ -313,7 +374,7 @@ def main():
     # The parameter vector is (redshift, age, tau, av)
     # age in gyr and tau in gyr
     # last parameter is av not tauv
-    r = np.array([6.0, 0.1, 0.5, 95.0])  # initial position
+    r = np.array([6.0, 0.1, 0.5, 95.0, 0.03])  # initial position
     print("Initial parameter vector:", r)
 
     # Set jump sizes
@@ -321,8 +382,10 @@ def main():
     jump_size_logtau = 0.01  # in gyr
     jump_size_av = 0.2  # magnitudes
     jump_size_lsf = 5.0  # angstroms
+    jump_size_zscatter = 0.002
 
-    label_list = [r'$\mathrm{Age\ [Gyr]}$', r'$\mathrm{log(\tau\ [Gyr])}$', r'$\mathrm{A_V\ [mag]}$', r'$LSF [\AA]$']
+    label_list = [r'$\mathrm{Age\ [Gyr]}$', r'$\mathrm{log(\tau\ [Gyr])}$', r'$\mathrm{A_V\ [mag]}$', \
+    r'$\mathrm{LSF\ [\AA]}$', r'$\left< \frac{\Delta z}{1+z} \right>$']
 
     """
     logp = logpost(r, wav, flam, ferr)  # evaluating the probability at the initial guess
@@ -399,7 +462,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 4, 300  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 300  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -410,8 +473,9 @@ def main():
         rn2 = float(r[1] + jump_size_logtau * np.random.normal(size=1))
         rn3 = float(r[2] + jump_size_av * np.random.normal(size=1))
         rn4 = float(r[3] + jump_size_lsf * np.random.normal(size=1))
+        rn5 = float(r[4] + jump_size_zscatter * np.random.normal(size=1))
 
-        rn = np.array([rn1, rn2, rn3, rn4])
+        rn = np.array([rn1, rn2, rn3, rn4, rn5])
 
         pos[i] = rn
     
@@ -419,16 +483,16 @@ def main():
 
     # ----------- Set up the HDF5 file to incrementally save progress to
     emcee_savefile = emcee_diagnostics_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
-    #backend = emcee.backends.HDFBackend(emcee_savefile)
-    #backend.reset(nwalkers, ndim)
+    backend = emcee.backends.HDFBackend(emcee_savefile)
+    backend.reset(nwalkers, ndim)
 
-    #with Pool() as pool:
-    #    
-    #    sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-    #    sampler.run_mcmc(pos, 2000, progress=True)
+    with Pool() as pool:
+        
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
+        sampler.run_mcmc(pos, 2000, progress=True)
 
-    #print("Finished running emcee.")
-    #print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
+    print("Finished running emcee.")
+    print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
 
     # -------------------------------------------------------- # 
     # --------------------- plotting ------------------------- #
