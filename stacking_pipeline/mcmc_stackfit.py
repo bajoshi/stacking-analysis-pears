@@ -228,7 +228,7 @@ def model(x, age, logtau, av, lsf_sigma, zscatter):
 
 def gen_model_stack(w, m, zs):
 
-    nstack = 150  # this needs to be globalized later
+    nstack = 1000
 
     # Generate a random array of redshifts
     zs_arr = np.random.normal(loc=0.0, scale=zs, size=nstack)
@@ -374,11 +374,11 @@ def main():
     # The parameter vector is (redshift, age, tau, av)
     # age in gyr and tau in gyr
     # last parameter is av not tauv
-    r = np.array([6.0, 0.1, 0.5, 95.0, 0.03])  # initial position
+    r = np.array([4.0, 0.1, 0.5, 95.0, 0.02])  # initial position
     print("Initial parameter vector:", r)
 
     # Set jump sizes
-    jump_size_age = 0.1  # in gyr
+    jump_size_age = 0.5  # in gyr
     jump_size_logtau = 0.01  # in gyr
     jump_size_av = 0.2  # magnitudes
     jump_size_lsf = 5.0  # angstroms
@@ -462,7 +462,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 5, 100  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 300  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -489,7 +489,7 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 1000, progress=True)
+        sampler.run_mcmc(pos, 2000, progress=True)
 
     print("Finished running emcee.")
     print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
@@ -571,6 +571,8 @@ def main():
 
         ind = int(np.random.randint(len(flat_samples), size=1))
         ind_list.append(ind)
+        print("On count:", model_count)
+        print()
 
         sample = flat_samples[ind]
         sample = sample.reshape(ndim)
