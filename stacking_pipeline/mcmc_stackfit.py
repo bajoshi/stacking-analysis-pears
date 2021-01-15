@@ -462,7 +462,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 5, 300  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 100  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -489,7 +489,7 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 2000, progress=True)
+        sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
     print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
