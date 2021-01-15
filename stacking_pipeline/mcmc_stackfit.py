@@ -545,6 +545,7 @@ def main():
     cq_tau = corner.quantile(x=flat_samples[:, 1], q=[0.16, 0.5, 0.84])
     cq_av = corner.quantile(x=flat_samples[:, 2], q=[0.16, 0.5, 0.84])
     cq_lsf = corner.quantile(x=flat_samples[:, 3], q=[0.16, 0.5, 0.84])
+    cq_zscatter = corner.quantile(x=flat_samples[:, 4], q=[0.16, 0.5, 0.84])
 
     # print parameter estimates
     print(f"{bcolors.CYAN}")
@@ -553,6 +554,7 @@ def main():
     print("log SFH Timescale [Gyr]:", cq_tau)
     print("Visual extinction [mag]:", cq_av)
     print("LSF [Angstroms]:", cq_lsf)
+    print("Average error in redshift for galaxies in stack:", cq_zscatter)
     print(f"{bcolors.ENDC}")
 
     # Plot 100 random models from the parameter space within +-1sigma of corner estimates
@@ -578,15 +580,17 @@ def main():
         model_tau = sample[1]
         model_av = sample[2]
         model_lsf = sample[3]
+        model_zscatter = sample[4]
 
         # Check that the model is within +-1 sigma
         # of value inferred by corner contours
         if (model_age >= cq_age[0]) and (model_age <= cq_age[2]) and \
            (model_tau >= cq_tau[0]) and (model_tau <= cq_tau[2]) and \
            (model_av >= cq_av[0]) and (model_av <= cq_av[2]) and \
-           (model_lsf >= cq_lsf[0]) and (model_lsf <= cq_lsf[2]):
+           (model_lsf >= cq_lsf[0]) and (model_lsf <= cq_lsf[2]) and \
+           (model_zscatter >= cq_zscatter[0]) and (model_zscatter <= cq_zscatter[2]):
 
-            m = model(wav, sample[0], sample[1], sample[2], sample[3])
+            m = model(wav, sample[0], sample[1], sample[2], sample[3], sample[4])
 
             ax3.plot(wav, m, color='firebrick', lw=1.8, alpha=0.05, zorder=2)
 
