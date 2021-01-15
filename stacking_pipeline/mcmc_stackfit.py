@@ -93,7 +93,7 @@ def loglike(theta, x, data, err):
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
-    x0 = np.where( (x >= 3600) & (x <= 6200) )[0]
+    x0 = np.where( (x >= 3800) & (x <= 6200) )[0]
 
     y = y[x0]
     data = data[x0]
@@ -228,7 +228,7 @@ def model(x, age, logtau, av, lsf_sigma, zscatter):
 
 def gen_model_stack(w, m, zs):
 
-    nstack = 1000
+    nstack = 500
 
     # Generate a random array of redshifts
     zs_arr = np.random.normal(loc=0.0, scale=zs, size=nstack)
@@ -462,7 +462,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 5, 300  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 200  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
