@@ -93,7 +93,7 @@ def loglike(theta, x, data, err):
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
-    x0 = np.where( (x >= 3800) & (x <= 6200) )[0]
+    x0 = np.where( (x >= 4000) & (x <= 6000) )[0]
 
     y = y[x0]
     data = data[x0]
@@ -462,7 +462,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 5, 200  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 300  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -489,7 +489,7 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 2000, progress=True)
+        sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
     print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
@@ -535,7 +535,7 @@ def main():
 
     fig = corner.corner(flat_samples, quantiles=[0.16, 0.5, 0.84], labels=label_list, \
         label_kwargs={"fontsize": 14}, show_titles='True', title_kwargs={"fontsize": 14}, \
-        verbose=True, truth_color='tab:red', smooth=1.0, smooth1d=1.0)#, \
+        verbose=True, truth_color='tab:red', smooth=0.8, smooth1d=0.8)#, \
     #range=[(2.5, 7.0), (-0.3, 0.2), (0.0, 0.15)])
 
     fig.savefig(emcee_diagnostics_dir + 'mcmc_stackfit_corner.pdf', dpi=200, bbox_inches='tight')
@@ -571,11 +571,11 @@ def main():
 
         ind = int(np.random.randint(len(flat_samples), size=1))
         ind_list.append(ind)
-        print("On count:", model_count)
-        print()
 
         sample = flat_samples[ind]
         sample = sample.reshape(ndim)
+        print("On count:", model_count)
+        print(sample)
 
         # Get the parameters of the sample
         model_age = sample[0]
