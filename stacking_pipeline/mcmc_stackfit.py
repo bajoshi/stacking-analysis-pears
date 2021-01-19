@@ -93,12 +93,12 @@ def loglike(theta, x, data, err):
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
-    x0 = np.where( (x >= 4000) & (x <= 6000) )[0]
+    #x0 = np.where( (x >= 4000) & (x <= 6000) )[0]
 
-    y = y[x0]
-    data = data[x0]
-    err = err[x0]
-    x = x[x0]
+    #y = y[x0]
+    #data = data[x0]
+    #err = err[x0]
+    #x = x[x0]
 
     lnLike = -0.5 * np.nansum((y-data)**2/err**2)
 
@@ -297,8 +297,6 @@ def divcont(wav, flux, ferr, showplot=False):
     #mask_indices = np.delete(arr=mask_indices, obj=remove_mask_idx)
 
     #weights = np.ones(len(wav))
-    #mask_indices = np.array([483, 484, 485, 486, 487, 488, 489])
-    # the above indices are manually done as a test for masking H-beta
     #weights[mask_indices] = 0
 
     # SciPy smoothing spline fit
@@ -364,6 +362,11 @@ def main():
     wav = stack['lam']
     flam = stack['flam']
     ferr = stack['flam_err']
+
+    x0 = np.where( (wav >= 4000) & (wav <= 6000) )[0]
+    wav = wav[x0]
+    flam = flam[x0]
+    ferr = ferr[x0]
 
     # ----------------------- Using explicit MCMC with Metropolis-Hastings ----------------------- #
     #*******Metropolis Hastings********************************
@@ -489,10 +492,11 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 1000, progress=True)
+        sampler.run_mcmc(pos, 2000, progress=True)
 
     print("Finished running emcee.")
     print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
+    sys.exit(0)
 
     # -------------------------------------------------------- # 
     # --------------------- plotting ------------------------- #
