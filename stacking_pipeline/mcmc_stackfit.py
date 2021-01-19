@@ -282,7 +282,10 @@ def gen_model_stack(w, m, zs):
     stack_ll = np.asarray(stack_ll)
 
     # make sure the returned stack has the same wavelength range as the model
-    stack_ll = griddata(points=stack_ll, values=lam_grid, xi=w)
+    #idx = np.where((w >= 4000) & (w <= 6000))[0]
+    #stack_ll_clip = stack_ll[idx]
+    #lam_grid_clip = lam_grid[idx]
+    stack_ll = griddata(points=lam_grid, values=stack_ll, xi=w)
 
     return stack_ll
 
@@ -486,6 +489,7 @@ def main():
         pos[i] = rn
     
     print("logpost at starting position:", logpost(r, wav, flam, ferr))
+    sys.exit(0)
 
     # ----------- Set up the HDF5 file to incrementally save progress to
     emcee_savefile = emcee_diagnostics_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
