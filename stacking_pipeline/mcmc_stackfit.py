@@ -281,6 +281,9 @@ def gen_model_stack(w, m, zs):
     # convert to numpy array and return
     stack_ll = np.asarray(stack_ll)
 
+    # make sure the returned stack has the same wavelength range as the model
+    stack_ll = griddata(points=stack_ll, values=lam_grid, xi=w)
+
     return stack_ll
 
 def divcont(wav, flux, ferr, showplot=False):
