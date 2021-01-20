@@ -93,12 +93,12 @@ def loglike(theta, x, data, err):
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
-    #x0 = np.where( (x >= 4000) & (x <= 6000) )[0]
+    x0 = np.where( (x >= 3800) & (x <= 6300) )[0]
 
-    #y = y[x0]
-    #data = data[x0]
-    #err = err[x0]
-    #x = x[x0]
+    y = y[x0]
+    data = data[x0]
+    err = err[x0]
+    x = x[x0]
 
     lnLike = -0.5 * np.nansum((y-data)**2/err**2)
 
@@ -220,6 +220,11 @@ def model(x, age, logtau, av, lsf_sigma, zscatter):
     # ----------------------- Using scipy spline fitting ----------------------- #
     model_err = np.zeros(len(x))
     model_cont_norm, model_err_cont_norm = divcont(x, model_mod, model_err)
+
+    # Shift it to force stack value ~1.0 at ~4600A
+    shift_idx = np.where((x >= 4600) & (x <= 4700))[0]
+    scaling_fac = np.mean(model_cont_norm[shift_idx])
+    model_cont_norm /= scaling_fac
 
     # ----------------------- Restack the same model using scatter in redshift ----------------------- #
     model_stack = gen_model_stack(x, model_cont_norm, zscatter)
@@ -369,10 +374,10 @@ def main():
     flam = stack['flam']
     ferr = stack['flam_err']
 
-    x0 = np.where( (wav >= 4000) & (wav <= 6000) )[0]
-    wav = wav[x0]
-    flam = flam[x0]
-    ferr = ferr[x0]
+    #x0 = np.where( (wav >= 4000) & (wav <= 6000) )[0]
+    #wav = wav[x0]
+    #flam = flam[x0]
+    #ferr = ferr[x0]
 
     # ----------------------- Using explicit MCMC with Metropolis-Hastings ----------------------- #
     #*******Metropolis Hastings********************************
@@ -471,7 +476,7 @@ def main():
 
     # ----------------------- Using emcee ----------------------- #
     print("\nRunning emcee...")
-    ndim, nwalkers = 5, 300  # setting up emcee params--number of params and number of walkers
+    ndim, nwalkers = 5, 200  # setting up emcee params--number of params and number of walkers
 
     # generating "intial" ball of walkers about best fit from min chi2
     pos = np.zeros(shape=(nwalkers, ndim))
@@ -489,7 +494,6 @@ def main():
         pos[i] = rn
     
     print("logpost at starting position:", logpost(r, wav, flam, ferr))
-    sys.exit(0)
 
     # ----------- Set up the HDF5 file to incrementally save progress to
     emcee_savefile = emcee_diagnostics_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
@@ -499,7 +503,7 @@ def main():
     with Pool() as pool:
         
         sampler = emcee.EnsembleSampler(nwalkers, ndim, logpost, args=[wav, flam, ferr], pool=pool, backend=backend)
-        sampler.run_mcmc(pos, 2000, progress=True)
+        sampler.run_mcmc(pos, 1000, progress=True)
 
     print("Finished running emcee.")
     print("Mean acceptance Fraction:", np.mean(sampler.acceptance_fraction), "\n")
