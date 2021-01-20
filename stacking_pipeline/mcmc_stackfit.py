@@ -93,7 +93,7 @@ def loglike(theta, x, data, err):
 
     # ------- Clip all arrays to where the stack is believable
     # then get the log likelihood
-    x0 = np.where( (x >= 3800) & (x <= 6300) )[0]
+    x0 = np.where( (x >= 3600) & (x <= 6300) )[0]
 
     y = y[x0]
     data = data[x0]
@@ -233,7 +233,7 @@ def model(x, age, logtau, av, lsf_sigma, zscatter):
 
 def gen_model_stack(w, m, zs):
 
-    nstack = 200
+    nstack = 250
 
     # Generate a random array of redshifts
     zs_arr = np.random.normal(loc=0.0, scale=zs, size=nstack)
@@ -613,7 +613,7 @@ def main():
 
             model_count += 1
 
-    print("\nList of randomly chosen indices:", ind_list)
+    print("\nTotal number of randomly chosen indices:", len(ind_list))
 
     ax3.plot(wav, flam, color='mediumblue', lw=2.2, zorder=1)
     ax3.fill_between(wav, flam - ferr, flam + ferr, color='gray', alpha=0.5, zorder=1)
