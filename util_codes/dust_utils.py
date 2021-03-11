@@ -1,5 +1,7 @@
 import numpy as np
+from numba import jit
 
+@jit(nopython=True)
 def get_klambda(wav):
     # Calzetti law
     # wavlength has to be in microns
@@ -19,6 +21,7 @@ def get_klambda(wav):
 
     return klam
 
+@jit(nopython=True)
 def get_dust_atten_model(model_wav_arr, model_flux_arr, av):
     """
     This function will apply the Calzetti dust extinction law 
@@ -29,11 +32,9 @@ def get_dust_atten_model(model_wav_arr, model_flux_arr, av):
 
     It returns the dust-attenuated flux array at the same wavelengths as before.
     """
-
-    ebv = av / 4.05
         
     # Now loop over the dust-free SED and generate a new dust-attenuated SED
-    dust_atten_model_flux = np.zeros(len(model_wav_arr), dtype=np.float32)
+    dust_atten_model_flux = np.empty(len(model_wav_arr), np.float32)
     for i in range(len(model_wav_arr)):
 
         current_wav = model_wav_arr[i] / 1e4  # because this has to be in microns
@@ -42,7 +43,7 @@ def get_dust_atten_model(model_wav_arr, model_flux_arr, av):
         # 2.2 micron this function just replaces the old values
         if current_wav <= 2.2:
             klam = get_klambda(current_wav)
-            alam = klam * ebv
+            alam = klam * av / 4.05
 
             dust_atten_model_flux[i] = model_flux_arr[i] * 10**(-1 * 0.4 * alam)
         else:

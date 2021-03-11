@@ -102,25 +102,26 @@ def loglike(theta, x, data, err):
 
     lnLike = -0.5 * np.nansum((y-data)**2/err**2)
 
-    #print("Pure chi2 term:", np.nansum( (y-data)**2/err**2 ))
-    #print("log likelihood:", lnLike)
+    print("Pure chi2 term:", np.nansum( (y-data)**2/err**2 ))
+    print("log likelihood:", lnLike)
     
-    """
+    
     fig = plt.figure(figsize=(10,5))
     ax = fig.add_subplot(111)
     ax.set_xlabel(r'$\lambda\, [\mathrm{\AA}]$', fontsize=14)
     ax.set_ylabel(r'$L_\lambda\, [\mathrm{continuum\ divided}]$', fontsize=14)
 
-    ax.plot(x, data, color='k')
+    ax.plot(x, data, color='mediumblue')
     ax.fill_between(x, data - err, data + err, color='gray', alpha=0.5)
 
     ax.plot(x, y, color='firebrick')
+    ax.axhline(y=1.0, ls='--', color='k', lw=1.8)
 
     ax.set_xscale('log')
     ax.minorticks_on()
     plt.show()
     #sys.exit(0)
-    """
+    
 
     return lnLike
 
@@ -233,7 +234,7 @@ def model(x, age, logtau, av, lsf_sigma, zscatter):
 
 def gen_model_stack(w, m, zs):
 
-    nstack = 250
+    nstack = 500
 
     # Generate a random array of redshifts
     zs_arr = np.random.normal(loc=0.0, scale=zs, size=nstack)
@@ -374,7 +375,7 @@ def main():
     flam = stack['flam']
     ferr = stack['flam_err']
 
-    ferr /= 2.0
+    ferr /= np.sqrt(2.0)
 
     #x0 = np.where( (wav >= 4000) & (wav <= 6000) )[0]
     #wav = wav[x0]
@@ -390,7 +391,7 @@ def main():
     # The parameter vector is (redshift, age, tau, av)
     # age in gyr and tau in gyr
     # last parameter is av not tauv
-    r = np.array([4.0, 0.1, 0.5, 95.0, 0.02])  # initial position
+    r = np.array([5.0, 0.1, 0.1, 85.0, 0.025])  # initial position
     print("Initial parameter vector:", r)
 
     # Set jump sizes
@@ -496,6 +497,7 @@ def main():
         pos[i] = rn
     
     print("logpost at starting position:", logpost(r, wav, flam, ferr))
+    sys.exit(0)
 
     # ----------- Set up the HDF5 file to incrementally save progress to
     emcee_savefile = emcee_diagnostics_dir + 'massive_stack_pears_' + str(z_low) + 'z' + str(z_high) + '_emcee_sampler.h5'
