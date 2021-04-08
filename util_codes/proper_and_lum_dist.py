@@ -1,5 +1,8 @@
 import scipy.integrate as spint
 import numpy as np
+from astropy.cosmology import FlatLambdaCDM
+import astropy.units as u
+astropy_cosmo = FlatLambdaCDM(H0=70 * u.km / u.s / u.Mpc, Tcmb0=2.725 * u.K, Om0=0.3)
 
 # -------- Define cosmology -------- # 
 # Flat Lambda CDM
@@ -8,6 +11,39 @@ omega_m0 = 0.3
 omega_lam0 = 1.0 - omega_m0
 
 speed_of_light_kms = 299792.458  # km per s
+
+def gen_lookup_table():
+
+    zrange = np.arange(0.0001, 10.0001, 0.0001)
+
+    # Open a txt file for saving
+    with open('dl_lookup_table.txt', 'w') as fh:
+
+        fh.write('#  z  dl_cm  dp_cm  age_gyr' + '\n')
+
+        for j in range(len(zrange)):
+
+            z = zrange[j]
+
+            print("Redshift:", z, end='\r')
+
+            # Get both distances
+            dp_mpc = proper_distance(z)  # in Mpc
+            dp_cm = dp_mpc * 3.086e24  # convert Mpc to cm
+
+            dl_cm = dp_cm * (1+z)  # convert to lum dist
+
+            # now get age
+            age_at_z = astropy_cosmo.age(z).value  # in Gyr
+
+            fh.write('{:.4f}'.format(z)     + '  ' 
+                     '{:.8e}'.format(dl_cm) + '  '
+                     '{:.8e}'.format(dp_cm) + '  '
+                     '{:.5e}'.format(age_at_z) + '\n')
+
+    print("Lookup table saved.")
+
+    return None
 
 def print_info():
 
@@ -45,14 +81,11 @@ def luminosity_distance(redshift):
 
     return dl
 
-def apply_redshift(restframe_wav, restframe_lum, redshift):
+def main():
+    gen_lookup_table()
+    return None
 
-    dl = luminosity_distance(redshift)  # returns dl in Mpc
-    dl = dl * 3.09e24  # convert to cm
-
-    redshifted_wav = restframe_wav * (1 + redshift)
-    redshifted_flux = restframe_lum / (4 * np.pi * dl * dl * (1 + redshift))
-
-    return redshifted_wav, redshifted_flux
+if __name__ == '__main__':
+    main()
 
 
