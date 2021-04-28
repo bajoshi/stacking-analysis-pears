@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     data_products = Observations.get_product_list(obs_table)
 
-    manifest = Observations.download_products(data_products, mrp_only=True, productType="SCIENCE", download_dir=data_dir)
+    manifest = Observations.download_products(data_products, mrp_only=False, productType="SCIENCE", download_dir=data_dir)
 
     print(manifest)
 
