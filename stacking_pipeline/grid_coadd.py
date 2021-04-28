@@ -762,7 +762,8 @@ def plot_ur_ms_diagram(ax, ur_color, stellar_mass, z_low, z_high, z_indices):
     ax.set_ylabel(r'$(u - r)_\mathrm{rest}$', fontsize=15)
 
     # Plot the points
-    ax.scatter(stellar_mass, ur_color, s=1.5, color='k', zorder=3)  # The arrays here already have the z_indices applied
+    ax.scatter(stellar_mass, ur_color, s=1.5, color='k', zorder=3)  
+    # The arrays here already have the z_indices applied
 
     # Use the utility functions from the make_col_ms_plots.py code
     make_col_ms_plots.add_contours(stellar_mass, ur_color, ax)
@@ -1464,7 +1465,7 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
     ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), 
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=16)
-    ax.text(0.66, 0.92, str(z_low) + r'$\,\leq z \leq\,$' + str(z_high), \
+    ax.text(0.66, 0.92, str(z_low) + r'$\,\leq z <\,$' + str(z_high), \
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=16)
 
@@ -1534,7 +1535,9 @@ def add_line_labels(ax, label_flag='all'):
     ax.axvline(x=5270.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
     ax.axvline(x=5335.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
     ax.axvline(x=5406.0, ls='--', ymin=0.2, ymax=0.29, color='firebrick')
-    fe_str = r'$\mathrm{Fe}\lambda 5270$' + '+ \n' + r'$\mathrm{Fe}\lambda 5335$' + '+' + r'$\mathrm{Fe}\lambda 5406$'
+    fe_str = r'$\mathrm{Fe}\lambda 5270$' + '+ \n' + \
+             r'$\mathrm{Fe}\lambda 5335$' + '+' + \
+             r'$\mathrm{Fe}\lambda 5406$'
     ax.text(5270, 0.935, fe_str, \
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transData, color='firebrick', size=12)
@@ -1889,7 +1892,8 @@ def fit_gauss_mgfe_scipy(stack_lam, stack_llam, z_low, z_high):
     amp_mg, sigma_mg, \
     amp_fe2, sigma_fe2]
 
-    popt, pcov = curve_fit(GaussAbs_central_wav_fixed, xdata=stack_lam_to_fit, ydata=stack_llam_to_fit)#, \
+    popt, pcov = curve_fit(GaussAbs_central_wav_fixed, 
+    xdata=stack_lam_to_fit, ydata=stack_llam_to_fit)#, \
     #p0=initial_guess)#, bounds=bounds)
 
     print("Optimal param values:", np.array_repr(popt, precision=2))
@@ -1904,7 +1908,8 @@ def fit_gauss_mgfe_scipy(stack_lam, stack_llam, z_low, z_high):
     # Show data and combined fit
     ax.plot(stack_lam, stack_llam, '.-', color='royalblue', linewidth=1.5, \
         markeredgecolor='royalblue', markersize=1.0, zorder=1)
-    ax.plot(stack_lam, GaussAbs_central_wav_fixed(stack_lam, *popt), ls='--', color='orange', lw=2, zorder=4)
+    ax.plot(stack_lam, GaussAbs_central_wav_fixed(stack_lam, *popt), 
+        ls='--', color='orange', lw=2, zorder=4)
 
     # Show individual gaussians
     # hbeta_params = popt[0:3]
@@ -1926,17 +1931,22 @@ def fit_gauss_mgfe_scipy(stack_lam, stack_llam, z_low, z_high):
     #fe3_gaussian = Gauss(stack_lam, fe3_amp_best, 5406.0, fe3_sigma_best)
 
     ax.plot(stack_lam, hbeta_gaussian, color='dodgerblue', zorder=2)
-    ax.fill_between(stack_lam, hbeta_gaussian.max(), hbeta_gaussian, facecolor='dodgerblue', alpha=0.4, zorder=2)
+    ax.fill_between(stack_lam, hbeta_gaussian.max(), hbeta_gaussian,
+        facecolor='dodgerblue', alpha=0.4, zorder=2)
 
     ax.plot(stack_lam, mg_gaussian, color='springgreen', zorder=2)
-    ax.fill_between(stack_lam, mg_gaussian.max(), mg_gaussian, facecolor='springgreen', alpha=0.4, zorder=2)
+    ax.fill_between(stack_lam, mg_gaussian.max(), mg_gaussian, 
+        facecolor='springgreen', alpha=0.4, zorder=2)
 
     #ax.plot(stack_lam, fe1_gaussian, color='crimson', zorder=2)
-    #ax.fill_between(stack_lam, fe1_gaussian.max(), fe1_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
+    #ax.fill_between(stack_lam, fe1_gaussian.max(), fe1_gaussian, 
+    #facecolor='crimson', alpha=0.4, zorder=2)
     ax.plot(stack_lam, fe2_gaussian, color='crimson', zorder=2)
-    ax.fill_between(stack_lam, fe2_gaussian.max(), fe2_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
+    ax.fill_between(stack_lam, fe2_gaussian.max(), fe2_gaussian, 
+        facecolor='crimson', alpha=0.4, zorder=2)
     #ax.plot(stack_lam, fe3_gaussian, color='crimson', zorder=2)
-    #ax.fill_between(stack_lam, fe3_gaussian.max(), fe3_gaussian, facecolor='crimson', alpha=0.4, zorder=2)
+    #ax.fill_between(stack_lam, fe3_gaussian.max(), fe3_gaussian, 
+    #facecolor='crimson', alpha=0.4, zorder=2)
 
     # Horizontal line
     ax.axhline(y=0.0, ls='--', color='k')
