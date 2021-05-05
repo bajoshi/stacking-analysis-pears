@@ -1,11 +1,8 @@
-def convert_to_sci_not(n):
-    """
-    BAJ: I'm not sure how well this function works
-    in every possible case. Needs more testing.
-    """
+def convert_to_sci_not(n, sigfigs=2):
 
     # convert to python string with sci notation
-    n_str = "{:.2e}".format(n)
+    sigfig_str = "{:." + str(sigfigs) + "e}"
+    n_str = sigfig_str.format(n)
 
     # split string and assign parts
     n_splt = n_str.split('e')
@@ -24,6 +21,6 @@ def convert_to_sci_not(n):
     if float(exponent) == 0.0:
         sci_str = decimal
     else:
-        sci_str = decimal + r'$\times$' + r'$\mathrm{10^{' + exponent + r'}}$'
+        sci_str = decimal + r'$\times$' + r'$10^{' + exponent + r'}$'
 
     return sci_str
