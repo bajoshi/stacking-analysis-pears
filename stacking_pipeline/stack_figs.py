@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.io import fits
+from scipy.interpolate import splev, splrep
 
 import os
 import sys
@@ -13,9 +14,11 @@ home = os.getenv('HOME')  # Does not have a trailing slash at the end
 figs_dir = home + "/Documents/pears_figs_data/"
 figs_allspectra = figs_dir + '1D/'
 stacking_utils = home + "/Documents/GitHub/stacking-analysis-pears/util_codes/"
+stacking_figures_dir = home + "/Documents/stacking_figures/"
 
 sys.path.append(stacking_utils)
 from get_total_extensions import get_total_extensions
+import grid_coadd as gd
 
 # This class came from stackoverflow
 # SEE: https://stackoverflow.com/questions/287871/how-to-print-colored-text-in-python
@@ -70,8 +73,8 @@ def gen_figs_matches():
 
     # Define our redshift range
     # Considering G102 coverage to be 8500 to 11300 Angstroms
-    zlow = 0.54  # defined as the redshift when the Fe features enter the G102 coverage
-    zhigh = 1.9  # defined as the redshift when the 4000break leaves the G102 coverage
+    zlow = 0.41  # defined as the redshift when the Fe features enter the G102 coverage
+    zhigh = 2.14  # defined as the redshift when the 4000break leaves the G102 coverage
 
     # Now try and match every figs object to
     # the candels catalog and then stack.
@@ -143,14 +146,6 @@ def main():
     if not os.path.isfile(figs_match_file):
         gen_figs_matches()
 
-    # Select galaxies and stack
-    # Define our redshift range
-    # Considering G102 coverage to be 8500 to 11300 Angstroms
-    zlow = 0.54  # defined as the redshift when the Fe features enter the G102 coverage
-    zhigh = 1.9  # defined as the redshift when the 4000break leaves the G102 coverage
-
-    mslim = 10.5 # all galaxies equal to and above this mass are selected
-
     # Read in FIGS catalogs
     # Only GOODS-S for now because 
     # Santini et al only have GOODS-S masses
@@ -160,17 +155,66 @@ def main():
     # Read in FIGS and CANDELS matching file
     figs_samp = np.genfromtxt(figs_match_file, dtype=None, names=True, encoding='ascii')
 
+    #ms_idx = np.where(np.log10(figs_samp['Mmed']) >= 10.5)[0]
+    #print(ms_idx, len(ms_idx))
+    #sys.exit(0)
+
+    # ----------------- Stacking prelims
+    # Change only the parameters here to change how the code runs
+    # Ideally you shouldn't have to change anything else.
+    lam_step = 25  # somewhat arbitrarily chosen by trial and error
+
+    # Set the ends of the lambda grid
+    # This is dependent on the redshift range being considered
+    lam_grid_low = 3000
+    lam_grid_high = 7600
+
+    lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
+
+    # Define our redshift range
+    # Considering G102 coverage to be 8500 to 11300 Angstroms
+    zlow = 0.41  # defined as the redshift when the Fe features enter the G102 coverage
+    zhigh = 2.14  # defined as the redshift when the 4000break leaves the G102 coverage
+
+    ms_lim_low = 10.5
+    ms_lim_high = 12.0
+
+    # Define empty arrays and lists for saving stacks
+    old_llam = np.zeros(len(lam_grid))
+    old_llamerr = np.zeros(len(lam_grid))
+    old_llam = old_llam.tolist()
+    old_llamerr = old_llamerr.tolist()
+
+    num_points = np.zeros(len(lam_grid))
+    num_galaxies = np.zeros(len(lam_grid))
+
+    # Create figure
+    fig = plt.figure(figsize=(10,6))
+    ax = fig.add_subplot(111)
+
     checkplot = True
+    num_massive = 0
     for i in range(len(figs_samp)):
+
+        # This step should only be done on the first iteration within a grid cell
+        # This converts every element (which are all 0 to begin with) 
+        # in the flux and flux error arrays to an empty list
+        # This is done so that function add_spec() can now append to every element
+        if i == 0:
+            for x in range(len(lam_grid)):
+                old_llam[x] = []
+                old_llamerr[x] = []
 
         # Cut on stellar mass
         ms = np.log10(figs_samp['Mmed'][i])
 
-        if ms < 10.5:
+        if ms < ms_lim_low:
             continue
 
+        # If mass okay then get the spectrum
         objid = figs_samp['ObjID'][i]
         field = figs_samp['Field'][i]
+        zbest = figs_samp['zbest'][i]
 
         if field == 'GS1':
             figs_spec = figs_gs1
@@ -183,14 +227,6 @@ def main():
         avg_wflux = figs_spec[obj_exten].data['AVG_WFLUX']
         std_wflux = figs_spec[obj_exten].data['STD_WFLUX']
 
-        #if checkplot:
-        #    fig = plt.figure()
-        #    ax = fig.add_subplot(111)
-        #
-        #    ax.plot(wav, avg_wflux, color='k')
-        #    ax.fill_between(wav, avg_wflux - std_wflux, avg_wflux + std_wflux, color='gray')
-        #    plt.show()
-
         # Clip the spectra at teh ends
         wav_idx = np.where((wav >= 8500) & (wav <= 11300))[0]
         wav = wav[wav_idx]
@@ -200,12 +236,84 @@ def main():
         # Now fit the continuum 
         # First normalize
         avg_wflux_norm = avg_wflux / np.mean(avg_wflux)
+        std_wflux_norm = std_wflux / np.mean(std_wflux)
 
         # Scipy spline fit
+        spl = splrep(x=wav, y=avg_wflux_norm, k=3, s=0.2)
+        wav_plt = np.arange(wav[0], wav[-1], 1.0)
+        spl_eval = splev(wav_plt, spl)
+
+        # Divide the given flux by the smooth spline fit
+        cont_div_flux_g102 = avg_wflux_norm / splev(wav, spl)
+        cont_div_err_g102  = std_wflux_norm / splev(wav, spl)
+
+        #if checkplot:
+        #    fig = plt.figure()
+        #    ax = fig.add_subplot(111)
         
+        #    ax.plot(wav, avg_wflux_norm, color='k')
+        #    ax.plot(wav_plt, spl_eval, color='tab:red')
 
+        #    plt.show()
 
-        if i > 20: sys.exit(0)
+        # Deredshift wavelength
+        wav_em = wav / (1 + zbest)
+
+        # Shift it to force stack value ~1.0 at ~4600A
+        shift_idx = np.where((wav_em >= 4600) & (wav_em <= 4700))[0]
+        scaling_fac = np.mean(cont_div_flux_g102[shift_idx])
+        cont_div_flux_g102 /= scaling_fac
+
+        # add the continuum subtracted spectrum
+        old_llam, old_llamerr, num_points, num_galaxies = \
+        gd.add_spec(wav_em, cont_div_flux_g102, cont_div_err_g102, 
+            old_llam, old_llamerr, num_points, num_galaxies, lam_grid, lam_step)
+
+        ax.plot(wav_em, cont_div_flux_g102, ls='-', 
+           color='bisque', linewidth=1.0)
+
+        num_massive += 1
+
+    old_llam, old_llamerr = gd.take_median(old_llam, old_llamerr, lam_grid)
+
+    old_llam = np.asarray(old_llam)
+    old_llamerr = np.asarray(old_llamerr)
+
+    ax.plot(lam_grid, old_llam, '.-', color='darkorange', linewidth=1.5, \
+        markeredgecolor='darkorange', markersize=1.0, zorder=5)
+    ax.fill_between(lam_grid, old_llam - old_llamerr, 
+                    old_llam + old_llamerr, \
+                    color='gray', alpha=0.5, zorder=5)
+
+    ax.set_xlim(lam_grid_low, lam_grid_high)
+    ax.set_ylim(0.9, 1.1)  # if dividing by the continuum instead of subtracting
+    ax.axhline(y=1.0, ls='--', color='k')
+    ax.minorticks_on()
+
+    gd.add_line_labels(ax)
+
+    # Number of galaxies and redshift range on plot
+    ax.text(0.66, 0.97, r'$\mathrm{N\,=\,}$' + str(num_massive), 
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=16)
+    ax.text(0.66, 0.92, str(zlow) + r'$\,\leq z <\,$' + str(zhigh), \
+        verticalalignment='top', horizontalalignment='left', \
+        transform=ax.transAxes, color='k', size=16)
+
+    # Mass range
+    ax.text(0.66, 0.86, str(ms_lim_low) + r'$\,\leq \mathrm{M\ [M_\odot]} <\,$' + 
+        str(ms_lim_high), 
+        verticalalignment='top', horizontalalignment='left', 
+        transform=ax.transAxes, color='k', size=16)
+
+    # Labels
+    ax.set_xlabel(r'$\lambda\ [\mathrm{\AA}]$', fontsize=15)
+    ax.set_ylabel(r'$L_{\lambda}\ [\mathrm{divided\ by\ continuum}]$', fontsize=15)
+
+    figname = stacking_figures_dir + 'massive_stack_figs_' + \
+            str(ms_lim_low).replace('.','p') + '_Ms_' + str(ms_lim_high).replace('.','p') + \
+            '_' + str(zlow).replace('.','p') + '_z_' + str(zhigh).replace('.','p') + '.pdf'
+    fig.savefig(figname, dpi=300, bbox_inches='tight')
 
     return None
 
