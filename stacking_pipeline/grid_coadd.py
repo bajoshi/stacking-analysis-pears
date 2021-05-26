@@ -59,9 +59,11 @@ def gen_balmer_lines():
         energy_levels_term = (1/4) - (1/lvl**2)
         lam_vac = (1/rydberg_const) * (1/energy_levels_term)
 
-        lam_vac_ang = lam_vac*1e10  # meters to angstroms # since the rydberg const above is in (1/m)
+        lam_vac_ang = lam_vac*1e10  # meters to angstroms 
+        # since the rydberg const above is in (1/m)
 
-        #print("Transition:", lvl, "--> 2,       wavelength in vacuum [Angstroms]:", "{:.3f}".format(lam_vac_ang))
+        #print("Transition:", lvl, "--> 2,       wavelength in vacuum [Angstroms]:")
+        #print("{:.3f}".format(lam_vac_ang))
 
         balmer_line_wav_list.append(lam_vac_ang)
 
@@ -116,14 +118,16 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr,
     for i in range(len(lam_grid)):
         
         # add fluxes
-        new_ind = np.where((lam_em >= lam_grid[i] - lam_step/2) & (lam_em < lam_grid[i] + lam_step/2))[0]
+        new_ind = np.where((lam_em >= lam_grid[i] - lam_step/2) & \
+                           (lam_em <  lam_grid[i] + lam_step/2))[0]
 
         if new_ind.size:
             
             # Not requiring any points to be positive anymore
             # because the continuum is being subtracted.
 
-            # Only count a galaxy in a particular bin if for that bin at least one point is positive
+            # Only count a galaxy in a particular bin if for 
+            # that bin at least one point is positive
             #if np.any(llam_em[new_ind] > 0):
             #    num_galaxies[i] += 1
             
@@ -138,8 +142,10 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr,
 
                     if np.isfinite(sig):
                         old_llam[i].append(sig)
-                        old_llamerr[i].append(noise**2) # adding errors in quadrature
-                        num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
+                        # adding errors in quadrature
+                        old_llamerr[i].append(noise**2)
+                        # keep track of how many points were added to each bin in lam_grid
+                        num_points[i] += 1
 
             elif len(new_ind) == 1:
                 sig = llam_em[int(new_ind)]
@@ -147,8 +153,8 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr,
 
                 if np.isfinite(sig):
                     old_llam[i].append(sig)
-                    old_llamerr[i].append(noise**2) # adding errors in quadrature
-                    num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
+                    old_llamerr[i].append(noise**2)
+                    num_points[i] += 1
 
             else:
                 print("Not sure what happened.")
@@ -157,21 +163,27 @@ def add_spec(lam_em, llam_em, lerr, old_llam, old_llamerr,
 
 
             #if np.isfinite(sig):
-            #    # Because I put in NaN values where there wasn't anything to add while combining PAs
+            #    # Because I put in NaN values where 
+            #    # there wasn't anything to add while combining PAs
             #
             #    if sig > 0: # only append those points where the signal is positive
             #        if sig/noise > 2.0:  # signal to noise cut
             #            old_llam[i].append(sig)
-            #            old_llamerr[i].append(noise**2) # adding errors in quadrature
-            #            num_points[i] += 1 # keep track of how many points were added to each bin in lam_grid
+            #            old_llamerr[i].append(noise**2)
+            #            num_points[i] += 1
             #    else:
             #        print("Signal read in:", sig, end="\n")
-            #        errmsg = "This error occurs when the code encounters a negative or zero signal." + "\n" + \
-            #        "This error should not have been triggered if you're using PA combined PEARS spectra or . " + \
-            #        "the FIGS spectra read in with the get_figs_data(...) function in grid_coadd.py. "
-            #        "These flux points should've been taken out by the code that combines spectra " + \
-            #        "for each galaxy at different PAs and the function that returns FIGS data." + "\n" + \
-            #        "Check/Run the PA combining code for this galaxy."
+            #        errmsg = "This error occurs when the code" + \
+            #                 "encounters a negative or zero signal." + "\n" + \
+            #                 "This error should not have been triggered if" + \
+            #                 "you're using PA combined PEARS spectra or " + \
+            #                 "the FIGS spectra read in with the get_figs_data(...)" + \
+            #                 "function in grid_coadd.py. "
+            #                 "These flux points should've been taken out by the" + \
+            #                 "code that combines spectra " + \
+            #                 "for each galaxy at different PAs and the function" + \
+            #                 "that returns FIGS data." + "\n" + \
+            #                 "Check/Run the PA combining code for this galaxy."
             #        raise ValueError(errmsg)
 
         else:            
@@ -292,8 +304,10 @@ def rescale(id_arr_cell, field_arr_cell, z_arr_cell, dl_tbl):
 
         # Get observed data and deredshift the spectrum
         # FIGS data
-        #lam_obs, flam_obs, ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
-        lam_obs, flam_obs, ferr_obs, return_code = get_pears_data(current_pears_id, current_pears_field)
+        #lam_obs, flam_obs, ferr_obs, return_code = \
+        #  get_figs_data(current_figs_id, current_figs_field)
+        lam_obs, flam_obs, ferr_obs, return_code = \
+          get_pears_data(current_pears_id, current_pears_field)
 
         # If the return code was 0, then exit,
         # i.e., the observed spectrum is unuseable.
@@ -382,8 +396,6 @@ def take_median(old_llam, old_llamerr, lam_grid):
             old_llam[y] = np.nan
             old_llamerr[y] = np.nan
 
-        #print("%d %.2e %.2e %.2f" % (lam_grid[y], old_llam[y], old_llamerr[y], (old_llam[y]/old_llamerr[y])))
-
     return old_llam, old_llamerr
 
 def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
@@ -400,15 +412,17 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     figs_field = cat['figs_field'][z_indices]
 
     ur_color = urcol[z_indices]
-    stellar_mass = np.log10(cat['zp_ms'][z_indices])  # because the code below expects log(stellar mass)
+    # because the code below expects log(stellar mass)
+    stellar_mass = np.log10(cat['zp_ms'][z_indices])
 
     # Read in dl lookup table
     # Required for deredshifting
-    dl_tbl = np.genfromtxt(massive_galaxies_dir + 'cluster_codes/dl_lookup_table.txt', dtype=None, names=True)
+    dl_tbl = np.genfromtxt(massive_galaxies_dir + 'cluster_codes/dl_lookup_table.txt', 
+        dtype=None, names=True)
     # Define redshift array used in lookup table
     z_arr = np.arange(0.005, 6.005, 0.005)
 
-    # ----------------------------------------- Code config params ----------------------------------------- #
+    # ----------------------- Code config params ----------------------- #
     # Change only the parameters here to change how the code runs
     # Ideally you shouldn't have to change anything else.
     lam_step = 10  # somewhat arbitrarily chosen # pretty much trial and error
@@ -421,16 +435,17 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     lam_grid = np.arange(lam_grid_low, lam_grid_high, lam_step)
     # Lambda grid decided based on observed wavelength range i.e. 6000 to 9500
     # and the initially chosen redshift range 0.6 < z < 1.2
-    # This redshift range was chosen so that the 4000A break would fall in the observed wavelength range
+    # This redshift range was chosen so that the 4000A break would 
+    # fall in the observed wavelength range
     
-    # ----------------------------------------- Other preliminaries ----------------------------------------- #
+    # ------------------------ Other preliminaries ------------------------ #
     # Create HDUList for writing final fits file with stacks
     hdu = fits.PrimaryHDU()
     hdr = fits.Header()
     hdulist = fits.HDUList(hdu)
     hdulist.append(fits.ImageHDU(lam_grid, header=hdr))
 
-    # ----------------------------------------- Begin creating stacks ----------------------------------------- #
+    # ------------------------ Begin creating stacks ------------------------ #
     added_gal = 0
     skipped_gal = 0
 
@@ -481,9 +496,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
             figs_num_galaxies = np.zeros(len(lam_grid))
 
             # rescale to 200A band centered on the observed wavelengths
-            # This function returns the median of the median values (in the given band) from all given spectra
+            # This function returns the median of the median values 
+            # (in the given band) from all given spectra
             # All spectra to be coadded in a given grid cell need to be divided by this value
-            medarr, medval, stdval = rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
+            medarr, medval, stdval = \
+            rescale(pears_id[indices], pears_field[indices], zp[indices], dl_tbl)
             print("This cell has a maximum possible of", len(pears_id[indices]), "spectra.")
             print("The spectra in this cell have a median value of:", end=' ')
             print("{:.3e}".format(medval), " [erg s^-1 A^-1]")
@@ -537,7 +554,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 # Match with photometry catalog and get photometry data
                 
                 # Divide by median value at 4400A to 4600A to rescale. 
-                # Multiplying by median value of the flux medians to get it back to physical units
+                # Multiplying by median value of the flux medians 
+                # to get it back to physical units
                 pears_llam_em = (pears_llam_em / medarr[u]) * medval
                 pears_lerr = (pears_lerr / medarr[u]) * medval
 
@@ -548,17 +566,21 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 added_gal += 1
                 gal_current_cell += 1
                 pears_old_llam, pears_old_llamerr, pears_num_points, pears_num_galaxies = \
-                add_spec(pears_lam_em, pears_llam_em, pears_lerr, pears_old_llam, pears_old_llamerr, \
+                add_spec(pears_lam_em, pears_llam_em, pears_lerr, 
+                    pears_old_llam, pears_old_llamerr, 
                     pears_num_points, pears_num_galaxies, lam_grid, lam_step)
 
                 figs_old_llam, figs_old_llamerr, figs_num_points, figs_num_galaxies = \
-                add_spec(figs_lam_em, figs_llam_em, figs_lerr, figs_old_llam, figs_old_llamerr, \
+                add_spec(figs_lam_em, figs_llam_em, figs_lerr, 
+                    figs_old_llam, figs_old_llamerr,
                     figs_num_points, figs_num_galaxies, lam_grid, lam_step)
 
             # Now take the median of all flux points appended within the list of lists
             # This function also does the 3-sigma clipping
-            pears_old_llam, pears_old_llamerr = take_median(pears_old_llam, pears_old_llamerr, lam_grid)
-            figs_old_llam, figs_old_llamerr = take_median(figs_old_llam, figs_old_llamerr, lam_grid)
+            pears_old_llam, pears_old_llamerr = \
+            take_median(pears_old_llam, pears_old_llamerr, lam_grid)
+            figs_old_llam, figs_old_llamerr = \
+            take_median(figs_old_llam, figs_old_llamerr, lam_grid)
 
             # ---------------- Check stack by making a preliminary plot ---------------- #
             # ---------------- DO NOT DELETE CODE BLOCK! Useful for checking ---------------- #
@@ -578,11 +600,13 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 current_figs_field = figs_field[indices][u]
 
                 # ----------------------------- Get data ----------------------------- #
-                grism_lam_obs, grism_flam_obs, grism_ferr_obs, pa_chosen, netsig_chosen, return_code \
-                = cf.get_data(current_pears_id, current_pears_field)
+                grism_lam_obs, grism_flam_obs, grism_ferr_obs, 
+                pa_chosen, netsig_chosen, return_code = \
+                cf.get_data(current_pears_id, current_pears_field)
 
                 # FIGS data
-                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = get_figs_data(current_figs_id, current_figs_field)
+                g102_lam_obs, g102_flam_obs, g102_ferr_obs, return_code = \
+                get_figs_data(current_figs_id, current_figs_field)
 
                 # Deredshift the observed data 
                 zidx = np.argmin(abs(z_arr - current_redshift))
@@ -630,9 +654,11 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
                 figs_chi2 = compute_chi2(figs_lam_em, figs_llam_em, figs_lerr, p_figs)
 
                 ax.text(x=0.05, y=0.1, s=r"$\chi^2_{PEARS} = $" + "{:.2f}".format(pears_chi2), \
-                    verticalalignment='top', horizontalalignment='left', transform=ax.transAxes, color='k', size=12)
+                    verticalalignment='top', horizontalalignment='left', 
+                    transform=ax.transAxes, color='k', size=12)
                 ax.text(x=0.05, y=0.05, s=r"$\chi^2_{FIGS} = $" + "{:.2f}".format(figs_chi2), \
-                    verticalalignment='top', horizontalalignment='left', transform=ax.transAxes, color='k', size=12)
+                    verticalalignment='top', horizontalalignment='left', 
+                    transform=ax.transAxes, color='k', size=12)
 
                 plt.show()
                 plt.clf()
@@ -686,7 +712,8 @@ def create_stacks(cat, urcol, z_low, z_high, z_indices, start):
     hdulist.append(fits.ImageHDU(data=np.flipud(gal_per_cell), header=galdist_hdr))
 
     # Write stacks to fits file
-    final_fits_filename = 'stacks_' + str(z_low).replace('.','p') + '_' + str(z_high).replace('.','p') + '.fits'
+    final_fits_filename = 'stacks_' + str(z_low).replace('.','p') + '_' + \
+                          str(z_high).replace('.','p') + '.fits'
     hdulist.writeto(stacking_analysis_dir + final_fits_filename, overwrite=True)
 
     # Time taken
@@ -714,7 +741,8 @@ def compute_chi2(x, y, err, model_fit):
 def get_avg_col_mass_arrays(ur_color, stellar_mass, stack_hdu):
 
     # Find the averages of all grid cells in a particular row/column
-    # While these are useful numbers to have, they are currently only used in the plotting routine.
+    # While these are useful numbers to have, 
+    # they are currently only used in the plotting routine.
     cellcount = 0
 
     avgcolarr = np.zeros(numcol)
@@ -1445,8 +1473,10 @@ def stack_plot_massive(cat, urcol, z_low, z_high, z_indices, start):
 
     # Now take the median of all flux points appended within the list of lists
     # This function also does the 3-sigma clipping
-    pears_old_llam, pears_old_llamerr = take_median(pears_old_llam, pears_old_llamerr, lam_grid)
-    figs_old_llam, figs_old_llamerr = take_median(figs_old_llam, figs_old_llamerr, lam_grid)
+    pears_old_llam, pears_old_llamerr = \
+    take_median(pears_old_llam, pears_old_llamerr, lam_grid)
+    figs_old_llam, figs_old_llamerr = \
+    take_median(figs_old_llam, figs_old_llamerr, lam_grid)
 
     pears_old_llam = np.asarray(pears_old_llam)
     pears_old_llamerr = np.asarray(pears_old_llamerr)
@@ -1623,9 +1653,11 @@ def get_all_line_wav():
     #nad = 5890
 
     # Now put all the line wavelengths in a list and return
-    all_lines = [oii3727, hbeta, oiii4959, oiii5007, halpha, gband, mg2_mgb, fe5270, fe5335]#, fe5406, nad]
-    all_line_labels = [r'$[OII]3727$', r'H$\beta$', r'$[OIII]4959$', r'$[OIII]5007$', \
-    r'H$\alpha + [NII]$', 'G-band', r'$\mathrm{Mg_2 + Mgb}$', 'Fe5270', 'Fe5335']#, 'Fe5406', 'NaD+TiO']
+    all_lines = [oii3727, hbeta, oiii4959, oiii5007, halpha, 
+                gband, mg2_mgb, fe5270, fe5335]#, fe5406, nad]
+    all_line_labels = [r'$[OII]3727$', r'H$\beta$', r'$[OIII]4959$', r'$[OIII]5007$',
+                       r'H$\alpha + [NII]$', 'G-band', r'$\mathrm{Mg_2 + Mgb}$', 
+                       'Fe5270', 'Fe5335']#, 'Fe5406', 'NaD+TiO']
 
     return all_lines, all_line_labels
 
@@ -1661,7 +1693,7 @@ def mask_em_lines(lam_em, llam_em):
 def Gauss(x, amp, mu, sigma):
     return amp * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
-def GaussAbs(x, amp1, mu1, sigma1, amp2, mu2, sigma2, amp3, mu3, sigma3, \
+def GaussAbs(x, amp1, mu1, sigma1, amp2, mu2, sigma2, amp3, mu3, sigma3,
     amp4, mu4, sigma4, amp5, mu5, sigma5):
     return amp1 * np.exp(-(x - mu1)**2 / (2 * sigma1**2)) + \
            amp2 * np.exp(-(x - mu2)**2 / (2 * sigma2**2)) + \
@@ -1689,7 +1721,8 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive,
     fe_abs_init = models.Gaussian1D(amplitude=0.02, mean=5335.0, stddev=150.0)
 
     # Fitting
-    # gauss_init = (const_init - hb_abs_init) + (const_init - mg_abs_init) + (const_init - fe_abs_init)
+    # gauss_init = (const_init - hb_abs_init) + (const_init - mg_abs_init) + \
+    #              (const_init - fe_abs_init)
     gauss_init = const_init - hb_abs_init -  mg_abs_init - fe_abs_init
 
     # Freeze central wavelengths
@@ -1737,9 +1770,12 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive,
     ax.plot(stack_lam, g(stack_lam), ls='--', color='orange', lw=2, zorder=5)
 
     # Show individual gaussians
-    ax.plot(stack_lam, g[0](stack_lam) - g[1](stack_lam), ls='--', color='dodgerblue', lw=2, zorder=4)
-    ax.plot(stack_lam, g[0](stack_lam) - g[2](stack_lam), ls='--', color='springgreen', lw=2, zorder=4)
-    ax.plot(stack_lam, g[0](stack_lam) - g[3](stack_lam), ls='--', color='crimson', lw=2, zorder=4)
+    ax.plot(stack_lam, g[0](stack_lam) - g[1](stack_lam), ls='--', 
+            color='dodgerblue', lw=2, zorder=4)
+    ax.plot(stack_lam, g[0](stack_lam) - g[2](stack_lam), ls='--', 
+            color='springgreen', lw=2, zorder=4)
+    ax.plot(stack_lam, g[0](stack_lam) - g[3](stack_lam), ls='--', 
+            color='crimson', lw=2, zorder=4)
 
     # Horizontal line
     ax.axhline(y=1.0, ls='--', color='k')
@@ -1763,7 +1799,8 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive,
         transform=ax.transAxes, color='k', size=12)
 
     # Mass range
-    ax.text(0.66, 0.86, str(ms_lim_low) + r'$\,\leq \mathrm{M\ [M_\odot]} <\,$' + str(ms_lim_high), \
+    ax.text(0.66, 0.86, str(ms_lim_low) + r'$\,\leq \mathrm{M\ [M_\odot]} <\,$' + \
+        str(ms_lim_high),
         verticalalignment='top', horizontalalignment='left', \
         transform=ax.transAxes, color='k', size=12)
 
@@ -1777,8 +1814,10 @@ def fit_gauss_mgfe_astropy(stack_lam, stack_llam, num_massive,
     left, bottom, width, height = [0.18, 0.66, 0.35, 0.2]
     axins = fig.add_axes([left, bottom, width, height])
 
-    width_z_err = 0.029 * 5175  # in angstrom; assumes a mean 3% error on redshifts
-    width_lsf_err = 3 * 50  # in angstrom; number of ACS pixels of a typical galaxy times spectral res at mgb
+    # in angstrom; assumes a mean 3% error on redshifts
+    width_z_err = 0.029 * 5175
+    # in angstroms; number of ACS pixels of a typical galaxy times spectral res at mgb
+    width_lsf_err = 3 * 50
     quad_width = np.sqrt(width_z_err**2 + width_lsf_err**2)
 
     y_ins = 1.0 - Gauss(stack_lam, 1.0, 5175.0, quad_width)
